@@ -1,12 +1,22 @@
 package dockergpucri
 
 import (
+	"net/url"
 	"time"
 
+	"github.com/golang/glog"
+
+	"k8s.io/client-go/pkg/apis/componentconfig"
+	"k8s.io/kubernetes/cmd/kubelet/app"
+	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
+	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
+	"k8s.io/kubernetes/pkg/kubelet/server"
+	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
 )
 
+// implementation of runtime service -- have to implement entire docker service
 type dockerGPUService struct {
 	dockerService dockershim.DockerService
 }
@@ -89,4 +99,57 @@ func (d *dockerGPUService) UpdateRuntimeConfig(runtimeConfig *runtimeapi.Runtime
 
 func (d *dockerGPUService) Status() (*runtimeapi.RuntimeStatus, error) {
 	return d.dockerService.Status()
+}
+
+// =====================
+
+// Gets the streaming server configuration to use with in-process CRI shims.
+func getStreamingConfig(kubeCfg *componentconfig.KubeletConfiguration, tlsOptions *server.TLSOptions) *streaming.Config {
+	config := &streaming.Config{
+		// Use a relative redirect (no scheme or host).
+		BaseURL: &url.URL{
+			Path: "/cri/",
+		},
+		StreamIdleTimeout:               kubeCfg.StreamingConnectionIdleTimeout.Duration,
+		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
+		SupportedRemoteCommandProtocols: streaming.DefaultConfig.SupportedRemoteCommandProtocols,
+		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
+	}
+	if tlsOptions != nil {
+		config.TLSConfig = tlsOptions.Config
+	}
+	return config
+}
+
+// Basically RunDockerShim
+func (d *dockerGPUService) Init(s *options.KubeletServer, crOptions *options.ContainerRuntimeOptions) {
+	kubeCfg = s.KubeletConfiguration
+
+	tlsOptions, err := app.InitializeTLS(&s.KubeletFlags, &s.KubeletConfiguration)
+	if err != nil {
+		return err
+	}
+	dockerClient := libdocker.ConnectToDockerOrDie(s.DockerEndpoint, s.RuntimeRequestTimeout.Duration, s.ImagePullProgressDeadline.Duration)
+
+	// Create and start the CRI shim running as a grpc server.
+	streamingConfig := getStreamingConfig(kubeCfg, kubeDeps)
+	ds, err := dockershim.NewDockerService(kubeDeps.DockerClient, kubeCfg.SeccompProfileRoot, crOptions.PodSandboxImage,
+		streamingConfig, &pluginSettings, kubeCfg.RuntimeCgroups, kubeCfg.CgroupDriver, crOptions.DockerExecHandlerName,
+		crOptions.DockershimRootDirectory, crOptions.DockerDisableSharedPID)
+	if err != nil {
+		return nil, err
+	}
+	if err := ds.Start(); err != nil {
+		return nil, err
+	}
+
+	// The unix socket for kubelet <-> dockershim communication.
+	glog.V(5).Infof("RemoteRuntimeEndpoint: %q, RemoteImageEndpoint: %q",
+		kubeCfg.RemoteRuntimeEndpoint,
+		kubeCfg.RemoteImageEndpoint)
+	glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
+	server := dockerremote.NewDockerServer(kubeCfg.RemoteRuntimeEndpoint, ds)
+	if err := server.Start(); err != nil {
+		return nil, err
+	}
 }
