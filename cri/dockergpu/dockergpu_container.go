@@ -147,7 +147,7 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 }
 
 // =====================
-
+// Start the shim
 func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
@@ -258,7 +258,7 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 // Main
 func main() {
 	s := options.NewKubeletServer()
-	s.AddFlags(pflag.CommandLine)
+	AddFlags(s, pflag.CommandLine)
 
 	flag.InitFlags()
 	logs.InitLogs()
