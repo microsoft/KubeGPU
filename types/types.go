@@ -18,6 +18,5 @@ type DeviceManager interface {
 	// Allocate attempst to allocate the devices
 	// Returns list of (VolumeName, VolumeDriver), and list of Devices to use
 	// Returns an error on failure.
-	AllocateGPU(*v1.Pod, *v1.Container) ([]Volume, []string, error)
+	AllocateDevices(*v1.Pod, *v1.Container) ([]Volume, []string, error)
 }
-

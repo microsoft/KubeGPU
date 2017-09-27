@@ -1,36 +1,13 @@
 package gpu
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 
+	"github.com/MSRCCS/grpalloc/grpalloc"
 	"github.com/golang/glog"
-
-	v1 "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
 )
-
-type gpuManagerStub struct{}
-
-func (gms *gpuManagerStub) Start() error {
-	return nil
-}
-
-func (gms *gpuManagerStub) Capacity() v1.ResourceList {
-	return nil
-}
-
-// AllocateGPU Returns volumename, volumedriver, devices
-func (gms *gpuManagerStub) AllocateGPU(_ *v1.Pod, _ *v1.Container) (volumeName string, volumeDriver string, devices []string, err error) {
-	devices = nil
-	err = fmt.Errorf("GPUs are not supported")
-	return volumeName, volumeDriver, devices, err
-}
-
-func NewGPUManagerStub() GPUManager {
-	return &gpuManagerStub{}
-}
 
 // TranslateGPUResources translates GPU resources to max level
 func TranslateGPUResources(nodeInfo *schedulercache.NodeInfo, container *v1.Container) error {
@@ -65,10 +42,10 @@ func TranslateGPUResources(nodeInfo *schedulercache.NodeInfo, container *v1.Cont
 
 	// perform 2nd stage translation if needed
 	resourceModified = resourceModified ||
-		v1.TranslateResource(nodeInfo.AllocatableResource().OpaqueIntResources, container, "gpugrp0", "gpu")
+		grpalloc.TranslateResource(nodeInfo.AllocatableResource().OpaqueIntResources, container, "gpugrp0", "gpu")
 	// perform 3rd stage translation if needed
 	resourceModified = resourceModified ||
-		v1.TranslateResource(nodeInfo.AllocatableResource().OpaqueIntResources, container, "gpugrp1", "gpugrp0")
+		grpalloc.TranslateResource(nodeInfo.AllocatableResource().OpaqueIntResources, container, "gpugrp1", "gpugrp0")
 
 	if resourceModified {
 		glog.V(3).Infoln("New Resources", container.Resources.Requests)
