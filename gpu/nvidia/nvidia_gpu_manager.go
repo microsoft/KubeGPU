@@ -2,19 +2,17 @@ package nvidia
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/MSRCCS/grpalloc/grpalloc"
+	"github.com/MSRCCS/grpalloc/types"
 	"github.com/golang/glog"
 
 	"strconv"
 
 	v1 "k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/api/resource"
-	"k8s.io/kubernetes/pkg/kubelet/dockertools"
-	"k8s.io/kubernetes/pkg/kubelet/gpu"
 )
 
 type memoryInfo struct {
@@ -67,10 +65,7 @@ type nvidiaGPUManager struct {
 
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
 // TODO: Migrate to use pod level cgroups and make it generic to all runtimes.
-func NewNvidiaGPUManager(dockerClient dockertools.DockerInterface) (gpu.GPUManager, error) {
-	if dockerClient == nil {
-		return nil, fmt.Errorf("invalid docker client specified")
-	}
+func NewNvidiaGPUManager() (types.DeviceManager, error) {
 	plugin := &NvidiaDockerPlugin{}
 	return &nvidiaGPUManager{gpus: make(map[string]gpuInfo), np: plugin}, nil
 }
@@ -194,20 +189,17 @@ func (ngm *nvidiaGPUManager) Start() error {
 }
 
 // Get how many GPU cards we have.
-func (ngm *nvidiaGPUManager) Capacity() v1.ResourceList {
+func (ngm *nvidiaGPUManager) Capacity() types.ResourceList {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
-	resourceList := make(v1.ResourceList)
+	resourceList := make(types.ResourceList)
 	if err != nil {
 		ngm.numGpus = 0
 		return resourceList // empty resource list
 	}
-	// first add # of gpus to resource list
-	gpus := resource.NewQuantity(int64(ngm.numGpus), resource.DecimalSI)
-	resourceList[v1.ResourceNvidiaGPU] = *gpus
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
-			v1.AddGroupResource(resourceList, val.Name+"/memory", val.Memory.Global)
-			v1.AddGroupResource(resourceList, val.Name+"/cards", int64(1))
+			grpalloc.AddGroupResource(resourceList, val.Name+"/memory", val.Memory.Global)
+			grpalloc.AddGroupResource(resourceList, val.Name+"/cards", int64(1))
 		}
 	}
 	return resourceList
@@ -221,8 +213,8 @@ func (ngm *nvidiaGPUManager) AllocateGPU(pod *v1.Pod, container *v1.Container) (
 	ngm.Lock()
 	defer ngm.Unlock()
 
-	//re := regexp.MustCompile(v1.ResourceGroupPrefix + "/gpu/" + `(.*?)/cards`)
-	re := regexp.MustCompile(v1.ResourceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
+	//re := regexp.MustCompile(types.ResourceGroupPrefix + "/gpu/" + `(.*?)/cards`)
+	re := regexp.MustCompile(types.ResourceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
 
 	devices := []int{}
 	for _, res := range container.Resources.AllocateFrom {

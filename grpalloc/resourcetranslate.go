@@ -4,8 +4,13 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/MSRCCS/grpalloc/types"
 	"github.com/golang/glog"
 )
+
+func AddGroupResource(list types.ResourceList, key string, val int64) {
+	list[ResourceName(ResourceGroupPrefix+"/"+key)] = val
+}
 
 // Resource translation to max level specified in nodeInfo
 // TranslateResource translates resources to next level

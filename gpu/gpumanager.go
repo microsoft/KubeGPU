@@ -5,12 +5,12 @@ import (
 	"strconv"
 
 	"github.com/MSRCCS/grpalloc/grpalloc"
-	"github.com/golang/glog"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"github.com/MSRCCS/grpalloc/types"
+	"github.com/MSRCCS/grpalloc/types"
 )
 
 // TranslateGPUResources translates GPU resources to max level
-func TranslateGPUResources(nodeInfo *schedulercache.NodeInfo, container *v1.Container) error {
+func TranslateGPUResources(nodeInfo types.ResourceList, container *v1.Container) error {
 	requests := container.Resources.Requests
 
 	// First stage translation, translate # of cards to simple GPU resources - extra stage

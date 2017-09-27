@@ -3,7 +3,7 @@ package nvidia
 import (
 	"encoding/json"
 
-	"k8s.io/kubernetes/pkg/kubelet/gpu"
+	"github.com/MSRCCS/grpalloc/types"
 )
 
 type NvidiaFakePlugin struct {
@@ -26,7 +26,7 @@ func (np *NvidiaFakePlugin) GetGPUCommandLine(devices []int) ([]byte, error) {
 	return []byte(cliString), nil
 }
 
-func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string) (gpu.GPUManager, error) {
+func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string) (types.DeviceManager, error) {
 	plugin := &NvidiaFakePlugin{
 		gInfo:        *info,
 		volume:       volume,

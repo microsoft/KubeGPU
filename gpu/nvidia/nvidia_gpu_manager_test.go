@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/MSRCCS/grpalloc/types"
+
 	"strconv"
 
-	v1 "k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/kubelet/gpu"
+	"k8s.io/kubernetes/pkg/api/v1"
 )
 
 const (
@@ -17,30 +18,30 @@ const (
 	volumeName   = "nvidia_driver_375.20:/usr/local/nvidia:ro"
 )
 
-func assertMapEqual(t *testing.T, cap v1.ResourceList, capExpected map[string]int64) {
+func assertMapEqual(t *testing.T, cap types.ResourceList, capExpected map[string]int64) {
 	if len(cap) != len(capExpected) {
 		t.Errorf("Length not same - expected %v - have %v", len(capExpected), len(cap))
 	}
 	for key, val := range capExpected {
-		capV, available := cap[v1.ResourceName(key)]
+		capV, available := cap[types.ResourceName(key)]
 		if !available {
 			t.Errorf("Expected resource %v not available", key)
 		}
-		if capV.Value() != val {
-			t.Errorf("Expected resource %v - expected %v - have %v", key, val, capV.Value())
+		if capV != val {
+			t.Errorf("Expected resource %v - expected %v - have %v", key, val, capV)
 		}
 	}
 }
 
-func setAllocFrom(info *gpusInfo, cont *v1.Container, from int, to int) {
+func setAllocFrom(info *gpusInfo, allocFrom types.ResourceLocation, from int, to int) {
 	fromS := strconv.Itoa(from)
 	toS := info.Gpus[to].ID
-	fromLoc := v1.ResourceName(string(v1.ResourceGroupPrefix) + "/gpu/" + fromS + "/cards")
+	fromLoc := types.ResourceName(string(types.ResourceGroupPrefix) + "/gpu/" + fromS + "/cards")
 	grp1 := to / 4
 	grp0 := to / 2
 	prefix := "/gpugrp1/" + strconv.Itoa(grp1) + "/gpugrp0/" + strconv.Itoa(grp0)
-	toLoc := v1.ResourceName(string(v1.ResourceGroupPrefix) + prefix + "/gpu/" + toS + "/cards")
-	cont.Resources.AllocateFrom[fromLoc] = toLoc
+	toLoc := types.ResourceName(string(types.ResourceGroupPrefix) + prefix + "/gpu/" + toS + "/cards")
+	allocFrom[fromLoc] = toLoc
 }
 
 func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
@@ -69,23 +70,23 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 	}
 }
 
-func testAlloc(t *testing.T, ngm gpu.GPUManager, info *gpusInfo, alloc map[int]int) {
+func testAlloc(t *testing.T, ngm types.DeviceManager, info *gpusInfo, alloc map[int]int) {
 	container := v1.Container{}
-	container.Resources.AllocateFrom = make(v1.ResourceLocation)
+	allocFrom := make(types.ResourceLocation)
 	for from, to := range alloc {
-		setAllocFrom(info, &container, from, to)
+		setAllocFrom(info, allocFrom, from, to)
 	}
 	pod := v1.Pod{}
 	pod.Name = "TestPod"
-	volumeNameGet, volumeDriverGet, devicesGet, err := ngm.AllocateGPU(&pod, &container)
+	volumesGet, devicesGet, err := ngm.AllocateDevices(&pod, &container)
 	if err != nil {
 		t.Errorf("Got error %v", err)
 	}
-	if volumeNameGet != volumeName {
-		t.Errorf("Volume name incorrect - expected %v - got %v", volumeName, volumeNameGet)
+	if volumesGet[0].Name != volumeName {
+		t.Errorf("Volume name incorrect - expected %v - got %v", volumeName, volumesGet[0].Name)
 	}
-	if volumeDriverGet != volumeDriver {
-		t.Errorf("Volume driver incorrect - expected %v - got %v", volumeDriver, volumeDriverGet)
+	if volumesGet[0].Driver != volumeDriver {
+		t.Errorf("Volume driver incorrect - expected %v - got %v", volumeDriver, volumesGet[0].Driver)
 	}
 	devices := []string{"/dev/nvidiactl", "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools"}
 	for _, to := range alloc {
@@ -111,14 +112,13 @@ func TestAlloc(t *testing.T) {
 
 	// test capacity returned
 	capExpected := make(map[string]int64)
-	capExpected[string(v1.ResourceNvidiaGPU)] = int64(len(info.Gpus))
 	for i := 0; i < len(info.Gpus); i++ {
 		grp1 := i / 4
 		//grp0 := (i / 2) % 2
 		grp0 := i / 2
 		prefix := "/gpugrp1/" + strconv.Itoa(grp1) + "/gpugrp0/" + strconv.Itoa(grp0)
-		capExpected[string(v1.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/cards"] = 1
-		capExpected[string(v1.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/memory"] = info.Gpus[i].Memory.Global * int64(1024) * int64(1024)
+		capExpected[string(types.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/cards"] = 1
+		capExpected[string(types.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/memory"] = info.Gpus[i].Memory.Global * int64(1024) * int64(1024)
 	}
 	assertMapEqual(t, cap, capExpected)
 
