@@ -16,25 +16,33 @@ type ResourceName string
 
 // ResourceLocation is a set of (resource name, resource location on node) pairs.
 type ResourceLocation map[ResourceName]ResourceName
+
+// ResourceList is a set of resources
 type ResourceList map[ResourceName]int64
 
+// ResourceScorer is a set of (resource name, scorer) pairs.
+type ResourceScorer map[ResourceName]int32
+
 type ContainerInfo struct {
+	Name         string
 	Requests     ResourceList
 	AllocateFrom ResourceLocation
+	Scorer       ResourceScorer
 }
 
 type PodInfo struct {
 	Name string
 	// requests
-	InitContainer    []ContainerInfo
-	RunningContainer []ContainerInfo
+	InitContainers    []ContainerInfo
+	RunningContainers []ContainerInfo
 }
 
 type NodeInfo struct {
 	Name        string
-	Capacity    []ResourceList
-	Allocatable []ResourceList // capacity minus reserverd
-	Used        []ResourceList // being used by pods, must be less than allocatable
+	Capacity    ResourceList
+	Allocatable ResourceList // capacity minus reserverd
+	Used        ResourceList // being used by pods, must be less than allocatable
+	Scorer      ResourceScorer
 }
 
 type Volume struct {

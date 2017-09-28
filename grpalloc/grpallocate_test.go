@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"k8s.io/client-go/pkg/api/v1"
 
+	"github.com/MSRCCS/grpalloc/types"
 	"github.com/golang/glog"
 
 	"regexp"
@@ -30,18 +31,18 @@ type PodEx struct {
 
 func printContainerAllocation(cont *types.ContainerInfo) {
 	//glog.V(5).Infoln("Allocated", cont.Resources.Allocated)
-	sortedKeys := v1.SortedStringKeys(cont.Resources.Requests)
+	sortedKeys := types.SortedStringKeys(cont.Requests)
 	for _, resKey := range sortedKeys {
-		resVal := cont.Resources.Requests[v1.ResourceName(resKey)]
+		resVal := cont.Requests[types.ResourceName(resKey)]
 		fmt.Println("Resource", cont.Name+"/"+string(resKey),
-			"TakenFrom", cont.Resources.AllocateFrom[v1.ResourceName(resKey)],
+			"TakenFrom", cont.AllocateFrom[types.ResourceName(resKey)],
 			"Amt", resVal)
 	}
 }
 
 func printPodAllocation(spec *types.PodInfo) {
 	fmt.Printf("\nRunningContainers\n\n")
-	for _, cont := range spec.Containers {
+	for _, cont := range spec.RunningContainers {
 		printContainerAllocation(&cont)
 		fmt.Printf("\n")
 	}
@@ -53,26 +54,20 @@ func printPodAllocation(spec *types.PodInfo) {
 }
 
 func setRes(res types.ResourceList, name string, amt int64) {
-	quant := res[types.ResourceName(name)]
-	quantP := &quant
-	quantP.Set(amt)
-	res[types.ResourceName(name)] = quant
+	res[types.ResourceName(name)] = amt
 }
 
 func setGrpRes(res types.ResourceList, name string, amt int64) {
 	fullName := types.ResourceName(types.ResourceGroupPrefix + "/" + name)
-	quant := res[fullName]
-	quantP := &quant
-	quantP.Set(amt)
-	res[fullName] = quant
+	res[fullName] = amt
 }
 
 func addContainer(cont *[]types.ContainerInfo, name string) types.ResourceList {
-	c := types.Container{}
+	c := types.ContainerInfo{}
 	c.Name = name
-	c.Resources.Requests = make(types.ResourceList)
+	c.Requests = make(types.ResourceList)
 	*cont = append(*cont, c)
-	return c.Resources.Requests
+	return c.Requests
 }
 
 // ResourceList is a map, no need for pointer
@@ -93,20 +88,17 @@ type nodeArgs struct {
 	grpres map[string]int64
 }
 
-func createNode(name string, res map[string]int64, grpres map[string]int64) (*schedulercache.NodeInfo, nodeArgs) {
+func createNode(name string, res map[string]int64, grpres map[string]int64) (*types.NodeInfo, nodeArgs) {
 	alloc := types.ResourceList{}
 	setResource(alloc, res, grpres)
 	node := types.NodeInfo{Name: name, Capacity: alloc, Allocatable: alloc}
-	//fmt.Println("AA", node.Status.Allocatable)
-	nodeInfo := schedulercache.NewNodeInfo()
-	nodeInfo.SetNode(&node)
 
-	glog.V(7).Infoln("AllocatableResource", len(nodeInfo.AllocatableResource().OpaqueIntResources), nodeInfo.AllocatableResource())
+	glog.V(7).Infoln("AllocatableResource", len(nodeInfo.Allocatable), nodeInfo.Allocatable)
 
-	return nodeInfo, nodeArgs{name: name, res: res, grpres: grpres}
+	return node, nodeArgs{name: name, res: res, grpres: grpres}
 }
 
-func createNodeArgs(args *nodeArgs) *schedulercache.NodeInfo {
+func createNodeArgs(args *nodeArgs) *types.NodeInfo {
 	info, _ := createNode(args.name, args.res, args.grpres)
 	return info
 }
@@ -153,11 +145,10 @@ func setExpectedResources(c *cont) {
 
 func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*types.PodInfo, *PodEx) {
 	pod := types.PodInfo{Name: name}
-	pod.Spec.AllocatingResources = true
 
 	glog.V(2).Infof("Working on pod %s", pod.Name)
 
-	var contR v1.ResourceList
+	var contR types.ResourceList
 
 	for index, icont := range iconts {
 		setExpectedResources(&iconts[index])
@@ -177,7 +168,7 @@ func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*ty
 	return &pod, &podEx
 }
 
-func sampleTest(pod *v1.Pod, podEx *PodEx, nodeInfo *schedulercache.NodeInfo, testCnt int) {
+func sampleTest(pod *v1.Pod, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	// now perform allocation
 	spec := &pod.Spec
 	found, reasons, score := PodFitsGroupConstraints(nodeInfo, spec)
@@ -194,7 +185,7 @@ func sampleTest(pod *v1.Pod, podEx *PodEx, nodeInfo *schedulercache.NodeInfo, te
 		node := nodeInfo.Node()
 		spec.NodeName = node.ObjectMeta.Name
 
-		updatedNode := schedulercache.NewNodeInfo(pod)
+		updatedNode := types.NewNodeInfo(pod)
 
 		for usedRes, usedAmt := range usedResources {
 			fmt.Println("Resource", usedRes, "AmtUsed", usedAmt)
@@ -230,14 +221,13 @@ func testContainerAllocs(t *testing.T, conts []cont, podConts []v1.Container, te
 	}
 }
 
-func testPodResourceUsage(t *testing.T, pod *v1.Pod, nodeInfo *schedulercache.NodeInfo, testCnt int) {
-	spec := &pod.Spec
-	usedResources, nodeResources := nodeInfo.ComputePodGroupResources(spec, false)
-	updatedNode := schedulercache.NewNodeInfo(pod) // addPod
+func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.NodeInfo, testCnt int) {
+	usedResources, nodeResources := ComputePodGroupResources(nodeInfo, pod, false)
+	TakePodGroupResource(nodeInfo, pod)
 	if len(usedResources) == 0 {
 		t.Errorf("Test %d no resources being used", testCnt)
 	}
-	for usedRes, usedAmt := range updatedNode.RequestedResource().OpaqueIntResources {
+	for usedRes, usedAmt := range nodeInfo.Used {
 		val, available := nodeResources[usedRes]
 		if !available {
 			t.Errorf("Test %d - expected used resource %v not found", testCnt, usedRes)
@@ -248,7 +238,7 @@ func testPodResourceUsage(t *testing.T, pod *v1.Pod, nodeInfo *schedulercache.No
 		}
 	}
 	// now return the resource and check
-	usedResourcesReturn, usedResourcesNode := updatedNode.ComputePodGroupResources(spec, true)
+	usedResourcesReturn, usedResourcesNode := ComputePodGroupResources(nodeInfo, pod, true)
 	if len(usedResources) != len(usedResourcesReturn) {
 		t.Errorf("Test %d used resource lengths do not match - now %d - before %d",
 			testCnt, len(usedResourcesReturn), len(usedResources))
@@ -260,9 +250,9 @@ func testPodResourceUsage(t *testing.T, pod *v1.Pod, nodeInfo *schedulercache.No
 	}
 }
 
-func testPodAllocs(t *testing.T, pod *v1.Pod, podEx *PodEx, nodeInfo *schedulercache.NodeInfo, testCnt int) {
+func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	spec := &pod.Spec
-	found, _, score := PodFitsGroupConstraints(nodeInfo, spec)
+	found, _, score := PodFitsGroupConstraints(nodeInfo, spec, true)
 	if found {
 		if podEx.rcont[0].expectedGrpLoc == nil {
 			t.Errorf("Test %d Group allocation found when it should not be found", testCnt)
@@ -273,7 +263,7 @@ func testPodAllocs(t *testing.T, pod *v1.Pod, podEx *PodEx, nodeInfo *schedulerc
 			testContainerAllocs(t, podEx.icont, pod.Spec.InitContainers, testCnt)
 			testContainerAllocs(t, podEx.rcont, pod.Spec.Containers, testCnt)
 			// repeat - now should go through findScoreAndUpdate path
-			found2, _, score2 := PodFitsGroupConstraints(nodeInfo, spec)
+			found2, _, score2 := PodFitsGroupConstraints(nodeInfo, spec, true)
 			if found2 != found || math.Abs(score-score2)/score > 0.01 {
 				t.Errorf("Test %d Repeat Score does not match - expected %v %v - have %v %v",
 					testCnt, found, score, found2, score2)
@@ -375,11 +365,11 @@ func TestGrpAllocate1(t *testing.T) {
 	pod, podEx = createPod("pod2", 0.3,
 		[]cont{
 			{name: "Init0",
-				res:            map[string]int64{string(v1.ResourceNvidiaGPU): 1},
+				res:            map[string]int64{string(types.ResourceNvidiaGPU): 1},
 				expectedGrpLoc: map[string]string{"gpu/0": "gpu/dev4"}}},
 		[]cont{
 			{name: "Run0",
-				res: map[string]int64{string(v1.ResourceNvidiaGPU): 2},
+				res: map[string]int64{string(types.ResourceNvidiaGPU): 2},
 				expectedGrpLoc: map[string]string{
 					"gpu/0": "gpu/dev4",
 					"gpu/1": "gpu/dev3"},

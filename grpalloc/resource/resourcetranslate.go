@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,8 +31,8 @@ func AddGroupResource(list types.ResourceList, key string, val int64) {
 
 // Resource translation to max level specified in nodeInfo
 // TranslateResource translates resources to next level
-func TranslateResource(nodeResources map[types.ResourceName]int64, container *types.ContainerInfo,
-	thisStage string, nextStage string) bool {
+func TranslateResource(nodeResources types.ResourceList, containerRequests types.ResourceList,
+	thisStage string, nextStage string) (bool, types.ResourceList) {
 
 	// see if translation needed
 	translationNeeded := false
@@ -44,12 +45,12 @@ func TranslateResource(nodeResources map[types.ResourceName]int64, container *ty
 		}
 	}
 	if !translationNeeded {
-		return false
+		return false, containerRequests
 	}
 
 	// find max existing index
 	maxGroupIndex := -1
-	for res := range container.Requests {
+	for res := range containerRequests {
 		matches := re.FindStringSubmatch(string(res))
 		if len(matches) >= 2 {
 			groupIndex, err := strconv.Atoi(matches[1])
@@ -66,10 +67,10 @@ func TranslateResource(nodeResources map[types.ResourceName]int64, container *ty
 	newList := make(types.ResourceList)
 	groupMap := make(map[string]string)
 	// ordered addition to make sure groupIndex is deterministic based on order
-	reqKeys := types.SortedStringKeys(container.Requests)
+	reqKeys := types.SortedStringKeys(containerRequests)
 	resourceModified := false
 	for _, resKey := range reqKeys {
-		val := container.Requests[types.ResourceName(resKey)]
+		val := containerRequests[types.ResourceName(resKey)]
 		matches := re.FindStringSubmatch(string(resKey))
 		newResKey := types.ResourceName(resKey)
 		if len(matches) == 0 { // does not qualify as thisStage resource
@@ -88,6 +89,29 @@ func TranslateResource(nodeResources map[types.ResourceName]int64, container *ty
 		}
 		newList[newResKey] = val
 	}
-	container.Requests = newList
-	return resourceModified
+
+	return resourceModified, newList
+}
+
+// InsufficientResourceError is an error type that indicates what kind of resource limit is
+// hit and caused the unfitting failure.
+type InsufficientResourceError struct {
+	// resourceName is the name of the resource that is insufficient
+	ResourceName types.ResourceName
+	requested    int64
+	used         int64
+	capacity     int64
+}
+
+func NewInsufficientResourceError(resourceName types.ResourceName, requested, used, capacity int64) *InsufficientResourceError {
+	return &InsufficientResourceError{
+		ResourceName: resourceName,
+		requested:    requested,
+		used:         used,
+		capacity:     capacity,
+	}
+}
+
+func (e *InsufficientResourceError) GetReason() string {
+	return fmt.Sprintf("Insufficient %v", e.ResourceName)
 }
