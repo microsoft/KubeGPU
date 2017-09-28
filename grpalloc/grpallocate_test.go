@@ -7,12 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+
 	"github.com/golang/glog"
 
 	"regexp"
-
-	v1 "k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
 )
 
 type cont struct {
@@ -23,13 +22,13 @@ type cont struct {
 }
 
 type PodEx struct {
-	pod           *v1.Pod
+	pod           *types.PodInfo
 	expectedScore float64
 	icont         []cont
 	rcont         []cont
 }
 
-func printContainerAllocation(cont *v1.Container) {
+func printContainerAllocation(cont *types.ContainerInfo) {
 	//glog.V(5).Infoln("Allocated", cont.Resources.Allocated)
 	sortedKeys := v1.SortedStringKeys(cont.Resources.Requests)
 	for _, resKey := range sortedKeys {
@@ -40,7 +39,7 @@ func printContainerAllocation(cont *v1.Container) {
 	}
 }
 
-func printPodAllocation(spec *v1.PodSpec) {
+func printPodAllocation(spec *types.PodInfo) {
 	fmt.Printf("\nRunningContainers\n\n")
 	for _, cont := range spec.Containers {
 		printContainerAllocation(&cont)
@@ -53,31 +52,31 @@ func printPodAllocation(spec *v1.PodSpec) {
 	}
 }
 
-func setRes(res v1.ResourceList, name string, amt int64) {
-	quant := res[v1.ResourceName(name)]
+func setRes(res types.ResourceList, name string, amt int64) {
+	quant := res[types.ResourceName(name)]
 	quantP := &quant
 	quantP.Set(amt)
-	res[v1.ResourceName(name)] = quant
+	res[types.ResourceName(name)] = quant
 }
 
-func setGrpRes(res v1.ResourceList, name string, amt int64) {
-	fullName := v1.ResourceName(v1.ResourceGroupPrefix + "/" + name)
+func setGrpRes(res types.ResourceList, name string, amt int64) {
+	fullName := types.ResourceName(types.ResourceGroupPrefix + "/" + name)
 	quant := res[fullName]
 	quantP := &quant
 	quantP.Set(amt)
 	res[fullName] = quant
 }
 
-func addContainer(cont *[]v1.Container, name string) v1.ResourceList {
-	c := v1.Container{}
+func addContainer(cont *[]types.ContainerInfo, name string) types.ResourceList {
+	c := types.Container{}
 	c.Name = name
-	c.Resources.Requests = make(v1.ResourceList)
+	c.Resources.Requests = make(types.ResourceList)
 	*cont = append(*cont, c)
 	return c.Resources.Requests
 }
 
 // ResourceList is a map, no need for pointer
-func setResource(alloc v1.ResourceList, res map[string]int64, grpres map[string]int64) {
+func setResource(alloc types.ResourceList, res map[string]int64, grpres map[string]int64) {
 	// set resource
 	for key, val := range res {
 		setRes(alloc, key, val)
@@ -95,9 +94,9 @@ type nodeArgs struct {
 }
 
 func createNode(name string, res map[string]int64, grpres map[string]int64) (*schedulercache.NodeInfo, nodeArgs) {
-	alloc := v1.ResourceList{}
+	alloc := types.ResourceList{}
 	setResource(alloc, res, grpres)
-	node := v1.Node{ObjectMeta: v1.ObjectMeta{Name: name}, Status: v1.NodeStatus{Capacity: alloc, Allocatable: alloc}}
+	node := types.NodeInfo{Name: name, Capacity: alloc, Allocatable: alloc}
 	//fmt.Println("AA", node.Status.Allocatable)
 	nodeInfo := schedulercache.NewNodeInfo()
 	nodeInfo.SetNode(&node)
@@ -133,28 +132,27 @@ func setExpectedResources(c *cont) {
 			for keyRes := range c.grpres {
 				//matches := re.FindStringSubmatch(keyRes)
 				if strings.HasSuffix(key, prefix[keyRes]) {
-					newKey := v1.ResourceGroupPrefix + "/" + key + "/" + suffix[keyRes]
-					newVal := v1.ResourceGroupPrefix + "/" + val + "/" + suffix[keyRes]
+					newKey := types.ResourceGroupPrefix + "/" + key + "/" + suffix[keyRes]
+					newVal := types.ResourceGroupPrefix + "/" + val + "/" + suffix[keyRes]
 					expectedGrpLoc[newKey] = newVal
 				}
 				// if len(matches) >= 2 {
-				// 	newKey := v1.ResourceGroupPrefix + "/" + key + "/" + matches[1]
-				// 	newVal := v1.ResourceGroupPrefix + "/" + val + "/" + matches[1]
+				// 	newKey := types.ResourceGroupPrefix + "/" + key + "/" + matches[1]
+				// 	newVal := types.ResourceGroupPrefix + "/" + val + "/" + matches[1]
 				// 	expectedGrpLoc[newKey] = newVal
 				// }
 			}
 		} else {
-			newKey := v1.ResourceGroupPrefix + "/" + key + "/cards"
-			newVal := v1.ResourceGroupPrefix + "/" + val + "/cards"
+			newKey := types.ResourceGroupPrefix + "/" + key + "/cards"
+			newVal := types.ResourceGroupPrefix + "/" + val + "/cards"
 			expectedGrpLoc[newKey] = newVal
 		}
 	}
 	c.expectedGrpLoc = expectedGrpLoc
 }
 
-func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*v1.Pod, *PodEx) {
-	pod := v1.Pod{ObjectMeta: v1.ObjectMeta{Name: name}, Spec: v1.PodSpec{}}
-	spec := &pod.Spec
+func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*types.PodInfo, *PodEx) {
+	pod := types.PodInfo{Name: name}
 	pod.Spec.AllocatingResources = true
 
 	glog.V(2).Infof("Working on pod %s", pod.Name)

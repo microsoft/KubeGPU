@@ -11,8 +11,6 @@ import (
 	"github.com/golang/glog"
 
 	"strconv"
-
-	v1 "k8s.io/kubernetes/pkg/api"
 )
 
 type memoryInfo struct {
@@ -206,7 +204,7 @@ func (ngm *nvidiaGPUManager) Capacity() types.ResourceList {
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *nvidiaGPUManager) AllocateGPU(pod *v1.Pod, container *v1.Container) (string, string, []string, error) {
+func (ngm *nvidiaGPUManager) AllocateGPU(pod *types.PodInfo, container *types.ContainerInfo) (string, string, []string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""
@@ -217,7 +215,7 @@ func (ngm *nvidiaGPUManager) AllocateGPU(pod *v1.Pod, container *v1.Container) (
 	re := regexp.MustCompile(types.ResourceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
 
 	devices := []int{}
-	for _, res := range container.Resources.AllocateFrom {
+	for _, res := range container.AllocateFrom {
 		glog.V(4).Infof("PodName: %v -- searching for device UID: %v", pod.Name, res)
 		matches := re.FindStringSubmatch(string(res))
 		if len(matches) >= 2 {

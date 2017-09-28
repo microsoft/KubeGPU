@@ -7,8 +7,6 @@ import (
 	"github.com/MSRCCS/grpalloc/types"
 
 	"strconv"
-
-	"k8s.io/kubernetes/pkg/api/v1"
 )
 
 const (
@@ -71,12 +69,12 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 }
 
 func testAlloc(t *testing.T, ngm types.DeviceManager, info *gpusInfo, alloc map[int]int) {
-	container := v1.Container{}
+	container := types.ContainerInfo{}
 	allocFrom := make(types.ResourceLocation)
 	for from, to := range alloc {
 		setAllocFrom(info, allocFrom, from, to)
 	}
-	pod := v1.Pod{}
+	pod := types.PodInfo{}
 	pod.Name = "TestPod"
 	volumesGet, devicesGet, err := ngm.AllocateDevices(&pod, &container)
 	if err != nil {

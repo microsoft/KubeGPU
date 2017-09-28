@@ -1,9 +1,6 @@
 package devicemanager
 
-import (
-	"github.com/MSRCCS/grpalloc/types"
-	"k8s.io/kubernetes/pkg/api/v1"
-)
+import "github.com/MSRCCS/grpalloc/types"
 
 // DeviceManager manages multiple devices
 type DevicesManager struct {
@@ -43,7 +40,7 @@ func (d *DevicesManager) Capacity() types.ResourceList {
 }
 
 // AllocateDevices allocates devices using device manager interface
-func (d *DevicesManager) AllocateDevices(pod *v1.Pod, cont *v1.Container) ([]types.Volume, []string, error) {
+func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.ContainerInfo) ([]types.Volume, []string, error) {
 	volumes := []types.Volume{}
 	devices := []string{}
 	var errRet error
