@@ -51,17 +51,3 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 
 	return containerRequests, nil
 }
-
-// translate all resources
-func TranslateResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	for _, cont := range podInfo.InitContainers {
-		// translate gpu resources
-		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
-	}
-	for _, cont := range podInfo.RunningContainers {
-		// translate gpu resources
-		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
-	}
-}
