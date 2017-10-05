@@ -1,6 +1,9 @@
 package devicemanager
 
-import "github.com/MSRCCS/grpalloc/types"
+import (
+	"github.com/MSRCCS/grpalloc/gpu"
+	"github.com/MSRCCS/grpalloc/types"
+)
 
 // DeviceManager manages multiple devices
 type DevicesManager struct {
@@ -57,4 +60,18 @@ func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.Contain
 		}
 	}
 	return volumes, devices, errRet
+}
+
+// translate all resources
+func TranslateResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
+	for _, cont := range podInfo.InitContainers {
+		// translate gpu resources
+		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
+		gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
+	}
+	for _, cont := range podInfo.RunningContainers {
+		// translate gpu resources
+		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
+		gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
+	}
 }

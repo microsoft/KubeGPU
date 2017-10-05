@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MSRCCS/grpalloc/grpalloc"
+	"github.com/MSRCCS/grpalloc/grpalloc/resource"
 	"github.com/MSRCCS/grpalloc/types"
 	"github.com/golang/glog"
 
@@ -196,15 +196,15 @@ func (ngm *nvidiaGPUManager) Capacity() types.ResourceList {
 	}
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
-			grpalloc.AddGroupResource(resourceList, val.Name+"/memory", val.Memory.Global)
-			grpalloc.AddGroupResource(resourceList, val.Name+"/cards", int64(1))
+			resource.AddGroupResource(resourceList, val.Name+"/memory", val.Memory.Global)
+			resource.AddGroupResource(resourceList, val.Name+"/cards", int64(1))
 		}
 	}
 	return resourceList
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *nvidiaGPUManager) AllocateGPU(pod *types.PodInfo, container *types.ContainerInfo) (string, string, []string, error) {
+func (ngm *nvidiaGPUManager) AllocateDevices(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""
@@ -232,7 +232,7 @@ func (ngm *nvidiaGPUManager) AllocateGPU(pod *types.PodInfo, container *types.Co
 	body, err := np.GetGPUCommandLine(devices)
 	glog.V(3).Infof("PodName: %v Command line from plugin: %v", pod.Name, string(body))
 	if err != nil {
-		return "", "", nil, err
+		return []types.Volume{}, nil, err
 	}
 
 	re = regexp.MustCompile(`(.*?)=(.*)`)
@@ -258,5 +258,5 @@ func (ngm *nvidiaGPUManager) AllocateGPU(pod *types.PodInfo, container *types.Co
 		}
 	}
 
-	return volumeName, volumeDriver, gpuList, nil
+	return []types.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil
 }

@@ -70,9 +70,9 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 
 func testAlloc(t *testing.T, ngm types.DeviceManager, info *gpusInfo, alloc map[int]int) {
 	container := types.ContainerInfo{}
-	allocFrom := make(types.ResourceLocation)
+	container.AllocateFrom = make(types.ResourceLocation)
 	for from, to := range alloc {
-		setAllocFrom(info, allocFrom, from, to)
+		setAllocFrom(info, container.AllocateFrom, from, to)
 	}
 	pod := types.PodInfo{}
 	pod.Name = "TestPod"
@@ -118,6 +118,8 @@ func TestAlloc(t *testing.T) {
 		capExpected[string(types.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/cards"] = 1
 		capExpected[string(types.ResourceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/memory"] = info.Gpus[i].Memory.Global * int64(1024) * int64(1024)
 	}
+	//fmt.Println("CapacityExpected")
+	//fmt.Println(ngm.Capacity())
 	assertMapEqual(t, cap, capExpected)
 
 	// test alloc GPU00

@@ -1,13 +1,15 @@
 package grpalloc
 
 import (
+	"bytes"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"math"
 	"strings"
 	"testing"
 
-	"k8s.io/client-go/pkg/api/v1"
+	"github.com/MSRCCS/grpalloc/devicemanager"
 
 	"github.com/MSRCCS/grpalloc/types"
 	"github.com/golang/glog"
@@ -24,6 +26,7 @@ type cont struct {
 
 type PodEx struct {
 	pod           *types.PodInfo
+	podOrig       *types.PodInfo
 	expectedScore float64
 	icont         []cont
 	rcont         []cont
@@ -93,9 +96,9 @@ func createNode(name string, res map[string]int64, grpres map[string]int64) (*ty
 	setResource(alloc, res, grpres)
 	node := types.NodeInfo{Name: name, Capacity: alloc, Allocatable: alloc}
 
-	glog.V(7).Infoln("AllocatableResource", len(nodeInfo.Allocatable), nodeInfo.Allocatable)
+	glog.V(7).Infoln("AllocatableResource", len(node.Allocatable), node.Allocatable)
 
-	return node, nodeArgs{name: name, res: res, grpres: grpres}
+	return &node, nodeArgs{name: name, res: res, grpres: grpres}
 }
 
 func createNodeArgs(args *nodeArgs) *types.NodeInfo {
@@ -152,26 +155,40 @@ func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*ty
 
 	for index, icont := range iconts {
 		setExpectedResources(&iconts[index])
-		contR = addContainer(&spec.InitContainers, icont.name)
+		contR = addContainer(&pod.InitContainers, icont.name)
 		setResource(contR, icont.res, icont.grpres)
-		glog.V(7).Infoln(icont.name, spec.InitContainers[index].Resources.Requests)
+		glog.V(7).Infoln(icont.name, pod.InitContainers[index].Requests)
 	}
 	for index, rcont := range rconts {
 		setExpectedResources(&rconts[index])
-		contR = addContainer(&spec.Containers, rcont.name)
+		contR = addContainer(&pod.RunningContainers, rcont.name)
 		setResource(contR, rcont.res, rcont.grpres)
-		glog.V(7).Infoln(rcont.name, spec.Containers[index].Resources.Requests)
+		glog.V(7).Infoln(rcont.name, pod.RunningContainers[index].Requests)
 	}
 
-	podEx := PodEx{pod: &pod, icont: iconts, rcont: rconts, expectedScore: expScore}
+	podEx := PodEx{podOrig: nil, pod: &pod, icont: iconts, rcont: rconts, expectedScore: expScore}
 
 	return &pod, &podEx
 }
 
-func sampleTest(pod *v1.Pod, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+func translatePod(node *types.NodeInfo, podEx *PodEx) {
+	buffer := &bytes.Buffer{}
+	enc := gob.NewEncoder(buffer)
+	dec := gob.NewDecoder(buffer)
+	if podEx.podOrig == nil {
+		//deep copy
+		enc.Encode(podEx.pod)
+		dec.Decode(&podEx.podOrig)
+	} else {
+		enc.Encode(podEx.podOrig)
+		dec.Decode(&podEx.pod)
+	}
+	devicemanager.TranslateResources(node, podEx.pod)
+}
+
+func sampleTest(pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	// now perform allocation
-	spec := &pod.Spec
-	found, reasons, score := PodFitsGroupConstraints(nodeInfo, spec)
+	found, reasons, score := PodFitsGroupConstraints(nodeInfo, pod, true)
 	//fmt.Println("AllocatedFromF", spec.InitContainers[0].Resources)
 	fmt.Printf("Test %d\n", testCnt)
 	fmt.Printf("Found: %t Score: %f\n", found, score)
@@ -180,37 +197,34 @@ func sampleTest(pod *v1.Pod, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int
 		fmt.Println(reason.GetReason())
 	}
 	if found {
-		printPodAllocation(spec)
-		usedResources, _ := nodeInfo.ComputePodGroupResources(spec, false)
-		node := nodeInfo.Node()
-		spec.NodeName = node.ObjectMeta.Name
-
-		updatedNode := types.NewNodeInfo(pod)
+		printPodAllocation(pod)
+		usedResources, _ := ComputePodGroupResources(nodeInfo, pod, false)
+		TakePodGroupResource(nodeInfo, pod)
 
 		for usedRes, usedAmt := range usedResources {
 			fmt.Println("Resource", usedRes, "AmtUsed", usedAmt)
 		}
-		for usedRes, usedAmt := range updatedNode.RequestedResource().OpaqueIntResources {
+		for usedRes, usedAmt := range nodeInfo.Used {
 			fmt.Println("RequestedResource", usedRes, "Amt", usedAmt)
 		}
 	}
 }
 
-func testContainerAllocs(t *testing.T, conts []cont, podConts []v1.Container, testCnt int) {
+func testContainerAllocs(t *testing.T, conts []cont, podConts []types.ContainerInfo, testCnt int) {
 	if len(conts) != len(podConts) {
 		t.Errorf("Test %d Number of containers don't match - expected %v - have %v", testCnt, len(conts), len(podConts))
 		return
 	}
 	for ci, c := range conts {
-		if len(c.expectedGrpLoc) != len(podConts[ci].Resources.AllocateFrom) {
+		if len(c.expectedGrpLoc) != len(podConts[ci].AllocateFrom) {
 			t.Errorf("Test %d Container %s Number of resources don't match - expected %v %v - have %v %v",
 				testCnt, c.name,
 				len(c.expectedGrpLoc), c.expectedGrpLoc,
-				len(podConts[ci].Resources.AllocateFrom), podConts[ci].Resources.AllocateFrom)
+				len(podConts[ci].AllocateFrom), podConts[ci].AllocateFrom)
 			return
 		}
 		for key, val := range c.expectedGrpLoc {
-			valP, available := podConts[ci].Resources.AllocateFrom[v1.ResourceName(key)]
+			valP, available := podConts[ci].AllocateFrom[types.ResourceName(key)]
 			if !available {
 				t.Errorf("Test %d Container %s Expected key %v not available", testCnt, c.name, key)
 			} else if string(valP) != val {
@@ -251,8 +265,7 @@ func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.Node
 }
 
 func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
-	spec := &pod.Spec
-	found, _, score := PodFitsGroupConstraints(nodeInfo, spec, true)
+	found, _, score := PodFitsGroupConstraints(nodeInfo, pod, false)
 	if found {
 		if podEx.rcont[0].expectedGrpLoc == nil {
 			t.Errorf("Test %d Group allocation found when it should not be found", testCnt)
@@ -260,10 +273,10 @@ func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *typ
 			if math.Abs(score-podEx.expectedScore)/podEx.expectedScore > 0.01 {
 				t.Errorf("Test %d Score not correct - expected %v - have %v", testCnt, podEx.expectedScore, score)
 			}
-			testContainerAllocs(t, podEx.icont, pod.Spec.InitContainers, testCnt)
-			testContainerAllocs(t, podEx.rcont, pod.Spec.Containers, testCnt)
+			testContainerAllocs(t, podEx.icont, pod.InitContainers, testCnt)
+			testContainerAllocs(t, podEx.rcont, pod.RunningContainers, testCnt)
 			// repeat - now should go through findScoreAndUpdate path
-			found2, _, score2 := PodFitsGroupConstraints(nodeInfo, spec, true)
+			found2, _, score2 := PodFitsGroupConstraints(nodeInfo, pod, true)
 			if found2 != found || math.Abs(score-score2)/score > 0.01 {
 				t.Errorf("Test %d Repeat Score does not match - expected %v %v - have %v %v",
 					testCnt, found, score, found2, score2)
@@ -317,6 +330,7 @@ func TestGrpAllocate1(t *testing.T) {
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
@@ -348,6 +362,7 @@ func TestGrpAllocate1(t *testing.T) {
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
@@ -375,11 +390,12 @@ func TestGrpAllocate1(t *testing.T) {
 					"gpu/1": "gpu/dev3"},
 			},
 			{name: "Run1",
-				res:            map[string]int64{string(v1.ResourceNvidiaGPU): 1},
+				res:            map[string]int64{string(types.ResourceNvidiaGPU): 1},
 				expectedGrpLoc: map[string]string{"gpu/0": "gpu/dev2"},
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
@@ -427,6 +443,7 @@ func TestGrpAllocate1(t *testing.T) {
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
@@ -458,6 +475,7 @@ func TestGrpAllocate1(t *testing.T) {
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
@@ -488,6 +506,7 @@ func TestGrpAllocate1(t *testing.T) {
 			},
 		},
 	)
+	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
