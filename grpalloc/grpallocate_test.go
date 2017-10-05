@@ -1,5 +1,10 @@
 package grpalloc
 
+// to test: run
+// go test --args -log_dir=/home/sanjeevm/logs -v=10
+// "--args" separate arguments to binary (after compiling)
+// -log_dir=/home/sanjeevm/logs -v=10 are arguments to main program for logging
+
 import (
 	"bytes"
 	"encoding/gob"
@@ -66,10 +71,9 @@ func setGrpRes(res types.ResourceList, name string, amt int64) {
 }
 
 func addContainer(cont *[]types.ContainerInfo, name string) types.ResourceList {
-	c := types.ContainerInfo{}
+	c := types.NewContainerInfo()
 	c.Name = name
-	c.Requests = make(types.ResourceList)
-	*cont = append(*cont, c)
+	*cont = append(*cont, *c)
 	return c.Requests
 }
 
@@ -94,11 +98,14 @@ type nodeArgs struct {
 func createNode(name string, res map[string]int64, grpres map[string]int64) (*types.NodeInfo, nodeArgs) {
 	alloc := types.ResourceList{}
 	setResource(alloc, res, grpres)
-	node := types.NodeInfo{Name: name, Capacity: alloc, Allocatable: alloc}
+	node := types.NewNodeInfo()
+	node.Name = name
+	node.Capacity = alloc
+	node.Allocatable = alloc
 
 	glog.V(7).Infoln("AllocatableResource", len(node.Allocatable), node.Allocatable)
 
-	return &node, nodeArgs{name: name, res: res, grpres: grpres}
+	return node, nodeArgs{name: name, res: res, grpres: grpres}
 }
 
 func createNodeArgs(args *nodeArgs) *types.NodeInfo {
@@ -187,6 +194,8 @@ func translatePod(node *types.NodeInfo, podEx *PodEx) {
 }
 
 func sampleTest(pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+	//fmt.Printf("Node: %v\n", nodeInfo)
+	//fmt.Printf("Pod: %v\n", pod)
 	// now perform allocation
 	found, reasons, score := PodFitsGroupConstraints(nodeInfo, pod, true)
 	//fmt.Println("AllocatedFromF", spec.InitContainers[0].Resources)
@@ -265,7 +274,9 @@ func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.Node
 }
 
 func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
-	found, _, score := PodFitsGroupConstraints(nodeInfo, pod, false)
+	//fmt.Printf("Node: %v\n", nodeInfo)
+	//fmt.Printf("Pod: %v\n", pod)
+	found, _, score := PodFitsGroupConstraints(nodeInfo, pod, true)
 	if found {
 		if podEx.rcont[0].expectedGrpLoc == nil {
 			t.Errorf("Test %d Group allocation found when it should not be found", testCnt)

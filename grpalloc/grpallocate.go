@@ -1,78 +1,16 @@
 package grpalloc
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/MSRCCS/grpalloc/grpalloc/resource"
 	"github.com/MSRCCS/grpalloc/grpalloc/scorer"
 	"github.com/MSRCCS/grpalloc/types"
+	"github.com/MSRCCS/grpalloc/utils"
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
 )
-
-func toInterfaceArray(val interface{}) []interface{} {
-	t := reflect.TypeOf(val)
-	tv := reflect.ValueOf(val)
-	if t.Kind() == reflect.Array || t.Kind() == reflect.Slice {
-		a := make([]interface{}, tv.Len())
-		for i := 0; i < tv.Len(); i++ {
-			a[i] = tv.Index(i).Interface()
-		}
-		return a
-	}
-	panic("Not an array or slice")
-}
-
-func assignMapK(x interface{}, keys []interface{}, val interface{}) {
-	t := reflect.TypeOf(x)
-	if t.Kind() == reflect.Map {
-		mv := reflect.ValueOf(x)
-		key0, keyR := keys[0], keys[1:]
-		if len(keyR) == 0 {
-			// at end
-			mv.SetMapIndex(reflect.ValueOf(key0), reflect.ValueOf(val))
-		} else {
-			k := reflect.ValueOf(key0)
-			v := mv.MapIndex(k)
-			if v == reflect.ValueOf(nil) {
-				v = reflect.MakeMap(t.Elem())
-				mv.SetMapIndex(reflect.ValueOf(key0), v)
-			}
-			assignMapK(v.Interface(), keyR, val)
-		}
-	} else {
-		panic("Not a map")
-	}
-}
-
-func assignMap(x interface{}, keys interface{}, val interface{}) {
-	keysA := toInterfaceArray(keys)
-	assignMapK(x, keysA, val)
-}
-
-func getMapK(x interface{}, keys []interface{}) interface{} {
-	t := reflect.TypeOf(x)
-	if t.Kind() == reflect.Map {
-		mv := reflect.ValueOf(x)
-		key0, keyR := keys[0], keys[1:]
-		v := mv.MapIndex(reflect.ValueOf(key0))
-		if len(keyR) == 0 {
-			// at end
-			if v == reflect.ValueOf(nil) {
-				return reflect.Zero(t.Elem()).Interface()
-			}
-			return v.Interface()
-		}
-		return getMapK(v.Interface(), keyR)
-	}
-	panic("Not a map")
-}
-
-func getMap(x interface{}, keys interface{}) interface{} {
-	return getMapK(x, toInterfaceArray(keys))
-}
 
 // ===================================================
 
@@ -85,7 +23,7 @@ func findSubGroups(baseGroup string, grp map[string]string) (map[string](map[str
 	for grpKey, grpElem := range grp {
 		matches := re.FindStringSubmatch(grpElem)
 		if len(matches) >= 4 {
-			assignMap(subGrp, matches[1:], grpElem)
+			utils.AssignMap(subGrp, matches[1:], grpElem)
 			isSubGrp[grpKey] = true
 		} else {
 			isSubGrp[grpKey] = false
@@ -465,7 +403,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	glog.V(7).Infoln("Requests", contReq.Requests)
 	glog.V(7).Infoln("AllocatableRes", allocatable)
 	for reqRes, reqVal := range contReq.Requests {
-		if !scorer.PrecheckedResource(reqRes) {
+		if !resource.PrecheckedResource(reqRes) {
 			reqName[string(reqRes)] = string(reqRes)
 			req[string(reqRes)] = reqVal
 			scoreEnum, available := contReq.Scorer[reqRes]
@@ -491,8 +429,8 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 		grpName = matches[2]
 	}
 	for allocRes, allocVal := range allocatable {
-		if !scorer.PrecheckedResource(allocRes) {
-			assignMap(allocName, []string{grpName, string(allocRes)}, string(allocRes))
+		if !resource.PrecheckedResource(allocRes) {
+			utils.AssignMap(allocName, []string{grpName, string(allocRes)}, string(allocRes))
 			alloc[string(allocRes)] = allocVal
 		}
 	}
@@ -519,7 +457,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	var reasons []algorithm.PredicateFailureReason
 	var score float64
 
-	if contReq.AllocateFrom == nil {
+	if contReq.AllocateFrom == nil || (len(contReq.AllocateFrom) == 0 && len(req) > 0) {
 		found, reasons = grp.allocateGroup()
 		score = grp.Score
 		if bSetAllocateFrom {
@@ -589,7 +527,6 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 
 	// first go over running containers
 	for i := range spec.RunningContainers {
-		// gpu.TranslateGPUResources(n, &spec.RunningContainers[i]) // TODO move outside
 		grp, fits, reasons, score := containerFitsGroupConstraints(&spec.RunningContainers[i], false, n.Allocatable,
 			scorer, podResource, nodeResource, usedGroups, true, allocating)
 		if fits == false {
@@ -605,7 +542,6 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 
 	// now go over initialization containers, try to reutilize used groups
 	for i := range spec.InitContainers {
-		//gpu.TranslateGPUResources(n, &spec.InitContainers[i]) // TODO move outside
 		// container.Resources.Requests contains a map, alloctable contains type Resource
 		// prefer groups which are already used by running containers
 		grp, fits, reasons, _ := containerFitsGroupConstraints(&spec.InitContainers[i], true, n.Allocatable,

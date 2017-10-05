@@ -93,6 +93,10 @@ func TranslateResource(nodeResources types.ResourceList, containerRequests types
 	return resourceModified, newList
 }
 
+func PrecheckedResource(constraint types.ResourceName) bool {
+	return !IsGroupResourceName(constraint)
+}
+
 // InsufficientResourceError is an error type that indicates what kind of resource limit is
 // hit and caused the unfitting failure.
 type InsufficientResourceError struct {

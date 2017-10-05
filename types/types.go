@@ -30,6 +30,10 @@ type ContainerInfo struct {
 	Scorer       ResourceScorer
 }
 
+func NewContainerInfo() *ContainerInfo {
+	return &ContainerInfo{Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer)}
+}
+
 type PodInfo struct {
 	Name string
 	// requests
@@ -43,6 +47,11 @@ type NodeInfo struct {
 	Allocatable ResourceList // capacity minus reserverd
 	Used        ResourceList // being used by pods, must be less than allocatable
 	Scorer      ResourceScorer
+}
+
+func NewNodeInfo() *NodeInfo {
+	return &NodeInfo{Capacity: make(ResourceList), Allocatable: make(ResourceList),
+		Used: make(ResourceList), Scorer: make(ResourceScorer)}
 }
 
 type Volume struct {
