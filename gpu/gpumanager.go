@@ -10,8 +10,7 @@ import (
 )
 
 // TranslateGPUResources translates GPU resources to max level
-func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, containerRequests types.ResourceList) (
-	types.ResourceList, error) {
+func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, containerRequests types.ResourceList) types.ResourceList {
 
 	// First stage translation, translate # of cards to simple GPU resources - extra stage
 	re := regexp.MustCompile(types.ResourceGroupPrefix + `.*/gpu/(.*?)/cards`)
@@ -49,5 +48,5 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 		glog.V(3).Infoln("New Resources", containerRequests)
 	}
 
-	return containerRequests, nil
+	return containerRequests
 }

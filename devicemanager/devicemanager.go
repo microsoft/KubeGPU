@@ -62,16 +62,16 @@ func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.Contain
 	return volumes, devices, errRet
 }
 
-// translate all resources
+// translate all device resources
 func TranslateResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	for _, cont := range podInfo.InitContainers {
+	for index, cont := range podInfo.InitContainers {
 		// translate gpu resources
 		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
+		podInfo.InitContainers[index].Requests = gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
 	}
-	for _, cont := range podInfo.RunningContainers {
+	for index, cont := range podInfo.RunningContainers {
 		// translate gpu resources
 		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
+		podInfo.RunningContainers[index].Requests = gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
 	}
 }

@@ -204,6 +204,7 @@ func (grp *GrpAllocator) allocateSubGroups(
 		subgrpsElemGrp := subgrpsReq[subgrpsKey]
 		sortedSubgrpsElemGrp := types.SortedStringKeys(subgrpsElemGrp)
 		for _, subgrpsElemIndex := range sortedSubgrpsElemGrp {
+			glog.V(5).Infof("Allocating subgroup with key %v and index %v", subgrpsKey, subgrpsElemIndex)
 			subGrp := grp.createSubGroup(allocLocationName, subgrpsReq, subgrpsAllocRes, subgrpsKey, subgrpsElemIndex)
 			foundSubGrp, reasons := subGrp.allocateGroup()
 			if !foundSubGrp {
@@ -329,6 +330,7 @@ func (grp *GrpAllocator) allocateGroup() (bool, []algorithm.PredicateFailureReas
 
 	// go over all possible places to allocate
 	sortedGrpAllocResourceKeys := types.SortedStringKeys(grp.GrpAllocResource)
+	glog.V(7).Infof("All available resources locations: %v", sortedGrpAllocResourceKeys)
 	for _, grpsAllocResKey := range sortedGrpAllocResourceKeys {
 		grpCheck := grp.cloneGroup()
 		found, reasons := grpCheck.allocateGroupAt(grpsAllocResKey, subgrpsReq)
