@@ -3,7 +3,8 @@ package scorer
 import (
 	"math"
 
-	v1 "k8s.io/kubernetes/pkg/api"
+	resourcefn "github.com/MSRCCS/grpalloc/grpalloc/resource"
+	"github.com/MSRCCS/grpalloc/types"
 )
 
 // LeftoverScoreFunc provides default scoring function
@@ -105,10 +106,10 @@ func EnumScoreFunc(allocatable int64, usedByPod int64, usedByNode int64, request
 	return
 }
 
-// DefaultScorer returns default scorer given a name
-func DefaultScorer(resource v1.ResourceName) ResourceScoreFunc {
-	if !PrecheckedResource(resource) {
-		if !v1.IsEnumResource(resource) {
+// GetDefaultScorer returns default scorer given a name
+func GetDefaultScorer(resource types.ResourceName) ResourceScoreFunc {
+	if !resourcefn.PrecheckedResource(resource) {
+		if !resourcefn.IsEnumResource(resource) {
 			return LeftoverScoreFunc
 		}
 		return EnumScoreFunc
@@ -116,19 +117,15 @@ func DefaultScorer(resource v1.ResourceName) ResourceScoreFunc {
 	return nil
 }
 
-func SetScorer(resource v1.ResourceName, scorerType int32) ResourceScoreFunc {
-	if scorerType == v1.DefaultScorer {
-		return DefaultScorer(resource)
+func SetScorer(resource types.ResourceName, scorerType int32) ResourceScoreFunc {
+	if scorerType == types.DefaultScorer {
+		return GetDefaultScorer(resource)
 	}
-	if scorerType == v1.LeftOverScorer {
+	if scorerType == types.LeftOverScorer {
 		return LeftoverScoreFunc
 	}
-	if scorerType == v1.EnumLeftOverScorer {
+	if scorerType == types.EnumLeftOverScorer {
 		return EnumScoreFunc
 	}
 	return nil
-}
-
-func PrecheckedResource(constraint v1.ResourceName) bool {
-	return !v1.IsGroupResourceName(constraint)
 }
