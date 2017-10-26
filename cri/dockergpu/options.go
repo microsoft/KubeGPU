@@ -1,4 +1,4 @@
-package dockergpucri
+package main
 
 import (
 	"strings"
