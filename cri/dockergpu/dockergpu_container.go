@@ -1,18 +1,19 @@
 package main
 
 import (
+	goflag "flag"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
-	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/apis/componentconfig"
@@ -254,13 +255,42 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 // 	}
 // }
 
+// WordSepNormalizeFunc changes all flags that contain "_" separators
+func WordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	if strings.Contains(name, "_") {
+		return pflag.NormalizedName(strings.Replace(name, "_", "-", -1))
+	}
+	return pflag.NormalizedName(name)
+}
+
+// WarnWordSepNormalizeFunc changes and warns for flags that contain "_" separators
+func WarnWordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	if strings.Contains(name, "_") {
+		nname := strings.Replace(name, "_", "-", -1)
+		glog.Warningf("%s is DEPRECATED and will be removed in a future version. Use %s instead.", name, nname)
+
+		return pflag.NormalizedName(nname)
+	}
+	return pflag.NormalizedName(name)
+}
+
+// InitFlags normalizes, parses, then logs the command line flags
+func InitFlags() {
+	pflag.CommandLine.SetNormalizeFunc(WordSepNormalizeFunc)
+	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	pflag.Parse()
+	pflag.VisitAll(func(flag *pflag.Flag) {
+		glog.V(4).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+	})
+}
+
 // ====================
 // Main
 func main() {
 	s := options.NewKubeletServer()
 	AddFlags(s, pflag.CommandLine)
 
-	flag.InitFlags()
+	InitFlags()
 	logs.InitLogs()
 	defer logs.FlushLogs()
 

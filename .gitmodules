@@ -1,4 +1,4 @@
 [submodule "vendor/k8s.io/kubernetes"]
 	path = vendor/k8s.io/kubernetes
 	url = http://github.com/sanjeevm0/kubernetes
-	branch = release-1.7-grpallocate
+	branch = release-1.8-grpallocate
