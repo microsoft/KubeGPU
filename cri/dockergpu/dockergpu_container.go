@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	goflag "flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
@@ -66,8 +67,8 @@ func (d *dockerGPUService) ContainerStatus(containerID string) (*runtimeapi.Cont
 	return d.dockerService.ContainerStatus(containerID)
 }
 
-func (d *dockerGPUService) UpdateContainerResources(ctx context.Context, r *runtimeapi.UpdateContainerResourcesRequest) (*runtimeapi.UpdateContainerResourcesResponse, error) {
-	return d.dockerService.UpdateContainerResources(ctx, r)
+func (d *dockerGPUService) UpdateContainerResources(containerID string, resources *runtimeapi.LinuxContainerResources) error {
+	return d.dockerService.UpdateContainerResources(containerID, resources)
 }
 
 func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
@@ -184,28 +185,26 @@ func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.Con
 		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
 	}
 
-	ds, err := dockershim.NewDockerService(dockerClient, c.SeccompProfileRoot, r.PodSandboxImage,
-		streamingConfig, &pluginSettings, c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory,
-		r.DockerDisableSharedPID)
-
-	dsGpu := &dockerGPUService{dockerService: ds}
-
+	ds, err := dockershim.NewDockerService(dockerClient, r.PodSandboxImage, streamingConfig, &pluginSettings,
+		c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory, r.DockerDisableSharedPID)
 	if err != nil {
 		return err
 	}
-	if err := dsGpu.Start(); err != nil {
+	if err := ds.Start(); err != nil {
 		return err
 	}
 
+	dsGPU := &dockerGPUService{dockerService: ds}
+
 	glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
-	server := dockerremote.NewDockerServer(c.RemoteRuntimeEndpoint, dsGpu)
+	server := dockerremote.NewDockerServer(c.RemoteRuntimeEndpoint, dsGPU)
 	if err := server.Start(); err != nil {
 		return err
 	}
 
-	// Start the streaming server - blocks?
+	// Start the streaming server
 	addr := net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port)))
-	return http.ListenAndServe(addr, dsGpu)
+	return http.ListenAndServe(addr, ds)
 }
 
 // Gets the streaming server configuration to use with in-process CRI shims.
@@ -290,18 +289,62 @@ func InitFlags() {
 
 // ====================
 // Main
-func main() {
-	s := options.NewKubeletServer()
-	AddFlags(s, pflag.CommandLine)
+func die(err error) {
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	os.Exit(1)
+}
 
+func main() {
+	// construct KubeletFlags object and register command line flags mapping
+	kubeletFlags := options.NewKubeletFlags()
+	kubeletFlags.AddFlags(pflag.CommandLine)
+
+	// construct KubeletConfiguration object and register command line flags mapping
+	defaultConfig, err := options.NewKubeletConfiguration()
+	if err != nil {
+		die(err)
+	}
+	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
+
+	// parse the command line flags into the respective objects
 	InitFlags()
+
+	// initialize logging and defer flush
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
+	// short-circuit on verflag
 	verflag.PrintAndExitIfRequested()
 
+	// validate the initial KubeletFlags, to make sure the dynamic-config-related flags aren't used unless the feature gate is on
+	if err := options.ValidateKubeletFlags(kubeletFlags); err != nil {
+		die(err)
+	}
+	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
+	// feature gates and only turn on relevant parts of the controller
+	kubeletConfig, kubeletConfigController, err := app.BootstrapKubeletConfigController(
+		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
+	if err != nil {
+		die(err)
+	}
+
+	// construct a KubeletServer from kubeletFlags and kubeletConfig
+	kubeletServer := &options.KubeletServer{
+		KubeletFlags:         *kubeletFlags,
+		KubeletConfiguration: *kubeletConfig,
+	}
+
+	// use kubeletServer to construct the default KubeletDeps
+	kubeletDeps, err := app.UnsecuredDependencies(kubeletServer)
+	if err != nil {
+		die(err)
+	}
+
+	// add the kubelet config controller to kubeletDeps
+	kubeletDeps.KubeletConfigController = kubeletConfigController
+
 	// run the gpushim
-	if err := DockerGPUInit(&s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
+	if err := DockerGPUInit(kubeletConfig, &kubeletFlags.ContainerRuntimeOptions); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
