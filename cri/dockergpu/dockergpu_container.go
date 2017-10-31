@@ -1,23 +1,24 @@
-package dockergpucri
+package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
-	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	"k8s.io/kubernetes/pkg/apis/componentconfig"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
+	kubeletconfiginternal "k8s.io/kubernetes/pkg/kubelet/apis/kubeletconfig"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
@@ -65,6 +66,10 @@ func (d *dockerGPUService) ContainerStatus(containerID string) (*runtimeapi.Cont
 	return d.dockerService.ContainerStatus(containerID)
 }
 
+func (d *dockerGPUService) UpdateContainerResources(ctx context.Context, r *runtimeapi.UpdateContainerResourcesRequest) (*runtimeapi.UpdateContainerResourcesResponse, error) {
+	return d.dockerService.UpdateContainerResources(ctx, r)
+}
+
 func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
 	return d.dockerService.ExecSync(containerID, cmd, timeout)
 }
@@ -103,12 +108,12 @@ func (d *dockerGPUService) PortForward(req *runtimeapi.PortForwardRequest) (*run
 }
 
 // DockerService => RuntimeService => ContainerStatsManager
-func (d *dockerGPUService) ContainerStats(req *runtimeapi.ContainerStatsRequest) (*runtimeapi.ContainerStatsResponse, error) {
-	return d.dockerService.ContainerStats(req)
+func (d *dockerGPUService) ContainerStats(containerID string) (*runtimeapi.ContainerStats, error) {
+	return d.dockerService.ContainerStats(containerID)
 }
 
-func (d *dockerGPUService) ListContainerStats(req *runtimeapi.ListContainerStatsRequest) (*runtimeapi.ListContainerStatsResponse, error) {
-	return d.dockerService.ListContainerStats(req)
+func (d *dockerGPUService) ListContainerStats(filter *runtimeapi.ContainerStatsFilter) ([]*runtimeapi.ContainerStats, error) {
+	return d.dockerService.ListContainerStats(filter)
 }
 
 // DockerService => RuntimeService
@@ -137,8 +142,8 @@ func (d *dockerGPUService) RemoveImage(image *runtimeapi.ImageSpec) error {
 	return d.dockerService.RemoveImage(image)
 }
 
-func (d *dockerGPUService) ImageFsInfo(req *runtimeapi.ImageFsInfoRequest) (*runtimeapi.ImageFsInfoResponse, error) {
-	return d.dockerService.ImageFsInfo(req)
+func (d *dockerGPUService) ImageFsInfo() ([]*runtimeapi.FilesystemUsage, error) {
+	return d.dockerService.ImageFsInfo()
 }
 
 // DockerService => http.Handler
@@ -148,7 +153,7 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 
 // =====================
 // Start the shim
-func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
+func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
 		r.ImagePullProgressDeadline.Duration)
@@ -160,7 +165,7 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 	}
 	nh := &kubelet.NoOpLegacyHost{}
 	pluginSettings := dockershim.NetworkPluginSettings{
-		HairpinMode:       componentconfig.HairpinMode(c.HairpinMode),
+		HairpinMode:       kubeletconfiginternal.HairpinMode(c.HairpinMode),
 		NonMasqueradeCIDR: c.NonMasqueradeCIDR,
 		PluginName:        r.NetworkPluginName,
 		PluginConfDir:     r.CNIConfDir,
@@ -254,13 +259,42 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 // 	}
 // }
 
+// WordSepNormalizeFunc changes all flags that contain "_" separators
+func WordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	if strings.Contains(name, "_") {
+		return pflag.NormalizedName(strings.Replace(name, "_", "-", -1))
+	}
+	return pflag.NormalizedName(name)
+}
+
+// WarnWordSepNormalizeFunc changes and warns for flags that contain "_" separators
+func WarnWordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
+	if strings.Contains(name, "_") {
+		nname := strings.Replace(name, "_", "-", -1)
+		glog.Warningf("%s is DEPRECATED and will be removed in a future version. Use %s instead.", name, nname)
+
+		return pflag.NormalizedName(nname)
+	}
+	return pflag.NormalizedName(name)
+}
+
+// InitFlags normalizes, parses, then logs the command line flags
+func InitFlags() {
+	pflag.CommandLine.SetNormalizeFunc(WordSepNormalizeFunc)
+	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	pflag.Parse()
+	pflag.VisitAll(func(flag *pflag.Flag) {
+		glog.V(4).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
+	})
+}
+
 // ====================
 // Main
 func main() {
 	s := options.NewKubeletServer()
 	AddFlags(s, pflag.CommandLine)
 
-	flag.InitFlags()
+	InitFlags()
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
