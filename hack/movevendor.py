@@ -4,9 +4,19 @@ import argparse
 import textwrap
 import re
 
-def copyOrLink(src, fd, dst, skippattern, isdir):
+#def splitPaths(pathToSplit):
+#    return pathToSplit.split('/')
+
+def removeRoot(rootdir, name):
+    m = re.match(os.path.normpath(rootdir)+'/(.*)', name)
+    return m.group(1)
+
+def copyOrLink(rootdir, src, fd, dst, skippattern, isdir):
     srcName = os.path.join(src, fd)
-    dstName = os.path.join(dst, fd)
+    #srcPaths = splitPaths(srcName)
+    #exit()
+    #dstName = os.path.join(dst, *(srcPaths[2:]))
+    dstName = os.path.join(dst, removeRoot(rootdir, srcName))
     if re.match(skippattern, srcName) is None:
         if os.path.islink(srcName):
             dstLinkTo = os.path.normpath(os.path.join(src, os.readlink(srcName)))
@@ -15,10 +25,10 @@ def copyOrLink(src, fd, dst, skippattern, isdir):
 def recurse(dir, dst, skippattern):
     for root, folders, files in os.walk(dir, topdown=True):
         for folder in folders:
-            copyOrLink(root, folder, dst, skippattern, True)
+            copyOrLink(dir, root, folder, dst, skippattern, True)
             #print os.path.join(root,folder)
         for file in files:
-            copyOrLink(root, file, dst, skippattern, False)
+            copyOrLink(dir, root, file, dst, skippattern, False)
             #print os.path.join(root,file)
 
 if __name__ == '__main__':
