@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -14,10 +21,9 @@ go_library(
         "transformer.go",
         "trieval.go",
     ],
-    visibility = ["//visibility:public"],
+    tags = ["automanaged"],
     deps = [
         "//vendor/golang.org/x/text/cases:go_default_library",
-        "//vendor/golang.org/x/text/language:go_default_library",
         "//vendor/golang.org/x/text/runes:go_default_library",
         "//vendor/golang.org/x/text/secure/bidirule:go_default_library",
         "//vendor/golang.org/x/text/transform:go_default_library",
@@ -37,5 +43,4 @@ filegroup(
     name = "all-srcs",
     srcs = [":package-srcs"],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

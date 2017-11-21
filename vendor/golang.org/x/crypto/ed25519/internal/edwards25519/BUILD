@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -6,7 +13,7 @@ go_library(
         "const.go",
         "edwards25519.go",
     ],
-    visibility = ["//vendor/golang.org/x/crypto/ed25519:__subpackages__"],
+    tags = ["automanaged"],
 )
 
 filegroup(
@@ -20,5 +27,4 @@ filegroup(
     name = "all-srcs",
     srcs = [":package-srcs"],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

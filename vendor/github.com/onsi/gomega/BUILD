@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -6,7 +13,7 @@ go_library(
         "gomega_dsl.go",
         "matchers.go",
     ],
-    visibility = ["//visibility:public"],
+    tags = ["automanaged"],
     deps = [
         "//vendor/github.com/onsi/gomega/internal/assertion:go_default_library",
         "//vendor/github.com/onsi/gomega/internal/asyncassertion:go_default_library",
@@ -37,5 +44,4 @@ filegroup(
         "//vendor/github.com/onsi/gomega/types:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

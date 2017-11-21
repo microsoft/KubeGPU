@@ -32,64 +32,54 @@ func ExtractServersInto(r pagination.Page, v interface{}) error {
 	return r.(ServerPage).Result.ExtractIntoSlicePtr(v, "servers")
 }
 
-// CreateResult is the response from a Create operation. Call its Extract
-// method to interpret it as a Server.
+// CreateResult temporarily contains the response from a Create call.
 type CreateResult struct {
 	serverResult
 }
 
-// GetResult is the response from a Get operation. Call its Extract
-// method to interpret it as a Server.
+// GetResult temporarily contains the response from a Get call.
 type GetResult struct {
 	serverResult
 }
 
-// UpdateResult is the response from an Update operation. Call its Extract
-// method to interpret it as a Server.
+// UpdateResult temporarily contains the response from an Update call.
 type UpdateResult struct {
 	serverResult
 }
 
-// DeleteResult is the response from a Delete operation. Call its ExtractErr
-// method to determine if the call succeeded or failed.
+// DeleteResult temporarily contains the response from a Delete call.
 type DeleteResult struct {
 	gophercloud.ErrResult
 }
 
-// RebuildResult is the response from a Rebuild operation. Call its Extract
-// method to interpret it as a Server.
+// RebuildResult temporarily contains the response from a Rebuild call.
 type RebuildResult struct {
 	serverResult
 }
 
-// ActionResult represents the result of server action operations, like reboot.
-// Call its ExtractErr method to determine if the action succeeded or failed.
+// ActionResult represents the result of server action operations, like reboot
 type ActionResult struct {
 	gophercloud.ErrResult
 }
 
-// RescueResult is the response from a Rescue operation. Call its ExtractErr
-// method to determine if the call succeeded or failed.
+// RescueResult represents the result of a server rescue operation
 type RescueResult struct {
 	ActionResult
 }
 
-// CreateImageResult is the response from a CreateImage operation. Call its
-// ExtractImageID method to retrieve the ID of the newly created image.
+// CreateImageResult represents the result of an image creation operation
 type CreateImageResult struct {
 	gophercloud.Result
 }
 
 // GetPasswordResult represent the result of a get os-server-password operation.
-// Call its ExtractPassword method to retrieve the password.
 type GetPasswordResult struct {
 	gophercloud.Result
 }
 
 // ExtractPassword gets the encrypted password.
 // If privateKey != nil the password is decrypted with the private key.
-// If privateKey == nil the encrypted password is returned and can be decrypted
-// with:
+// If privateKey == nil the encrypted password is returned and can be decrypted with:
 //   echo '<pwd>' | base64 -D | openssl rsautl -decrypt -inkey <private_key>
 func (r GetPasswordResult) ExtractPassword(privateKey *rsa.PrivateKey) (string, error) {
 	var s struct {
@@ -117,7 +107,7 @@ func decryptPassword(encryptedPassword string, privateKey *rsa.PrivateKey) (stri
 	return string(password), nil
 }
 
-// ExtractImageID gets the ID of the newly created server image from the header.
+// ExtractImageID gets the ID of the newly created server image from the header
 func (r CreateImageResult) ExtractImageID() (string, error) {
 	if r.Err != nil {
 		return "", r.Err
@@ -143,73 +133,44 @@ func (r RescueResult) Extract() (string, error) {
 	return s.AdminPass, err
 }
 
-// Server represents a server/instance in the OpenStack cloud.
+// Server exposes only the standard OpenStack fields corresponding to a given server on the user's account.
 type Server struct {
-	// ID uniquely identifies this server amongst all other servers,
-	// including those not accessible to the current tenant.
+	// ID uniquely identifies this server amongst all other servers, including those not accessible to the current tenant.
 	ID string `json:"id"`
-
 	// TenantID identifies the tenant owning this server resource.
 	TenantID string `json:"tenant_id"`
-
 	// UserID uniquely identifies the user account owning the tenant.
 	UserID string `json:"user_id"`
-
 	// Name contains the human-readable name for the server.
 	Name string `json:"name"`
-
-	// Updated and Created contain ISO-8601 timestamps of when the state of the
-	// server last changed, and when it was created.
+	// Updated and Created contain ISO-8601 timestamps of when the state of the server last changed, and when it was created.
 	Updated time.Time `json:"updated"`
 	Created time.Time `json:"created"`
-
-	// HostID is the host where the server is located in the cloud.
-	HostID string `json:"hostid"`
-
-	// Status contains the current operational status of the server,
-	// such as IN_PROGRESS or ACTIVE.
+	HostID  string    `json:"hostid"`
+	// Status contains the current operational status of the server, such as IN_PROGRESS or ACTIVE.
 	Status string `json:"status"`
-
 	// Progress ranges from 0..100.
 	// A request made against the server completes only once Progress reaches 100.
 	Progress int `json:"progress"`
-
-	// AccessIPv4 and AccessIPv6 contain the IP addresses of the server,
-	// suitable for remote access for administration.
+	// AccessIPv4 and AccessIPv6 contain the IP addresses of the server, suitable for remote access for administration.
 	AccessIPv4 string `json:"accessIPv4"`
 	AccessIPv6 string `json:"accessIPv6"`
-
-	// Image refers to a JSON object, which itself indicates the OS image used to
-	// deploy the server.
+	// Image refers to a JSON object, which itself indicates the OS image used to deploy the server.
 	Image map[string]interface{} `json:"-"`
-
-	// Flavor refers to a JSON object, which itself indicates the hardware
-	// configuration of the deployed server.
+	// Flavor refers to a JSON object, which itself indicates the hardware configuration of the deployed server.
 	Flavor map[string]interface{} `json:"flavor"`
-
-	// Addresses includes a list of all IP addresses assigned to the server,
-	// keyed by pool.
+	// Addresses includes a list of all IP addresses assigned to the server, keyed by pool.
 	Addresses map[string]interface{} `json:"addresses"`
-
-	// Metadata includes a list of all user-specified key-value pairs attached
-	// to the server.
+	// Metadata includes a list of all user-specified key-value pairs attached to the server.
 	Metadata map[string]string `json:"metadata"`
-
-	// Links includes HTTP references to the itself, useful for passing along to
-	// other APIs that might want a server reference.
+	// Links includes HTTP references to the itself, useful for passing along to other APIs that might want a server reference.
 	Links []interface{} `json:"links"`
-
 	// KeyName indicates which public key was injected into the server on launch.
 	KeyName string `json:"key_name"`
-
-	// AdminPass will generally be empty ("").  However, it will contain the
-	// administrative password chosen when provisioning a new server without a
-	// set AdminPass setting in the first place.
+	// AdminPass will generally be empty ("").  However, it will contain the administrative password chosen when provisioning a new server without a set AdminPass setting in the first place.
 	// Note that this is the ONLY time this field will be valid.
 	AdminPass string `json:"adminPass"`
-
-	// SecurityGroups includes the security groups that this instance has applied
-	// to it.
+	// SecurityGroups includes the security groups that this instance has applied to it
 	SecurityGroups []map[string]interface{} `json:"security_groups"`
 }
 
@@ -239,10 +200,9 @@ func (r *Server) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-// ServerPage abstracts the raw results of making a List() request against
-// the API. As OpenStack extensions may freely alter the response bodies of
-// structures returned to the client, you may only safely access the data
-// provided through the ExtractServers call.
+// ServerPage abstracts the raw results of making a List() request against the API.
+// As OpenStack extensions may freely alter the response bodies of structures returned to the client, you may only safely access the
+// data provided through the ExtractServers call.
 type ServerPage struct {
 	pagination.LinkedPageBase
 }
@@ -253,8 +213,7 @@ func (r ServerPage) IsEmpty() (bool, error) {
 	return len(s) == 0, err
 }
 
-// NextPageURL uses the response's embedded link reference to navigate to the
-// next page of results.
+// NextPageURL uses the response's embedded link reference to navigate to the next page of results.
 func (r ServerPage) NextPageURL() (string, error) {
 	var s struct {
 		Links []gophercloud.Link `json:"servers_links"`
@@ -266,59 +225,49 @@ func (r ServerPage) NextPageURL() (string, error) {
 	return gophercloud.ExtractNextURL(s.Links)
 }
 
-// ExtractServers interprets the results of a single page from a List() call,
-// producing a slice of Server entities.
+// ExtractServers interprets the results of a single page from a List() call, producing a slice of Server entities.
 func ExtractServers(r pagination.Page) ([]Server, error) {
 	var s []Server
 	err := ExtractServersInto(r, &s)
 	return s, err
 }
 
-// MetadataResult contains the result of a call for (potentially) multiple
-// key-value pairs. Call its Extract method to interpret it as a
-// map[string]interface.
+// MetadataResult contains the result of a call for (potentially) multiple key-value pairs.
 type MetadataResult struct {
 	gophercloud.Result
 }
 
-// GetMetadataResult contains the result of a Get operation. Call its Extract
-// method to interpret it as a map[string]interface.
+// GetMetadataResult temporarily contains the response from a metadata Get call.
 type GetMetadataResult struct {
 	MetadataResult
 }
 
-// ResetMetadataResult contains the result of a Reset operation. Call its
-// Extract method to interpret it as a map[string]interface.
+// ResetMetadataResult temporarily contains the response from a metadata Reset call.
 type ResetMetadataResult struct {
 	MetadataResult
 }
 
-// UpdateMetadataResult contains the result of an Update operation. Call its
-// Extract method to interpret it as a map[string]interface.
+// UpdateMetadataResult temporarily contains the response from a metadata Update call.
 type UpdateMetadataResult struct {
 	MetadataResult
 }
 
-// MetadatumResult contains the result of a call for individual a single
-// key-value pair.
+// MetadatumResult contains the result of a call for individual a single key-value pair.
 type MetadatumResult struct {
 	gophercloud.Result
 }
 
-// GetMetadatumResult contains the result of a Get operation. Call its Extract
-// method to interpret it as a map[string]interface.
+// GetMetadatumResult temporarily contains the response from a metadatum Get call.
 type GetMetadatumResult struct {
 	MetadatumResult
 }
 
-// CreateMetadatumResult contains the result of a Create operation. Call its
-// Extract method to interpret it as a map[string]interface.
+// CreateMetadatumResult temporarily contains the response from a metadatum Create call.
 type CreateMetadatumResult struct {
 	MetadatumResult
 }
 
-// DeleteMetadatumResult contains the result of a Delete operation. Call its
-// ExtractErr method to determine if the call succeeded or failed.
+// DeleteMetadatumResult temporarily contains the response from a metadatum Delete call.
 type DeleteMetadatumResult struct {
 	gophercloud.ErrResult
 }
@@ -347,10 +296,9 @@ type Address struct {
 	Address string `json:"addr"`
 }
 
-// AddressPage abstracts the raw results of making a ListAddresses() request
-// against the API. As OpenStack extensions may freely alter the response bodies
-// of structures returned to the client, you may only safely access the data
-// provided through the ExtractAddresses call.
+// AddressPage abstracts the raw results of making a ListAddresses() request against the API.
+// As OpenStack extensions may freely alter the response bodies of structures returned
+// to the client, you may only safely access the data provided through the ExtractAddresses call.
 type AddressPage struct {
 	pagination.SinglePageBase
 }
@@ -361,8 +309,8 @@ func (r AddressPage) IsEmpty() (bool, error) {
 	return len(addresses) == 0, err
 }
 
-// ExtractAddresses interprets the results of a single page from a
-// ListAddresses() call, producing a map of addresses.
+// ExtractAddresses interprets the results of a single page from a ListAddresses() call,
+// producing a map of addresses.
 func ExtractAddresses(r pagination.Page) (map[string][]Address, error) {
 	var s struct {
 		Addresses map[string][]Address `json:"addresses"`
@@ -371,11 +319,9 @@ func ExtractAddresses(r pagination.Page) (map[string][]Address, error) {
 	return s.Addresses, err
 }
 
-// NetworkAddressPage abstracts the raw results of making a
-// ListAddressesByNetwork() request against the API.
-// As OpenStack extensions may freely alter the response bodies of structures
-// returned to the client, you may only safely access the data provided through
-// the ExtractAddresses call.
+// NetworkAddressPage abstracts the raw results of making a ListAddressesByNetwork() request against the API.
+// As OpenStack extensions may freely alter the response bodies of structures returned
+// to the client, you may only safely access the data provided through the ExtractAddresses call.
 type NetworkAddressPage struct {
 	pagination.SinglePageBase
 }
@@ -386,8 +332,8 @@ func (r NetworkAddressPage) IsEmpty() (bool, error) {
 	return len(addresses) == 0, err
 }
 
-// ExtractNetworkAddresses interprets the results of a single page from a
-// ListAddressesByNetwork() call, producing a slice of addresses.
+// ExtractNetworkAddresses interprets the results of a single page from a ListAddressesByNetwork() call,
+// producing a slice of addresses.
 func ExtractNetworkAddresses(r pagination.Page) ([]Address, error) {
 	var s map[string][]Address
 	err := (r.(NetworkAddressPage)).ExtractInto(&s)

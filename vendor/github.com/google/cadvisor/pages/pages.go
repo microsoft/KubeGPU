@@ -77,25 +77,37 @@ func init() {
 
 func containerHandlerNoAuth(containerManager manager.Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		serveContainersPage(containerManager, w, r.URL)
+		err := serveContainersPage(containerManager, w, r.URL)
+		if err != nil {
+			fmt.Fprintf(w, "%s", err)
+		}
 	}
 }
 
 func containerHandler(containerManager manager.Manager) auth.AuthenticatedHandlerFunc {
 	return func(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-		serveContainersPage(containerManager, w, r.URL)
+		err := serveContainersPage(containerManager, w, r.URL)
+		if err != nil {
+			fmt.Fprintf(w, "%s", err)
+		}
 	}
 }
 
 func dockerHandlerNoAuth(containerManager manager.Manager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		serveDockerPage(containerManager, w, r.URL)
+		err := serveDockerPage(containerManager, w, r.URL)
+		if err != nil {
+			fmt.Fprintf(w, "%s", err)
+		}
 	}
 }
 
 func dockerHandler(containerManager manager.Manager) auth.AuthenticatedHandlerFunc {
 	return func(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-		serveDockerPage(containerManager, w, r.URL)
+		err := serveDockerPage(containerManager, w, r.URL)
+		if err != nil {
+			fmt.Fprintf(w, "%s", err)
+		}
 	}
 }
 

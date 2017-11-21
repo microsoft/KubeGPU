@@ -28,7 +28,6 @@ import (
 	"github.com/google/cadvisor/cache/memory"
 	"github.com/google/cadvisor/collector"
 	"github.com/google/cadvisor/container"
-	"github.com/google/cadvisor/container/crio"
 	"github.com/google/cadvisor/container/docker"
 	"github.com/google/cadvisor/container/raw"
 	"github.com/google/cadvisor/container/rkt"
@@ -102,11 +101,6 @@ type Manager interface {
 	// Get version information about different components we depend on.
 	GetVersionInfo() (*info.VersionInfo, error)
 
-	// GetFsInfoByFsUUID returns the information of the device having the
-	// specified filesystem uuid. If no such device with the UUID exists, this
-	// function will return the fs.ErrNoSuchDevice error.
-	GetFsInfoByFsUUID(uuid string) (v2.FsInfo, error)
-
 	// Get filesystem information for the filesystem that contains the given directory
 	GetDirFsInfo(dir string) (v2.FsInfo, error)
 
@@ -142,7 +136,7 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 	}
 
 	// Detect the container we are running on.
-	selfContainer, err := cgroups.GetOwnCgroupPath("cpu")
+	selfContainer, err := cgroups.GetThisCgroupDir("cpu")
 	if err != nil {
 		return nil, err
 	}
@@ -157,15 +151,6 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 		glog.Warningf("unable to connect to Rkt api service: %v", err)
 	}
 
-	crioClient, err := crio.Client()
-	if err != nil {
-		return nil, err
-	}
-	crioInfo, err := crioClient.Info()
-	if err != nil {
-		glog.Warningf("unable to connect to CRI-O api service: %v", err)
-	}
-
 	context := fs.Context{
 		Docker: fs.DockerContext{
 			Root:         docker.RootDir(),
@@ -173,9 +158,6 @@ func New(memoryCache *memory.InMemoryCache, sysfs sysfs.SysFs, maxHousekeepingIn
 			DriverStatus: dockerStatus.DriverStatus,
 		},
 		RktPath: rktPath,
-		Crio: fs.CrioContext{
-			Root: crioInfo.StorageRoot,
-		},
 	}
 	fsInfo, err := fs.NewFsInfo(context)
 	if err != nil {
@@ -269,11 +251,6 @@ func (self *manager) Start() error {
 			return err
 		}
 		self.containerWatchers = append(self.containerWatchers, watcher)
-	}
-
-	err = crio.Register(self, self.fsInfo, self.ignoreMetrics)
-	if err != nil {
-		glog.Warningf("Registration of the crio container factory failed: %v", err)
 	}
 
 	err = systemd.Register(self, self.fsInfo, self.ignoreMetrics)
@@ -423,7 +400,7 @@ func (self *manager) GetContainerSpec(containerName string, options v2.RequestOp
 	var errs partialFailure
 	specs := make(map[string]v2.ContainerSpec)
 	for name, cont := range conts {
-		cinfo, err := cont.GetInfo(false)
+		cinfo, err := cont.GetInfo()
 		if err != nil {
 			errs.append(name, "GetInfo", err)
 		}
@@ -472,7 +449,7 @@ func (self *manager) GetContainerInfoV2(containerName string, options v2.Request
 	infos := make(map[string]v2.ContainerInfo, len(containers))
 	for name, container := range containers {
 		result := v2.ContainerInfo{}
-		cinfo, err := container.GetInfo(false)
+		cinfo, err := container.GetInfo()
 		if err != nil {
 			errs.append(name, "GetInfo", err)
 			infos[name] = result
@@ -496,7 +473,7 @@ func (self *manager) GetContainerInfoV2(containerName string, options v2.Request
 
 func (self *manager) containerDataToContainerInfo(cont *containerData, query *info.ContainerInfoRequest) (*info.ContainerInfo, error) {
 	// Get the info from the container.
-	cinfo, err := cont.GetInfo(true)
+	cinfo, err := cont.GetInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -699,19 +676,24 @@ func (self *manager) getRequestedContainers(containerName string, options v2.Req
 }
 
 func (self *manager) GetDirFsInfo(dir string) (v2.FsInfo, error) {
-	device, err := self.fsInfo.GetDirFsDevice(dir)
+	dirDevice, err := self.fsInfo.GetDirFsDevice(dir)
 	if err != nil {
-		return v2.FsInfo{}, fmt.Errorf("failed to get device for dir %q: %v", dir, err)
+		return v2.FsInfo{}, fmt.Errorf("error trying to get filesystem Device for dir %v: err: %v", dir, err)
 	}
-	return self.getFsInfoByDeviceName(device.Device)
-}
-
-func (self *manager) GetFsInfoByFsUUID(uuid string) (v2.FsInfo, error) {
-	device, err := self.fsInfo.GetDeviceInfoByFsUUID(uuid)
+	dirMountpoint, err := self.fsInfo.GetMountpointForDevice(dirDevice.Device)
+	if err != nil {
+		return v2.FsInfo{}, fmt.Errorf("error trying to get MountPoint for Root Device: %v, err: %v", dirDevice, err)
+	}
+	infos, err := self.GetFsInfo("")
 	if err != nil {
 		return v2.FsInfo{}, err
 	}
-	return self.getFsInfoByDeviceName(device.Device)
+	for _, info := range infos {
+		if info.Mountpoint == dirMountpoint {
+			return info, nil
+		}
+	}
+	return v2.FsInfo{}, fmt.Errorf("did not find fs info for dir: %v", dir)
 }
 
 func (self *manager) GetFsInfo(label string) ([]v2.FsInfo, error) {
@@ -744,7 +726,6 @@ func (self *manager) GetFsInfo(label string) ([]v2.FsInfo, error) {
 		}
 
 		fi := v2.FsInfo{
-			Timestamp:  stats[0].Timestamp,
 			Device:     fs.Device,
 			Mountpoint: mountpoint,
 			Capacity:   fs.Limit,
@@ -1282,23 +1263,6 @@ func (m *manager) DebugInfo() map[string][]string {
 
 	debugInfo["Managed containers"] = lines
 	return debugInfo
-}
-
-func (self *manager) getFsInfoByDeviceName(deviceName string) (v2.FsInfo, error) {
-	mountPoint, err := self.fsInfo.GetMountpointForDevice(deviceName)
-	if err != nil {
-		return v2.FsInfo{}, fmt.Errorf("failed to get mount point for device %q: %v", deviceName, err)
-	}
-	infos, err := self.GetFsInfo("")
-	if err != nil {
-		return v2.FsInfo{}, err
-	}
-	for _, info := range infos {
-		if info.Mountpoint == mountPoint {
-			return info, nil
-		}
-	}
-	return v2.FsInfo{}, fmt.Errorf("cannot find filesystem info for device %q", deviceName)
 }
 
 func getVersionInfo() (*info.VersionInfo, error) {

@@ -113,18 +113,16 @@ func (c *containerData) allowErrorLogging() bool {
 	return false
 }
 
-func (c *containerData) GetInfo(shouldUpdateSubcontainers bool) (*containerInfo, error) {
+func (c *containerData) GetInfo() (*containerInfo, error) {
 	// Get spec and subcontainers.
 	if time.Since(c.lastUpdatedTime) > 5*time.Second {
 		err := c.updateSpec()
 		if err != nil {
 			return nil, err
 		}
-		if shouldUpdateSubcontainers {
-			err = c.updateSubcontainers()
-			if err != nil {
-				return nil, err
-			}
+		err = c.updateSubcontainers()
+		if err != nil {
+			return nil, err
 		}
 		c.lastUpdatedTime = time.Now()
 	}

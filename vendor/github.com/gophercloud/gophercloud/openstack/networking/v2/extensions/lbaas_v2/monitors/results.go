@@ -31,7 +31,8 @@ type Monitor struct {
 	// The Name of the Monitor.
 	Name string `json:"name"`
 
-	// TenantID is the owner of the Monitor.
+	// Only an administrative user can specify a tenant ID
+	// other than its own.
 	TenantID string `json:"tenant_id"`
 
 	// The type of probe sent by the load balancer to verify the member state,
@@ -42,8 +43,7 @@ type Monitor struct {
 	Delay int `json:"delay"`
 
 	// The maximum number of seconds for a monitor to wait for a connection to be
-	// established before it times out. This value must be less than the delay
-	// value.
+	// established before it times out. This value must be less than the delay value.
 	Timeout int `json:"timeout"`
 
 	// Number of allowed connection failures before changing the status of the
@@ -60,8 +60,7 @@ type Monitor struct {
 	// Expected HTTP codes for a passing HTTP(S) monitor.
 	ExpectedCodes string `json:"expected_codes"`
 
-	// The administrative state of the health monitor, which is up (true) or
-	// down (false).
+	// The administrative state of the health monitor, which is up (true) or down (false).
 	AdminStateUp bool `json:"admin_state_up"`
 
 	// The status of the health monitor. Indicates whether the health monitor is
@@ -124,26 +123,22 @@ func (r commonResult) Extract() (*Monitor, error) {
 	return s.Monitor, err
 }
 
-// CreateResult represents the result of a create operation. Call its Extract
-// method to interpret it as a Monitor.
+// CreateResult represents the result of a create operation.
 type CreateResult struct {
 	commonResult
 }
 
-// GetResult represents the result of a get operation. Call its Extract
-// method to interpret it as a Monitor.
+// GetResult represents the result of a get operation.
 type GetResult struct {
 	commonResult
 }
 
-// UpdateResult represents the result of an update operation. Call its Extract
-// method to interpret it as a Monitor.
+// UpdateResult represents the result of an update operation.
 type UpdateResult struct {
 	commonResult
 }
 
-// DeleteResult represents the result of a delete operation. Call its
-// ExtractErr method to determine if the result succeeded or failed.
+// DeleteResult represents the result of a delete operation.
 type DeleteResult struct {
 	gophercloud.ErrResult
 }

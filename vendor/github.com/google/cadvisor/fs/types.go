@@ -14,10 +14,7 @@
 
 package fs
 
-import (
-	"errors"
-	"time"
-)
+import "time"
 
 type DeviceInfo struct {
 	Device string
@@ -62,9 +59,6 @@ type DiskStats struct {
 	WeightedIoTime  uint64
 }
 
-// ErrNoSuchDevice is the error indicating the requested device does not exist.
-var ErrNoSuchDevice = errors.New("cadvisor: no such device")
-
 type FsInfo interface {
 	// Returns capacity and free space, in bytes, of all the ext2, ext3, ext4 filesystems on the host.
 	GetGlobalFsInfo() ([]Fs, error)
@@ -77,11 +71,6 @@ type FsInfo interface {
 
 	// Returns number of inodes used by 'dir'.
 	GetDirInodeUsage(dir string, timeout time.Duration) (uint64, error)
-
-	// GetDeviceInfoByFsUUID returns the information of the device with the
-	// specified filesystem uuid. If no such device exists, this function will
-	// return the ErrNoSuchDevice error.
-	GetDeviceInfoByFsUUID(uuid string) (*DeviceInfo, error)
 
 	// Returns the block device info of the filesystem on which 'dir' resides.
 	GetDirFsDevice(dir string) (*DeviceInfo, error)

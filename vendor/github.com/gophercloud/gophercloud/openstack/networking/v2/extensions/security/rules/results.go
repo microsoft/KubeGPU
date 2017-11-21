@@ -102,20 +102,17 @@ func (r commonResult) Extract() (*SecGroupRule, error) {
 	return s.SecGroupRule, err
 }
 
-// CreateResult represents the result of a create operation. Call its Extract
-// method to interpret it as a SecGroupRule.
+// CreateResult represents the result of a create operation.
 type CreateResult struct {
 	commonResult
 }
 
-// GetResult represents the result of a get operation. Call its Extract
-// method to interpret it as a SecGroupRule.
+// GetResult represents the result of a get operation.
 type GetResult struct {
 	commonResult
 }
 
-// DeleteResult represents the result of a delete operation. Call its
-// ExtractErr method to determine if the request succeeded or failed.
+// DeleteResult represents the result of a delete operation.
 type DeleteResult struct {
 	gophercloud.ErrResult
 }

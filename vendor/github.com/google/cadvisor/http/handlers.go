@@ -44,7 +44,7 @@ func RegisterHandlers(mux httpmux.Mux, containerManager manager.Manager, httpAut
 	mux.HandleFunc(validate.ValidatePage, func(w http.ResponseWriter, r *http.Request) {
 		err := validate.HandleRequest(w, containerManager)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fmt.Fprintf(w, "%s", err)
 		}
 	})
 
@@ -104,9 +104,15 @@ func RegisterPrometheusHandler(mux httpmux.Mux, containerManager manager.Manager
 }
 
 func staticHandlerNoAuth(w http.ResponseWriter, r *http.Request) {
-	static.HandleRequest(w, r.URL)
+	err := static.HandleRequest(w, r.URL)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+	}
 }
 
 func staticHandler(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	static.HandleRequest(w, r.URL)
+	err := static.HandleRequest(w, r.URL)
+	if err != nil {
+		fmt.Fprintf(w, "%s", err)
+	}
 }

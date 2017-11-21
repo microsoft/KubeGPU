@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -15,11 +22,14 @@ go_library(
         "parser.go",
         "parser_action_helpers.go",
         "parser_actions.go",
+        "parser_test_helpers.go",
+        "parser_test_utilities.go",
         "states.go",
+        "test_event_handler.go",
         "utilities.go",
     ],
-    visibility = ["//visibility:public"],
-    deps = ["//vendor/github.com/sirupsen/logrus:go_default_library"],
+    tags = ["automanaged"],
+    deps = ["//vendor/github.com/Sirupsen/logrus:go_default_library"],
 )
 
 filegroup(
@@ -31,10 +41,6 @@ filegroup(
 
 filegroup(
     name = "all-srcs",
-    srcs = [
-        ":package-srcs",
-        "//vendor/github.com/Azure/go-ansiterm/winterm:all-srcs",
-    ],
+    srcs = [":package-srcs"],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

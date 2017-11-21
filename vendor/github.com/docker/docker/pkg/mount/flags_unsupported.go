@@ -1,4 +1,4 @@
-// +build !linux,!freebsd freebsd,!cgo solaris,!cgo
+// +build !linux,!freebsd freebsd,!cgo
 
 package mount
 
@@ -27,5 +27,4 @@ const (
 	STRICTATIME = 0
 	SYNCHRONOUS = 0
 	RDONLY      = 0
-	mntDetach   = 0
 )

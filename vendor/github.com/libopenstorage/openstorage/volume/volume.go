@@ -7,67 +7,30 @@ import (
 )
 
 var (
-	// ErrAlreadyShutdown returned when driver is shutdown
-	ErrAlreadyShutdown = errors.New("VolumeDriverProvider already shutdown")
-	// ErrExit returned when driver already registered
-	ErrExist = errors.New("Already exists")
-	// ErrDriverNotFound returned when a driver is not registered
-	ErrDriverNotFound = errors.New("Driver implementation not found")
-	// ErrDriverInitializing returned when a driver is initializing
-	ErrDriverInitializing = errors.New("Driver is initializing")
-	// ErrEnoEnt returned when volume does not exist
-	ErrEnoEnt = errors.New("Volume does not exist.")
-	// ErrEnomem returned when we are out of memory
-	ErrEnomem = errors.New("Out of memory.")
-	// ErrEinval returned when an invalid input is provided
-	ErrEinval = errors.New("Invalid argument")
-	// ErrVolDetached returned when volume is in detached state
-	ErrVolDetached = errors.New("Volume is detached")
-	// ErrVolAttached returned when volume is in attached state
-	ErrVolAttached = errors.New("Volume is attached")
-	// ErrVolAttachedOnRemoteNode returned when volume is in attached on different node
+	ErrAlreadyShutdown         = errors.New("VolumeDriverProvider already shutdown")
+	ErrExist                   = errors.New("Driver already exists")
+	ErrDriverNotFound          = errors.New("Driver implementation not found")
+	ErrDriverInitializing      = errors.New("Driver is initializing")
+	ErrEnoEnt                  = errors.New("Volume does not exist.")
+	ErrEnomem                  = errors.New("Out of memory.")
+	ErrEinval                  = errors.New("Invalid argument")
+	ErrVolDetached             = errors.New("Volume is detached")
+	ErrVolAttached             = errors.New("Volume is attached")
 	ErrVolAttachedOnRemoteNode = errors.New("Volume is attached on another node")
-	// ErrVolAttachedScale returned when volume is attached and can be scaled
-	ErrVolAttachedScale = errors.New("Volume is attached on another node." +
-		" Increase scale factor to create more instances")
-	// ErrVolHasSnaps returned when volume has previous snapshots
-	ErrVolHasSnaps = errors.New("Volume has snapshots associated")
-	// ErrNotSupported returned when the operation is not supported
-	ErrNotSupported = errors.New("Operation not supported")
-	// ErrVolBusy returned when volume is in busy state
-	ErrVolBusy = errors.New("Volume is busy")
+	ErrVolAttachedScale        = errors.New("Volume is attached but can be scaled")
+	ErrVolHasSnaps             = errors.New("Volume has snapshots associated")
+	ErrNotSupported            = errors.New("Operation not supported")
 )
 
 // Constants used by the VolumeDriver
 const (
-	// APIVersion for the volume management apis
-	APIVersion = "v1"
-	// PluginAPIBase where the docker unix socket resides
+	APIVersion    = "v1"
 	PluginAPIBase = "/run/docker/plugins/"
-	// DriverAPIBase where the osd unix socket resides
 	DriverAPIBase = "/var/lib/osd/driver/"
-	// MountBase for osd mountpoints
-	MountBase = "/var/lib/osd/mounts/"
-	// VolumeBase for osd volumes
-	VolumeBase = "/var/lib/osd/"
+	MountBase     = "/var/lib/osd/mounts/"
+	VolumeBase    = "/var/lib/osd/"
 )
 
-const (
-	// LocationConstaint is a label that specifies data location constraint.
-	LocationConstraint = "LocationConstraint"
-	// LocalNode is an alias for this node - similar to localhost.
-	LocalNode = "LocalNode"
-)
-
-// AttachOptionsKey specifies a key type from a key-value pair
-// that will be passed in to the Attach api
-type AttachOptionsKey string
-
-const (
-	AttachOptionsSecret = AttachOptionsKey("SECRET_KEY")
-)
-
-// Store defines the interface for basic volume store operations
 type Store interface {
 	// Lock volume specified by volumeID.
 	Lock(volumeID string) (interface{}, error)
@@ -105,34 +68,16 @@ type IODriver interface {
 	Flush(volumeID string) error
 }
 
-// SnapshotDriver interfaces provides snapshot capability
 type SnapshotDriver interface {
 	// Snapshot create volume snapshot.
 	// Errors ErrEnoEnt may be returned
 	Snapshot(volumeID string, readonly bool, locator *api.VolumeLocator) (string, error)
-	// Restore restores volume to specified snapshot.
-	Restore(volumeID string, snapshotID string) error
-}
-
-// StatsDriver interface provides stats features
-type StatsDriver interface {
-	// Stats for specified volume.
-	// cumulative stats are /proc/diskstats style stats.
-	// nonCumulative stats are stats for specific duration.
-	// Errors ErrEnoEnt may be returned
-	Stats(volumeID string, cumulative bool) (*api.Stats, error)
-	// UsedSize returns currently used volume size.
-	// Errors ErrEnoEnt may be returned.
-	UsedSize(volumeID string) (uint64, error)
-	// GetActiveRequests get active requests
-	GetActiveRequests() (*api.ActiveRequests, error)
 }
 
 // ProtoDriver must be implemented by all volume drivers.  It specifies the
 // most basic functionality, such as creating and deleting volumes.
 type ProtoDriver interface {
 	SnapshotDriver
-	StatsDriver
 	// Name returns the name of the driver.
 	Name() string
 	// Type of this driver
@@ -154,6 +99,16 @@ type ProtoDriver interface {
 	// Update not all fields of the spec are supported, ErrNotSupported will be thrown for unsupported
 	// updates.
 	Set(volumeID string, locator *api.VolumeLocator, spec *api.VolumeSpec) error
+	// Stats for specified volume.
+	// cumulative stats are /proc/diskstats style stats.
+	// nonCumulative stats are stats for specific duration.
+	// Errors ErrEnoEnt may be returned
+	Stats(volumeID string, cumulative bool) (*api.Stats, error)
+	// Alerts on this volume.
+	// Errors ErrEnoEnt may be returned
+	Alerts(volumeID string) (*api.Alerts, error)
+	// GetActiveRequests get active requests
+	GetActiveRequests() (*api.ActiveRequests, error)
 	// Status returns a set of key-value pairs which give low
 	// level diagnostic status about this driver.
 	Status() [][2]string
@@ -173,7 +128,6 @@ type Enumerator interface {
 	SnapEnumerate(volID []string, snapLabels map[string]string) ([]*api.Volume, error)
 }
 
-// StoreEnumerator combines Store and Enumerator capabilities
 type StoreEnumerator interface {
 	Store
 	Enumerator
@@ -185,10 +139,10 @@ type BlockDriver interface {
 	// Attach map device to the host.
 	// On success the devicePath specifies location where the device is exported
 	// Errors ErrEnoEnt, ErrVolAttached may be returned.
-	Attach(volumeID string, attachOptions map[string]string) (string, error)
+	Attach(volumeID string) (string, error)
 	// Detach device from the host.
 	// Errors ErrEnoEnt, ErrVolDetached may be returned.
-	Detach(volumeID string, unmountBeforeDetach bool) error
+	Detach(volumeID string) error
 }
 
 // VolumeDriverProvider provides VolumeDrivers.
@@ -211,7 +165,7 @@ type VolumeDriverRegistry interface {
 	Add(name string, init func(map[string]string) (VolumeDriver, error)) error
 }
 
-// NewVolumeDriverRegistry constructs a new VolumeDriverRegistry.
+// VolumeDriverRegistry constructs a new VolumeDriverRegistry.
 func NewVolumeDriverRegistry(nameToInitFunc map[string]func(map[string]string) (VolumeDriver, error)) VolumeDriverRegistry {
 	return newVolumeDriverRegistry(nameToInitFunc)
 }

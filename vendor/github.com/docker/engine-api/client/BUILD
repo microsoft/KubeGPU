@@ -1,9 +1,17 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
     srcs = [
         "client.go",
+        "client_unix.go",
         "container_attach.go",
         "container_commit.go",
         "container_copy.go",
@@ -58,19 +66,8 @@ go_library(
         "volume_inspect.go",
         "volume_list.go",
         "volume_remove.go",
-    ] + select({
-        "@io_bazel_rules_go//go/platform:darwin_amd64": [
-            "client_darwin.go",
-        ],
-        "@io_bazel_rules_go//go/platform:linux_amd64": [
-            "client_unix.go",
-        ],
-        "@io_bazel_rules_go//go/platform:windows_amd64": [
-            "client_windows.go",
-        ],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
+    ],
+    tags = ["automanaged"],
     deps = [
         "//vendor/github.com/docker/distribution/reference:go_default_library",
         "//vendor/github.com/docker/engine-api/client/transport:go_default_library",
@@ -102,5 +99,4 @@ filegroup(
         "//vendor/github.com/docker/engine-api/client/transport:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

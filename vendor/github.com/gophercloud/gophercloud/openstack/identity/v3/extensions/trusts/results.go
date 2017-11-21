@@ -1,17 +1,13 @@
 package trusts
 
-// TrusteeUser represents the trusted user ID of a trust.
 type TrusteeUser struct {
 	ID string `json:"id"`
 }
 
-// TrustorUser represents the trusting user ID of a trust.
 type TrustorUser struct {
 	ID string `json:"id"`
 }
 
-// Trust represents a delegated authorization request between two
-// identities.
 type Trust struct {
 	ID                 string      `json:"id"`
 	Impersonation      bool        `json:"impersonation"`
@@ -21,7 +17,6 @@ type Trust struct {
 	RedelegationCount  int         `json:"redelegation_count"`
 }
 
-// TokenExt represents an extension of the base token result.
 type TokenExt struct {
 	Trust Trust `json:"OS-TRUST:trust"`
 }

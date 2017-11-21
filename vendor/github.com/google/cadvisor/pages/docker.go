@@ -51,7 +51,7 @@ func toStatusKV(status info.DockerStatus) ([]keyVal, []keyVal) {
 	}, ds
 }
 
-func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
+func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) error {
 	start := time.Now()
 
 	// The container name is the path after the handler
@@ -66,8 +66,7 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		}
 		conts, err := m.AllDockerContainers(&reqParams)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to get container %q with error: %v", containerName, err), http.StatusNotFound)
-			return
+			return fmt.Errorf("failed to get container %q with error: %v", containerName, err)
 		}
 		subcontainers := make([]link, 0, len(conts))
 		for _, cont := range conts {
@@ -80,16 +79,14 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		// Get Docker status
 		status, err := m.DockerInfo()
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to get docker info: %v", err), http.StatusInternalServerError)
-			return
+			return err
 		}
 
 		dockerStatus, driverStatus := toStatusKV(status)
 		// Get Docker Images
 		images, err := m.DockerImages()
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to get docker images: %v", err), http.StatusInternalServerError)
-			return
+			return err
 		}
 
 		dockerContainersText := "Docker Containers"
@@ -113,8 +110,7 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		}
 		cont, err := m.DockerContainer(containerName[1:], &reqParams)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to get container %q with error: %v", containerName, err), http.StatusNotFound)
-			return
+			return fmt.Errorf("failed to get container %q with error: %v", containerName, err)
 		}
 		displayName := getContainerDisplayName(cont.ContainerReference)
 
@@ -132,8 +128,7 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 		// Get the MachineInfo
 		machineInfo, err := m.GetMachineInfo()
 		if err != nil {
-			http.Error(w, fmt.Sprintf("failed to get machine info: %v", err), http.StatusInternalServerError)
-			return
+			return err
 		}
 		data = &pageData{
 			DisplayName:            displayName,
@@ -158,5 +153,5 @@ func serveDockerPage(m manager.Manager, w http.ResponseWriter, u *url.URL) {
 	}
 
 	glog.V(5).Infof("Request took %s", time.Since(start))
-	return
+	return nil
 }

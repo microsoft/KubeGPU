@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -8,13 +15,11 @@ go_library(
         "cbor.go",
         "decode.go",
         "decode_go.go",
-        "decode_go14.go",
         "encode.go",
         "fast-path.generated.go",
         "gen.generated.go",
         "gen.go",
         "gen-helper.generated.go",
-        "gen_15.go",
         "gen_16.go",
         "gen_17.go",
         "helper.go",
@@ -28,7 +33,7 @@ go_library(
         "simple.go",
         "time.go",
     ],
-    visibility = ["//visibility:public"],
+    tags = ["automanaged"],
 )
 
 filegroup(
@@ -40,7 +45,9 @@ filegroup(
 
 filegroup(
     name = "all-srcs",
-    srcs = [":package-srcs"],
+    srcs = [
+        ":package-srcs",
+        "//vendor/github.com/ugorji/go/codec/codecgen:all-srcs",
+    ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

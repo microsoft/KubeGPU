@@ -1,9 +1,7 @@
 // Package quobyte represents a golang API for the Quobyte Storage System
 package quobyte
 
-import (
-	"net/http"
-)
+import "net/http"
 
 type QuobyteClient struct {
 	client   *http.Client
@@ -78,27 +76,4 @@ func (client *QuobyteClient) GetClientList(tenant string) (GetClientListResponse
 	}
 
 	return response, nil
-}
-
-func (client *QuobyteClient) SetVolumeQuota(volumeUUID string, quotaSize uint64) error {
-	request := &setQuotaRequest{
-		Quotas: []*quota{
-			&quota{
-				Consumer: []*consumingEntity{
-					&consumingEntity{
-						Type:       "VOLUME",
-						Identifier: volumeUUID,
-					},
-				},
-				Limits: []*resource{
-					&resource{
-						Type:  "LOGICAL_DISK_SPACE",
-						Value: quotaSize,
-					},
-				},
-			},
-		},
-	}
-
-	return client.sendRequest("setQuota", request, nil)
 }

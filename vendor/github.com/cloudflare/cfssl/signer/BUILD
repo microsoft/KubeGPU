@@ -1,9 +1,16 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
     srcs = ["signer.go"],
-    visibility = ["//visibility:public"],
+    tags = ["automanaged"],
     deps = [
         "//vendor/github.com/cloudflare/cfssl/certdb:go_default_library",
         "//vendor/github.com/cloudflare/cfssl/config:go_default_library",
@@ -28,5 +35,4 @@ filegroup(
         "//vendor/github.com/cloudflare/cfssl/signer/local:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

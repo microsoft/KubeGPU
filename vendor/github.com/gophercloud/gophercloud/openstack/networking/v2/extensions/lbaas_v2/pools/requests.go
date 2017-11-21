@@ -71,8 +71,10 @@ const (
 	ProtocolHTTPS Protocol = "HTTPS"
 )
 
-// CreateOptsBuilder allows extensions to add additional parameters to the
-// Create request.
+// CreateOptsBuilder is the interface options structs have to satisfy in order
+// to be used in the main Create operation in this package. Since many
+// extensions decorate or modify the common logic, it is useful for them to
+// satisfy a basic interface in order for them to be used.
 type CreateOptsBuilder interface {
 	ToPoolCreateMap() (map[string]interface{}, error)
 }
@@ -84,39 +86,30 @@ type CreateOpts struct {
 	// current specification supports LBMethodRoundRobin, LBMethodLeastConnections
 	// and LBMethodSourceIp as valid values for this attribute.
 	LBMethod LBMethod `json:"lb_algorithm" required:"true"`
-
 	// The protocol used by the pool members, you can use either
 	// ProtocolTCP, ProtocolHTTP, or ProtocolHTTPS.
 	Protocol Protocol `json:"protocol" required:"true"`
-
 	// The Loadbalancer on which the members of the pool will be associated with.
-	// Note: one of LoadbalancerID or ListenerID must be provided.
+	// Note:  one of LoadbalancerID or ListenerID must be provided.
 	LoadbalancerID string `json:"loadbalancer_id,omitempty" xor:"ListenerID"`
-
 	// The Listener on which the members of the pool will be associated with.
-	// Note: one of LoadbalancerID or ListenerID must be provided.
+	// Note:  one of LoadbalancerID or ListenerID must be provided.
 	ListenerID string `json:"listener_id,omitempty" xor:"LoadbalancerID"`
-
-	// The UUID of the tenant who owns the Pool. Only administrative users
-	// can specify a tenant UUID other than their own.
+	// Only required if the caller has an admin role and wants to create a pool
+	// for another tenant.
 	TenantID string `json:"tenant_id,omitempty"`
-
 	// Name of the pool.
 	Name string `json:"name,omitempty"`
-
 	// Human-readable description for the pool.
 	Description string `json:"description,omitempty"`
-
-	// Persistence is the session persistence of the pool.
 	// Omit this field to prevent session persistence.
 	Persistence *SessionPersistence `json:"session_persistence,omitempty"`
-
 	// The administrative state of the Pool. A valid value is true (UP)
 	// or false (DOWN).
 	AdminStateUp *bool `json:"admin_state_up,omitempty"`
 }
 
-// ToPoolCreateMap builds a request body from CreateOpts.
+// ToPoolCreateMap casts a CreateOpts struct to a map.
 func (opts CreateOpts) ToPoolCreateMap() (map[string]interface{}, error) {
 	return gophercloud.BuildRequestBody(opts, "pool")
 }
@@ -139,8 +132,10 @@ func Get(c *gophercloud.ServiceClient, id string) (r GetResult) {
 	return
 }
 
-// UpdateOptsBuilder allows extensions to add additional parameters to the
-// Update request.
+// UpdateOptsBuilder is the interface options structs have to satisfy in order
+// to be used in the main Update operation in this package. Since many
+// extensions decorate or modify the common logic, it is useful for them to
+// satisfy a basic interface in order for them to be used.
 type UpdateOptsBuilder interface {
 	ToPoolUpdateMap() (map[string]interface{}, error)
 }
@@ -150,21 +145,18 @@ type UpdateOptsBuilder interface {
 type UpdateOpts struct {
 	// Name of the pool.
 	Name string `json:"name,omitempty"`
-
 	// Human-readable description for the pool.
 	Description string `json:"description,omitempty"`
-
 	// The algorithm used to distribute load between the members of the pool. The
 	// current specification supports LBMethodRoundRobin, LBMethodLeastConnections
 	// and LBMethodSourceIp as valid values for this attribute.
 	LBMethod LBMethod `json:"lb_algorithm,omitempty"`
-
 	// The administrative state of the Pool. A valid value is true (UP)
 	// or false (DOWN).
 	AdminStateUp *bool `json:"admin_state_up,omitempty"`
 }
 
-// ToPoolUpdateMap builds a request body from UpdateOpts.
+// ToPoolUpdateMap casts a UpdateOpts struct to a map.
 func (opts UpdateOpts) ToPoolUpdateMap() (map[string]interface{}, error) {
 	return gophercloud.BuildRequestBody(opts, "pool")
 }
@@ -194,11 +186,11 @@ type ListMembersOptsBuilder interface {
 	ToMembersListQuery() (string, error)
 }
 
-// ListMembersOpts allows the filtering and sorting of paginated collections
-// through the API. Filtering is achieved by passing in struct field values
-// that map to the Member attributes you want to see returned. SortKey allows
-// you to sort by a particular Member attribute. SortDir sets the direction,
-// and is either `asc' or `desc'. Marker and Limit are used for pagination.
+// ListMembersOpts allows the filtering and sorting of paginated collections through
+// the API. Filtering is achieved by passing in struct field values that map to
+// the Member attributes you want to see returned. SortKey allows you to
+// sort by a particular Member attribute. SortDir sets the direction, and is
+// either `asc' or `desc'. Marker and Limit are used for pagination.
 type ListMembersOpts struct {
 	Name         string `q:"name"`
 	Weight       int    `q:"weight"`
@@ -220,8 +212,8 @@ func (opts ListMembersOpts) ToMembersListQuery() (string, error) {
 }
 
 // ListMembers returns a Pager which allows you to iterate over a collection of
-// members. It accepts a ListMembersOptsBuilder, which allows you to filter and
-// sort the returned collection for greater efficiency.
+// members. It accepts a ListMembersOptsBuilder, which allows you to filter and sort
+// the returned collection for greater efficiency.
 //
 // Default policy settings return only those members that are owned by the
 // tenant who submits the request, unless an admin user submits the request.
@@ -239,8 +231,10 @@ func ListMembers(c *gophercloud.ServiceClient, poolID string, opts ListMembersOp
 	})
 }
 
-// CreateMemberOptsBuilder allows extensions to add additional parameters to the
-// CreateMember request.
+// CreateMemberOptsBuilder is the interface options structs have to satisfy in order
+// to be used in the CreateMember operation in this package. Since many
+// extensions decorate or modify the common logic, it is useful for them to
+// satisfy a basic interface in order for them to be used.
 type CreateMemberOptsBuilder interface {
 	ToMemberCreateMap() (map[string]interface{}, error)
 }
@@ -248,35 +242,29 @@ type CreateMemberOptsBuilder interface {
 // CreateMemberOpts is the common options struct used in this package's CreateMember
 // operation.
 type CreateMemberOpts struct {
-	// The IP address of the member to receive traffic from the load balancer.
+	// Required. The IP address of the member to receive traffic from the load balancer.
 	Address string `json:"address" required:"true"`
-
-	// The port on which to listen for client traffic.
+	// Required. The port on which to listen for client traffic.
 	ProtocolPort int `json:"protocol_port" required:"true"`
-
-	// Name of the Member.
+	// Optional. Name of the Member.
 	Name string `json:"name,omitempty"`
-
-	// The UUID of the tenant who owns the Member. Only administrative users
-	// can specify a tenant UUID other than their own.
+	// Only required if the caller has an admin role and wants to create a Member
+	// for another tenant.
 	TenantID string `json:"tenant_id,omitempty"`
-
-	// A positive integer value that indicates the relative portion of traffic
-	// that  this member should receive from the pool. For example, a member with
-	// a weight  of 10 receives five times as much traffic as a member with a
-	// weight of 2.
+	// Optional. A positive integer value that indicates the relative portion of
+	// traffic that this member should receive from the pool. For example, a
+	// member with a weight of 10 receives five times as much traffic as a member
+	// with a weight of 2.
 	Weight int `json:"weight,omitempty"`
-
-	// If you omit this parameter, LBaaS uses the vip_subnet_id parameter value
-	// for the subnet UUID.
+	// Optional.  If you omit this parameter, LBaaS uses the vip_subnet_id
+	// parameter value for the subnet UUID.
 	SubnetID string `json:"subnet_id,omitempty"`
-
-	// The administrative state of the Pool. A valid value is true (UP)
+	// Optional. The administrative state of the Pool. A valid value is true (UP)
 	// or false (DOWN).
 	AdminStateUp *bool `json:"admin_state_up,omitempty"`
 }
 
-// ToMemberCreateMap builds a request body from CreateMemberOpts.
+// ToMemberCreateMap casts a CreateOpts struct to a map.
 func (opts CreateMemberOpts) ToMemberCreateMap() (map[string]interface{}, error) {
 	return gophercloud.BuildRequestBody(opts, "member")
 }
@@ -298,8 +286,10 @@ func GetMember(c *gophercloud.ServiceClient, poolID string, memberID string) (r 
 	return
 }
 
-// UpdateMemberOptsBuilder allows extensions to add additional parameters to the
-// List request.
+// MemberUpdateOptsBuilder is the interface options structs have to satisfy in order
+// to be used in the main Update operation in this package. Since many
+// extensions decorate or modify the common logic, it is useful for them to
+// satisfy a basic interface in order for them to be used.
 type UpdateMemberOptsBuilder interface {
 	ToMemberUpdateMap() (map[string]interface{}, error)
 }
@@ -307,21 +297,19 @@ type UpdateMemberOptsBuilder interface {
 // UpdateMemberOpts is the common options struct used in this package's Update
 // operation.
 type UpdateMemberOpts struct {
-	// Name of the Member.
+	// Optional. Name of the Member.
 	Name string `json:"name,omitempty"`
-
-	// A positive integer value that indicates the relative portion of traffic
-	// that this member should receive from the pool. For example, a member with
-	// a weight of 10 receives five times as much traffic as a member with a
-	// weight of 2.
+	// Optional. A positive integer value that indicates the relative portion of
+	// traffic that this member should receive from the pool. For example, a
+	// member with a weight of 10 receives five times as much traffic as a member
+	// with a weight of 2.
 	Weight int `json:"weight,omitempty"`
-
-	// The administrative state of the Pool. A valid value is true (UP)
+	// Optional. The administrative state of the Pool. A valid value is true (UP)
 	// or false (DOWN).
 	AdminStateUp *bool `json:"admin_state_up,omitempty"`
 }
 
-// ToMemberUpdateMap builds a request body from UpdateMemberOpts.
+// ToMemberUpdateMap casts a UpdateOpts struct to a map.
 func (opts UpdateMemberOpts) ToMemberUpdateMap() (map[string]interface{}, error) {
 	return gophercloud.BuildRequestBody(opts, "member")
 }
@@ -339,8 +327,7 @@ func UpdateMember(c *gophercloud.ServiceClient, poolID string, memberID string, 
 	return
 }
 
-// DisassociateMember will remove and disassociate a Member from a particular
-// Pool.
+// DisassociateMember will remove and disassociate a Member from a particular Pool.
 func DeleteMember(c *gophercloud.ServiceClient, poolID string, memberID string) (r DeleteMemberResult) {
 	_, r.Err = c.Delete(memberResourceURL(c, poolID, memberID), nil)
 	return

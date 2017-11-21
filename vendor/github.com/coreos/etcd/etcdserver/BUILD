@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -21,7 +28,7 @@ go_library(
         "v2_server.go",
         "v3_server.go",
     ],
-    visibility = ["//visibility:public"],
+    tags = ["automanaged"],
     deps = [
         "//vendor/github.com/coreos/etcd/alarm:go_default_library",
         "//vendor/github.com/coreos/etcd/auth:go_default_library",
@@ -82,5 +89,4 @@ filegroup(
         "//vendor/github.com/coreos/etcd/etcdserver/stats:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

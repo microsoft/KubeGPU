@@ -1,4 +1,11 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_library",
+)
 
 go_library(
     name = "go_default_library",
@@ -33,21 +40,13 @@ go_library(
         "tsig.go",
         "types.go",
         "udp.go",
-        "udp_other.go",
+        "udp_linux.go",
         "update.go",
         "xfr.go",
         "zmsg.go",
         "ztypes.go",
-    ] + select({
-        "@io_bazel_rules_go//go/platform:linux_amd64": [
-            "udp_linux.go",
-        ],
-        "@io_bazel_rules_go//go/platform:windows_amd64": [
-            "udp_windows.go",
-        ],
-        "//conditions:default": [],
-    }),
-    visibility = ["//visibility:public"],
+    ],
+    tags = ["automanaged"],
 )
 
 filegroup(
@@ -61,5 +60,4 @@ filegroup(
     name = "all-srcs",
     srcs = [":package-srcs"],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

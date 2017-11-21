@@ -1,4 +1,18 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+load(
+    "@io_bazel_rules_go//go:def.bzl",
+    "go_binary",
+    "go_library",
+)
+
+go_binary(
+    name = "ginkgo",
+    library = ":go_default_library",
+    tags = ["automanaged"],
+)
 
 go_library(
     name = "go_default_library",
@@ -18,7 +32,7 @@ go_library(
         "version_command.go",
         "watch_command.go",
     ],
-    visibility = ["//visibility:private"],
+    tags = ["automanaged"],
     deps = [
         "//vendor/github.com/onsi/ginkgo/config:go_default_library",
         "//vendor/github.com/onsi/ginkgo/ginkgo/convert:go_default_library",
@@ -30,12 +44,6 @@ go_library(
         "//vendor/github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable:go_default_library",
         "//vendor/github.com/onsi/ginkgo/types:go_default_library",
     ],
-)
-
-go_binary(
-    name = "ginkgo",
-    library = ":go_default_library",
-    visibility = ["//visibility:public"],
 )
 
 filegroup(
@@ -57,5 +65,4 @@ filegroup(
         "//vendor/github.com/onsi/ginkgo/ginkgo/watch:all-srcs",
     ],
     tags = ["automanaged"],
-    visibility = ["//visibility:public"],
 )

@@ -127,13 +127,15 @@ func GetSpec(cgroupPaths map[string]string, machineInfoFactory info.MachineInfoF
 func readString(dirpath string, file string) string {
 	cgroupFile := path.Join(dirpath, file)
 
+	// Ignore non-existent files
+	if !utils.FileExists(cgroupFile) {
+		return ""
+	}
+
 	// Read
 	out, err := ioutil.ReadFile(cgroupFile)
 	if err != nil {
-		// Ignore non-existent files
-		if !os.IsNotExist(err) {
-			glog.Errorf("readString: Failed to read %q: %s", cgroupFile, err)
-		}
+		glog.Errorf("readString: Failed to read %q: %s", cgroupFile, err)
 		return ""
 	}
 	return strings.TrimSpace(string(out))
@@ -156,12 +158,13 @@ func readUInt64(dirpath string, file string) uint64 {
 
 // Lists all directories under "path" and outputs the results as children of "parent".
 func ListDirectories(dirpath string, parent string, recursive bool, output map[string]struct{}) error {
+	// Ignore if this hierarchy does not exist.
+	if !utils.FileExists(dirpath) {
+		return nil
+	}
+
 	entries, err := ioutil.ReadDir(dirpath)
 	if err != nil {
-		// Ignore if this hierarchy does not exist.
-		if os.IsNotExist(err) {
-			err = nil
-		}
 		return err
 	}
 	for _, entry := range entries {
