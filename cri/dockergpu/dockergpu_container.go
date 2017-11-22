@@ -1,24 +1,23 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
+	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
+	"k8s.io/kubernetes/pkg/apis/componentconfig"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
-	kubeletconfiginternal "k8s.io/kubernetes/pkg/kubelet/apis/kubeletconfig"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
@@ -66,9 +65,9 @@ func (d *dockerGPUService) ContainerStatus(containerID string) (*runtimeapi.Cont
 	return d.dockerService.ContainerStatus(containerID)
 }
 
-func (d *dockerGPUService) UpdateContainerResources(ctx context.Context, r *runtimeapi.UpdateContainerResourcesRequest) (*runtimeapi.UpdateContainerResourcesResponse, error) {
-	return d.dockerService.UpdateContainerResources(ctx, r)
-}
+// func (d *dockerGPUService) UpdateContainerResources(containerID string, resources *runtimeapi.LinuxContainerResources) error {
+// 	return d.dockerService.UpdateContainerResources(containerID, resources)
+// }
 
 func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
 	return d.dockerService.ExecSync(containerID, cmd, timeout)
@@ -108,12 +107,15 @@ func (d *dockerGPUService) PortForward(req *runtimeapi.PortForwardRequest) (*run
 }
 
 // DockerService => RuntimeService => ContainerStatsManager
-func (d *dockerGPUService) ContainerStats(containerID string) (*runtimeapi.ContainerStats, error) {
-	return d.dockerService.ContainerStats(containerID)
+// func (d *dockerGPUService) ContainerStats(containerID string) (*runtimeapi.ContainerStats, error) {
+// 	return d.dockerService.ContainerStats(containerID)
+// }
+func (d *dockerGPUService) ContainerStats(req *runtimeapi.ContainerStatsRequest) (*runtimeapi.ContainerStatsResponse, error) {
+	return d.dockerService.ContainerStats(req)
 }
 
-func (d *dockerGPUService) ListContainerStats(filter *runtimeapi.ContainerStatsFilter) ([]*runtimeapi.ContainerStats, error) {
-	return d.dockerService.ListContainerStats(filter)
+func (d *dockerGPUService) ListContainerStats(req *runtimeapi.ListContainerStatsRequest) (*runtimeapi.ListContainerStatsResponse, error) {
+	return d.dockerService.ListContainerStats(req)
 }
 
 // DockerService => RuntimeService
@@ -142,8 +144,11 @@ func (d *dockerGPUService) RemoveImage(image *runtimeapi.ImageSpec) error {
 	return d.dockerService.RemoveImage(image)
 }
 
-func (d *dockerGPUService) ImageFsInfo() ([]*runtimeapi.FilesystemUsage, error) {
-	return d.dockerService.ImageFsInfo()
+// func (d *dockerGPUService) ImageFsInfo() ([]*runtimeapi.FilesystemUsage, error) {
+// 	return d.dockerService.ImageFsInfo()
+// }
+func (d *dockerGPUService) ImageFsInfo(req *runtimeapi.ImageFsInfoRequest) (*runtimeapi.ImageFsInfoResponse, error) {
+	return d.dockerService.ImageFsInfo(req)
 }
 
 // DockerService => http.Handler
@@ -153,7 +158,7 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 
 // =====================
 // Start the shim
-func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
+func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
 		r.ImagePullProgressDeadline.Duration)
@@ -165,7 +170,7 @@ func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.Con
 	}
 	nh := &kubelet.NoOpLegacyHost{}
 	pluginSettings := dockershim.NetworkPluginSettings{
-		HairpinMode:       kubeletconfiginternal.HairpinMode(c.HairpinMode),
+		HairpinMode:       componentconfig.HairpinMode(c.HairpinMode),
 		NonMasqueradeCIDR: c.NonMasqueradeCIDR,
 		PluginName:        r.NetworkPluginName,
 		PluginConfDir:     r.CNIConfDir,
@@ -184,28 +189,31 @@ func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.Con
 		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
 	}
 
+	// ds, err := dockershim.NewDockerService(dockerClient, r.PodSandboxImage, streamingConfig, &pluginSettings,
+	// 	c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory, r.DockerDisableSharedPID)
 	ds, err := dockershim.NewDockerService(dockerClient, c.SeccompProfileRoot, r.PodSandboxImage,
 		streamingConfig, &pluginSettings, c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory,
 		r.DockerDisableSharedPID)
 
-	dsGpu := &dockerGPUService{dockerService: ds}
-
 	if err != nil {
 		return err
 	}
-	if err := dsGpu.Start(); err != nil {
+
+	if err := ds.Start(); err != nil {
 		return err
 	}
 
+	dsGPU := &dockerGPUService{dockerService: ds}
+
 	glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
-	server := dockerremote.NewDockerServer(c.RemoteRuntimeEndpoint, dsGpu)
+	server := dockerremote.NewDockerServer(c.RemoteRuntimeEndpoint, dsGPU)
 	if err := server.Start(); err != nil {
 		return err
 	}
 
-	// Start the streaming server - blocks?
+	// Start the streaming server
 	addr := net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port)))
-	return http.ListenAndServe(addr, dsGpu)
+	return http.ListenAndServe(addr, ds)
 }
 
 // Gets the streaming server configuration to use with in-process CRI shims.
@@ -258,43 +266,18 @@ func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.Con
 // 		return nil, err
 // 	}
 // }
-
-// WordSepNormalizeFunc changes all flags that contain "_" separators
-func WordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
-	if strings.Contains(name, "_") {
-		return pflag.NormalizedName(strings.Replace(name, "_", "-", -1))
-	}
-	return pflag.NormalizedName(name)
-}
-
-// WarnWordSepNormalizeFunc changes and warns for flags that contain "_" separators
-func WarnWordSepNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
-	if strings.Contains(name, "_") {
-		nname := strings.Replace(name, "_", "-", -1)
-		glog.Warningf("%s is DEPRECATED and will be removed in a future version. Use %s instead.", name, nname)
-
-		return pflag.NormalizedName(nname)
-	}
-	return pflag.NormalizedName(name)
-}
-
-// InitFlags normalizes, parses, then logs the command line flags
-func InitFlags() {
-	pflag.CommandLine.SetNormalizeFunc(WordSepNormalizeFunc)
-	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-	pflag.Parse()
-	pflag.VisitAll(func(flag *pflag.Flag) {
-		glog.V(4).Infof("FLAG: --%s=%q", flag.Name, flag.Value)
-	})
-}
-
 // ====================
 // Main
+func die(err error) {
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	os.Exit(1)
+}
+
 func main() {
 	s := options.NewKubeletServer()
-	AddFlags(s, pflag.CommandLine)
+	s.AddFlags(pflag.CommandLine)
 
-	InitFlags()
+	flag.InitFlags()
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
@@ -305,4 +288,67 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	// if s.ExperimentalDockershim {
+	// 	if err := app.RunDockershim(&s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
+	// 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	// 		os.Exit(1)
+	// 	}
+	// }
 }
+
+// From 1.8
+// func main() {
+// 	// construct KubeletFlags object and register command line flags mapping
+// 	kubeletFlags := options.NewKubeletFlags()
+// 	kubeletFlags.AddFlags(pflag.CommandLine)
+
+// 	// construct KubeletConfiguration object and register command line flags mapping
+// 	defaultConfig, err := options.NewKubeletConfiguration()
+// 	if err != nil {
+// 		die(err)
+// 	}
+// 	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
+
+// 	// parse the command line flags into the respective objects
+// 	flag.InitFlags()
+
+// 	// initialize logging and defer flush
+// 	logs.InitLogs()
+// 	defer logs.FlushLogs()
+
+// 	// short-circuit on verflag
+// 	verflag.PrintAndExitIfRequested()
+
+// 	// validate the initial KubeletFlags, to make sure the dynamic-config-related flags aren't used unless the feature gate is on
+// 	if err := options.ValidateKubeletFlags(kubeletFlags); err != nil {
+// 		die(err)
+// 	}
+// 	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
+// 	// feature gates and only turn on relevant parts of the controller
+// 	kubeletConfig, kubeletConfigController, err := app.BootstrapKubeletConfigController(
+// 		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
+// 	if err != nil {
+// 		die(err)
+// 	}
+
+// 	// construct a KubeletServer from kubeletFlags and kubeletConfig
+// 	kubeletServer := &options.KubeletServer{
+// 		KubeletFlags:         *kubeletFlags,
+// 		KubeletConfiguration: *kubeletConfig,
+// 	}
+
+// 	// use kubeletServer to construct the default KubeletDeps
+// 	kubeletDeps, err := app.UnsecuredDependencies(kubeletServer)
+// 	if err != nil {
+// 		die(err)
+// 	}
+
+// 	// add the kubelet config controller to kubeletDeps
+// 	kubeletDeps.KubeletConfigController = kubeletConfigController
+
+// 	// run the gpushim
+// 	if err := DockerGPUInit(kubeletConfig, &kubeletFlags.ContainerRuntimeOptions); err != nil {
+// 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+// 		os.Exit(1)
+// 	}
+// }
