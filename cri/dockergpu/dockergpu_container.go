@@ -14,9 +14,8 @@ import (
 
 	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
-	"k8s.io/kubernetes/pkg/apis/componentconfig"
-	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
+	"k8s.io/kubernetes/pkg/apis/componentconfig"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
@@ -66,9 +65,9 @@ func (d *dockerGPUService) ContainerStatus(containerID string) (*runtimeapi.Cont
 	return d.dockerService.ContainerStatus(containerID)
 }
 
-func (d *dockerGPUService) UpdateContainerResources(containerID string, resources *runtimeapi.LinuxContainerResources) error {
-	return d.dockerService.UpdateContainerResources(containerID, resources)
-}
+// func (d *dockerGPUService) UpdateContainerResources(containerID string, resources *runtimeapi.LinuxContainerResources) error {
+// 	return d.dockerService.UpdateContainerResources(containerID, resources)
+// }
 
 func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
 	return d.dockerService.ExecSync(containerID, cmd, timeout)
@@ -108,12 +107,15 @@ func (d *dockerGPUService) PortForward(req *runtimeapi.PortForwardRequest) (*run
 }
 
 // DockerService => RuntimeService => ContainerStatsManager
-func (d *dockerGPUService) ContainerStats(containerID string) (*runtimeapi.ContainerStats, error) {
-	return d.dockerService.ContainerStats(containerID)
+// func (d *dockerGPUService) ContainerStats(containerID string) (*runtimeapi.ContainerStats, error) {
+// 	return d.dockerService.ContainerStats(containerID)
+// }
+func (d *dockerGPUService) ContainerStats(req *runtimeapi.ContainerStatsRequest) (*runtimeapi.ContainerStatsResponse, error) {
+	return d.dockerService.ContainerStats(req)
 }
 
-func (d *dockerGPUService) ListContainerStats(filter *runtimeapi.ContainerStatsFilter) ([]*runtimeapi.ContainerStats, error) {
-	return d.dockerService.ListContainerStats(filter)
+func (d *dockerGPUService) ListContainerStats(req *runtimeapi.ListContainerStatsRequest) (*runtimeapi.ListContainerStatsResponse, error) {
+	return d.dockerService.ListContainerStats(req)
 }
 
 // DockerService => RuntimeService
@@ -142,8 +144,11 @@ func (d *dockerGPUService) RemoveImage(image *runtimeapi.ImageSpec) error {
 	return d.dockerService.RemoveImage(image)
 }
 
-func (d *dockerGPUService) ImageFsInfo() ([]*runtimeapi.FilesystemUsage, error) {
-	return d.dockerService.ImageFsInfo()
+// func (d *dockerGPUService) ImageFsInfo() ([]*runtimeapi.FilesystemUsage, error) {
+// 	return d.dockerService.ImageFsInfo()
+// }
+func (d *dockerGPUService) ImageFsInfo(req *runtimeapi.ImageFsInfoRequest) (*runtimeapi.ImageFsInfoResponse, error) {
+	return d.dockerService.ImageFsInfo(req)
 }
 
 // DockerService => http.Handler
@@ -184,11 +189,16 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
 	}
 
-	ds, err := dockershim.NewDockerService(dockerClient, r.PodSandboxImage, streamingConfig, &pluginSettings,
-		c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory, r.DockerDisableSharedPID)
+	// ds, err := dockershim.NewDockerService(dockerClient, r.PodSandboxImage, streamingConfig, &pluginSettings,
+	// 	c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory, r.DockerDisableSharedPID)
+	ds, err := dockershim.NewDockerService(dockerClient, c.SeccompProfileRoot, r.PodSandboxImage,
+		streamingConfig, &pluginSettings, c.RuntimeCgroups, c.CgroupDriver, r.DockerExecHandlerName, r.DockershimRootDirectory,
+		r.DockerDisableSharedPID)
+
 	if err != nil {
 		return err
 	}
+
 	if err := ds.Start(); err != nil {
 		return err
 	}
@@ -263,7 +273,7 @@ func die(err error) {
 	os.Exit(1)
 }
 
-func main {
+func main() {
 	s := options.NewKubeletServer()
 	s.AddFlags(pflag.CommandLine)
 
