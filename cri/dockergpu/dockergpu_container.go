@@ -14,11 +14,11 @@ import (
 
 	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/kubernetes/pkg/apis/componentconfig"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
-	kubeletconfiginternal "k8s.io/kubernetes/pkg/kubelet/apis/kubeletconfig"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
@@ -153,7 +153,7 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 
 // =====================
 // Start the shim
-func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
+func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
 		r.ImagePullProgressDeadline.Duration)
@@ -165,7 +165,7 @@ func DockerGPUInit(c *kubeletconfiginternal.KubeletConfiguration, r *options.Con
 	}
 	nh := &kubelet.NoOpLegacyHost{}
 	pluginSettings := dockershim.NetworkPluginSettings{
-		HairpinMode:       kubeletconfiginternal.HairpinMode(c.HairpinMode),
+		HairpinMode:       componentconfig.HairpinMode(c.HairpinMode),
 		NonMasqueradeCIDR: c.NonMasqueradeCIDR,
 		PluginName:        r.NetworkPluginName,
 		PluginConfDir:     r.CNIConfDir,
@@ -263,58 +263,82 @@ func die(err error) {
 	os.Exit(1)
 }
 
-func main() {
-	// construct KubeletFlags object and register command line flags mapping
-	kubeletFlags := options.NewKubeletFlags()
-	kubeletFlags.AddFlags(pflag.CommandLine)
+func main {
+	s := options.NewKubeletServer()
+	s.AddFlags(pflag.CommandLine)
 
-	// construct KubeletConfiguration object and register command line flags mapping
-	defaultConfig, err := options.NewKubeletConfiguration()
-	if err != nil {
-		die(err)
-	}
-	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
-
-	// parse the command line flags into the respective objects
 	flag.InitFlags()
-
-	// initialize logging and defer flush
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	// short-circuit on verflag
 	verflag.PrintAndExitIfRequested()
 
-	// validate the initial KubeletFlags, to make sure the dynamic-config-related flags aren't used unless the feature gate is on
-	if err := options.ValidateKubeletFlags(kubeletFlags); err != nil {
-		die(err)
-	}
-	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
-	// feature gates and only turn on relevant parts of the controller
-	kubeletConfig, kubeletConfigController, err := app.BootstrapKubeletConfigController(
-		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
-	if err != nil {
-		die(err)
-	}
-
-	// construct a KubeletServer from kubeletFlags and kubeletConfig
-	kubeletServer := &options.KubeletServer{
-		KubeletFlags:         *kubeletFlags,
-		KubeletConfiguration: *kubeletConfig,
-	}
-
-	// use kubeletServer to construct the default KubeletDeps
-	kubeletDeps, err := app.UnsecuredDependencies(kubeletServer)
-	if err != nil {
-		die(err)
-	}
-
-	// add the kubelet config controller to kubeletDeps
-	kubeletDeps.KubeletConfigController = kubeletConfigController
-
 	// run the gpushim
-	if err := DockerGPUInit(kubeletConfig, &kubeletFlags.ContainerRuntimeOptions); err != nil {
+	if err := DockerGPUInit(&s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+	// if s.ExperimentalDockershim {
+	// 	if err := app.RunDockershim(&s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
+	// 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	// 		os.Exit(1)
+	// 	}
+	// }
 }
+
+// From 1.8
+// func main() {
+// 	// construct KubeletFlags object and register command line flags mapping
+// 	kubeletFlags := options.NewKubeletFlags()
+// 	kubeletFlags.AddFlags(pflag.CommandLine)
+
+// 	// construct KubeletConfiguration object and register command line flags mapping
+// 	defaultConfig, err := options.NewKubeletConfiguration()
+// 	if err != nil {
+// 		die(err)
+// 	}
+// 	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
+
+// 	// parse the command line flags into the respective objects
+// 	flag.InitFlags()
+
+// 	// initialize logging and defer flush
+// 	logs.InitLogs()
+// 	defer logs.FlushLogs()
+
+// 	// short-circuit on verflag
+// 	verflag.PrintAndExitIfRequested()
+
+// 	// validate the initial KubeletFlags, to make sure the dynamic-config-related flags aren't used unless the feature gate is on
+// 	if err := options.ValidateKubeletFlags(kubeletFlags); err != nil {
+// 		die(err)
+// 	}
+// 	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
+// 	// feature gates and only turn on relevant parts of the controller
+// 	kubeletConfig, kubeletConfigController, err := app.BootstrapKubeletConfigController(
+// 		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
+// 	if err != nil {
+// 		die(err)
+// 	}
+
+// 	// construct a KubeletServer from kubeletFlags and kubeletConfig
+// 	kubeletServer := &options.KubeletServer{
+// 		KubeletFlags:         *kubeletFlags,
+// 		KubeletConfiguration: *kubeletConfig,
+// 	}
+
+// 	// use kubeletServer to construct the default KubeletDeps
+// 	kubeletDeps, err := app.UnsecuredDependencies(kubeletServer)
+// 	if err != nil {
+// 		die(err)
+// 	}
+
+// 	// add the kubelet config controller to kubeletDeps
+// 	kubeletDeps.KubeletConfigController = kubeletConfigController
+
+// 	// run the gpushim
+// 	if err := DockerGPUInit(kubeletConfig, &kubeletFlags.ContainerRuntimeOptions); err != nil {
+// 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+// 		os.Exit(1)
+// 	}
+// }
