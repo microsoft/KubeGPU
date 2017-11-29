@@ -222,7 +222,8 @@ func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfigurat
 	}
 
 	if c.EnableServer {
-		// Start the streaming server
+		// Start the streaming server -- doesn't reallly work since only handles crihandler stuff
+		// if we wanted to use custom CRI for streaming server, then we should call ListenAndServeKubeletServer
 		s := &http.Server{
 			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
 			Handler:        dsGPU,
