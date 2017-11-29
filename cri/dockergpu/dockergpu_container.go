@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -219,14 +221,25 @@ func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfigurat
 		return err
 	}
 
-	// Start the streaming server
-	//addr := net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port)))
-	//return http.ListenAndServe(addr, ds)
-
-	// wait forever
-	done := make(chan bool)
-	<-done
-	return nil
+	if c.EnableServer {
+		// Start the streaming server
+		s := &http.Server{
+			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
+			Handler:        dsGPU,
+			MaxHeaderBytes: 1 << 20,
+		}
+		if tlsOptions != nil {
+			s.TLSConfig = tlsOptions.Config
+			return s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
+		} else {
+			return s.ListenAndServe()
+		}
+	} else {
+		// wait forever
+		done := make(chan bool)
+		<-done
+		return nil
+	}
 }
 
 // Gets the streaming server configuration to use with in-process CRI shims.
