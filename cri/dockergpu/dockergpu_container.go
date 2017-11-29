@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/golang/glog"
@@ -14,6 +12,7 @@ import (
 
 	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
+	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/apis/componentconfig"
 	"k8s.io/kubernetes/pkg/kubelet"
@@ -158,7 +157,7 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 
 // =====================
 // Start the shim
-func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
+func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
 		r.ImagePullProgressDeadline.Duration)
@@ -179,6 +178,12 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 		LegacyRuntimeHost: nh,
 	}
 
+	// initialize TLS
+	tlsOptions, err := kubeletapp.InitializeTLS(f, c)
+	if err != nil {
+		return err
+	}
+
 	// Initialize streaming configuration. (Not using TLS now)
 	streamingConfig := &streaming.Config{
 		// Use a relative redirect (no scheme or host).
@@ -187,6 +192,9 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
 		SupportedRemoteCommandProtocols: streaming.DefaultConfig.SupportedRemoteCommandProtocols,
 		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
+	}
+	if tlsOptions != nil {
+		streamingConfig.TLSConfig = tlsOptions.Config
 	}
 
 	// ds, err := dockershim.NewDockerService(dockerClient, r.PodSandboxImage, streamingConfig, &pluginSettings,
@@ -212,8 +220,13 @@ func DockerGPUInit(c *componentconfig.KubeletConfiguration, r *options.Container
 	}
 
 	// Start the streaming server
-	addr := net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port)))
-	return http.ListenAndServe(addr, ds)
+	//addr := net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port)))
+	//return http.ListenAndServe(addr, ds)
+
+	// wait forever
+	done := make(chan bool)
+	<-done
+	return nil
 }
 
 // Gets the streaming server configuration to use with in-process CRI shims.
@@ -284,7 +297,7 @@ func main() {
 	verflag.PrintAndExitIfRequested()
 
 	// run the gpushim
-	if err := DockerGPUInit(&s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
+	if err := DockerGPUInit(&s.KubeletFlags, &s.KubeletConfiguration, &s.ContainerRuntimeOptions); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
