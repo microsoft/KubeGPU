@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/types"
 
 	"strconv"
 )

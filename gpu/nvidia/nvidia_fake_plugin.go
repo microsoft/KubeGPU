@@ -3,7 +3,7 @@ package nvidia
 import (
 	"encoding/json"
 
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/types"
 )
 
 type NvidiaFakePlugin struct {

@@ -1,10 +1,5 @@
 package types
 
-import (
-	"reflect"
-	"sort"
-)
-
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
@@ -69,22 +64,6 @@ type DeviceManager interface {
 	// Returns list of (VolumeName, VolumeDriver), and list of Devices to use
 	// Returns an error on failure.
 	AllocateDevices(*PodInfo, *ContainerInfo) ([]Volume, []string, error)
-}
-
-// sorted string keys
-func SortedStringKeys(x interface{}) []string {
-	t := reflect.TypeOf(x)
-	keys := []string{}
-	if t.Kind() == reflect.Map {
-		mv := reflect.ValueOf(x)
-		keysV := mv.MapKeys()
-		for _, val := range keysV {
-			keys = append(keys, val.String())
-		}
-		sort.Strings(keys)
-		return keys
-	}
-	panic("Not a map")
 }
 
 const (

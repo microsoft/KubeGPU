@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
 )
 
@@ -67,7 +68,7 @@ func TranslateResource(nodeResources types.ResourceList, containerRequests types
 	newList := make(types.ResourceList)
 	groupMap := make(map[string]string)
 	// ordered addition to make sure groupIndex is deterministic based on order
-	reqKeys := types.SortedStringKeys(containerRequests)
+	reqKeys := utils.SortedStringKeys(containerRequests)
 	resourceModified := false
 	for _, resKey := range reqKeys {
 		val := containerRequests[types.ResourceName(resKey)]

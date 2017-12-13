@@ -1,4 +1,17 @@
 
+# Kubernetes GPU Project
+
+This project aims to provide extensible support for devices such as GPU inside Kubernetes.
+It utilizes a group scheduler and group based hierarchical constraints to support GPU topology.
+It consists of two parts.
+
+1. Custom CRI to take care of GPU constraints
+2. Custom scheduler to allocate and schedule pods
+
+# Installing
+
+Clone this repo to $GOPATH/src/github.com/KubeGPU to get it to compile
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a

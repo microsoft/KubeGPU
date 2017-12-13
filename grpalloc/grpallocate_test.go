@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MSRCCS/grpalloc/devicemanager"
-
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/devicemanager"
+	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
 
 	"regexp"
@@ -39,7 +39,7 @@ type PodEx struct {
 
 func printContainerAllocation(cont *types.ContainerInfo) {
 	//glog.V(5).Infoln("Allocated", cont.Resources.Allocated)
-	sortedKeys := types.SortedStringKeys(cont.Requests)
+	sortedKeys := utils.SortedStringKeys(cont.Requests)
 	for _, resKey := range sortedKeys {
 		resVal := cont.Requests[types.ResourceName(resKey)]
 		fmt.Println("Resource", cont.Name+"/"+string(resKey),

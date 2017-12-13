@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MSRCCS/grpalloc/grpalloc/resource"
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/grpalloc/resource"
+	"github.com/KubeGPU/types"
 	"github.com/golang/glog"
 
 	"strconv"

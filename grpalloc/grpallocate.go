@@ -3,10 +3,10 @@ package grpalloc
 import (
 	"regexp"
 
-	"github.com/MSRCCS/grpalloc/grpalloc/resource"
-	"github.com/MSRCCS/grpalloc/grpalloc/scorer"
-	"github.com/MSRCCS/grpalloc/types"
-	"github.com/MSRCCS/grpalloc/utils"
+	"github.com/KubeGPU/grpalloc/resource"
+	"github.com/KubeGPU/grpalloc/scorer"
+	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
@@ -199,10 +199,10 @@ func (grp *GrpAllocator) allocateSubGroups(
 
 	found := true
 	var predicateFails []algorithm.PredicateFailureReason
-	sortedSubGrpsReqKeys := types.SortedStringKeys(subgrpsReq)
+	sortedSubGrpsReqKeys := utils.SortedStringKeys(subgrpsReq)
 	for _, subgrpsKey := range sortedSubGrpsReqKeys {
 		subgrpsElemGrp := subgrpsReq[subgrpsKey]
-		sortedSubgrpsElemGrp := types.SortedStringKeys(subgrpsElemGrp)
+		sortedSubgrpsElemGrp := utils.SortedStringKeys(subgrpsElemGrp)
 		for _, subgrpsElemIndex := range sortedSubgrpsElemGrp {
 			glog.V(5).Infof("Allocating subgroup with key %v and index %v", subgrpsKey, subgrpsElemIndex)
 			subGrp := grp.createSubGroup(allocLocationName, subgrpsReq, subgrpsAllocRes, subgrpsKey, subgrpsElemIndex)
@@ -329,7 +329,7 @@ func (grp *GrpAllocator) allocateGroup() (bool, []algorithm.PredicateFailureReas
 	grp.IsReqSubGrp = isSubGrp
 
 	// go over all possible places to allocate
-	sortedGrpAllocResourceKeys := types.SortedStringKeys(grp.GrpAllocResource)
+	sortedGrpAllocResourceKeys := utils.SortedStringKeys(grp.GrpAllocResource)
 	glog.V(7).Infof("All available resources locations: %v", sortedGrpAllocResourceKeys)
 	for _, grpsAllocResKey := range sortedGrpAllocResourceKeys {
 		grpCheck := grp.cloneGroup()

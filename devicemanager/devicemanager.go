@@ -1,8 +1,8 @@
 package devicemanager
 
 import (
-	"github.com/MSRCCS/grpalloc/gpu"
-	"github.com/MSRCCS/grpalloc/types"
+	"github.com/KubeGPU/gpu"
+	"github.com/KubeGPU/types"
 )
 
 // DeviceManager manages multiple devices
