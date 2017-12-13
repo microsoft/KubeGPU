@@ -3,8 +3,8 @@ package scorer
 import (
 	"math"
 
-	resourcefn "github.com/MSRCCS/grpalloc/grpalloc/resource"
-	"github.com/MSRCCS/grpalloc/types"
+	resourcefn "github.com/KubeGPU/grpalloc/resource"
+	"github.com/KubeGPU/types"
 )
 
 // LeftoverScoreFunc provides default scoring function
