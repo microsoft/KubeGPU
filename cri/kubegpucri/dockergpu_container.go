@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
@@ -23,6 +23,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
+	nodeutil "k8s.io/kubernetes/pkg/util/node"
 	"k8s.io/kubernetes/pkg/version/verflag"
 )
 
@@ -71,11 +72,14 @@ func (d *dockerGPUService) ContainerStatus(containerID string) (*runtimeapi.Cont
 // }
 
 func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
+	glog.V(5).Infof("Exec sync called %v Cmd %v", containerID, cmd)
 	return d.dockerService.ExecSync(containerID, cmd, timeout)
 }
 
 func (d *dockerGPUService) Exec(request *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
-	return d.dockerService.Exec(request)
+	response, err := d.dockerService.Exec(request)
+	glog.V(5).Infof("Exec called %v\n Response %v", request, response)
+	return response, err
 }
 
 func (d *dockerGPUService) Attach(req *runtimeapi.AttachRequest) (*runtimeapi.AttachResponse, error) {
@@ -159,6 +163,29 @@ func (d *dockerGPUService) ServeHTTP(writer http.ResponseWriter, req *http.Reque
 
 // =====================
 // Start the shim
+func GetHostName(f *options.KubeletFlags) (string, error) {
+	// 1) Use nodeIP if set
+	// 2) If the user has specified an IP to HostnameOverride, use it
+	// 3) Lookup the IP from node name by DNS and use the first non-loopback ipv4 address
+	// 4) Try to get the IP from the network interface used as default gateway
+	name := ""
+	if f.NodeIP != "" {
+		name = f.NodeIP
+	} else {
+		hostName := nodeutil.GetHostname(f.HostnameOverride)
+		var addr net.IP
+		if addr = net.ParseIP(hostName); addr == nil {
+			var err error
+			addr, err = utilnet.ChooseHostInterface()
+			if err != nil {
+				return "", err
+			}
+		}
+		name = addr.String()
+	}
+	return name, nil
+}
+
 func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
@@ -187,9 +214,15 @@ func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfigurat
 	}
 
 	// Initialize streaming configuration. (Not using TLS now)
+	hostName, err := GetHostName(f)
+	glog.V(2).Infof("Using hostname %v", hostName)
+	if err != nil {
+		return err
+	}
 	streamingConfig := &streaming.Config{
 		// Use a relative redirect (no scheme or host).
-		BaseURL:                         &url.URL{Path: "/cri/"},
+		//BaseURL:                         &url.URL{Path: "/cri/"},
+		Addr:                            fmt.Sprintf("%s:%d", hostName, c.Port),
 		StreamIdleTimeout:               c.StreamingConnectionIdleTimeout.Duration,
 		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
 		SupportedRemoteCommandProtocols: streaming.DefaultConfig.SupportedRemoteCommandProtocols,
@@ -222,15 +255,14 @@ func DockerGPUInit(f *options.KubeletFlags, c *componentconfig.KubeletConfigurat
 	}
 
 	if c.EnableServer {
-		// Start the streaming server -- doesn't reallly work since only handles crihandler stuff
-		// if we wanted to use custom CRI for streaming server, then we should call ListenAndServeKubeletServer
+		// Start the streaming server
 		s := &http.Server{
 			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
 			Handler:        dsGPU,
+			TLSConfig:      tlsOptions.Config,
 			MaxHeaderBytes: 1 << 20,
 		}
 		if tlsOptions != nil {
-			s.TLSConfig = tlsOptions.Config
 			return s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
 		} else {
 			return s.ListenAndServe()
