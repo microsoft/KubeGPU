@@ -1,9 +1,16 @@
 package devicemanager
 
 import (
+	"reflect"
+
 	"github.com/KubeGPU/gpu"
+	"github.com/KubeGPU/gpu/nvidia"
 	"github.com/KubeGPU/types"
 )
+
+var DeviceRegistry = map[string]reflect.Type{
+	"nvidiagpu": reflect.TypeOf(nvidia.NvidiaGPUManager{}),
+}
 
 // DeviceManager manages multiple devices
 type DevicesManager struct {
@@ -14,6 +21,17 @@ type DevicesManager struct {
 // AddDevice adds a device to the manager
 func (d *DevicesManager) AddDevice(device types.DeviceManager) {
 	d.Devices = append(d.Devices, device)
+}
+
+func (d *DevicesManager) CreateAndAddDevice(device string) error {
+	o := reflect.New(DeviceRegistry[device])
+	t := o.Interface().(types.DeviceManager)
+	err := t.New()
+	if err != nil {
+		return err
+	}
+	d.AddDevice(t)
+	return nil
 }
 
 // Start starts all devices in manager

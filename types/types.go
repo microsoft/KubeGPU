@@ -56,6 +56,8 @@ type Volume struct {
 
 // DeviceManager manages devices
 type DeviceManager interface {
+	// New creates the device and initializes it
+	New() error
 	// Start logically initializes the device
 	Start() error
 	// Capacity returns the capacity of resources

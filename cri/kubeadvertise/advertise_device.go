@@ -2,7 +2,9 @@ package kubeadvertise
 
 import (
 	"fmt"
+	"strconv"
 
+	"github.com/KubeGPU/devicemanager"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,6 +17,7 @@ import (
 
 type DeviceAdvertiser struct {
 	KubeClient *clientset.Clientset
+	DevMgr     *devicemanager.DevicesManager
 	nodeName   string
 }
 
@@ -49,7 +52,11 @@ func (da *DeviceAdvertiser) patchResources() error {
 		return fmt.Errorf("failed to cast %q node object %#v to v1.Node", da.nodeName, clonedNode)
 	}
 
-	// update the node status here ...
+	// update the node status here with device resources ...
+	resources := da.DevMgr.Capacity()
+	for resName, resVal := range resources {
+		originalNode.ObjectMeta.Annotations[string(resName)] = strconv.FormatInt(resVal, 10)
+	}
 
 	// Patch the current status on the API server
 	_, err = nodeutil.PatchNodeStatus(da.KubeClient, types.NodeName(da.nodeName), originalNode, node)

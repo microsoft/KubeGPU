@@ -32,7 +32,7 @@ func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string)
 		volume:       volume,
 		volumeDriver: volumeDriver,
 	}
-	return &nvidiaGPUManager{
+	return &NvidiaGPUManager{
 		gpus: make(map[string]gpuInfo),
 		np:   plugin,
 	}, nil

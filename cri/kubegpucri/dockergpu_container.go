@@ -23,6 +23,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/dockershim/libdocker"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
+	kubelettypes "k8s.io/kubernetes/pkg/kubelet/types"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 	"k8s.io/kubernetes/pkg/version/verflag"
 )
@@ -34,6 +35,10 @@ type dockerGPUService struct {
 
 // DockerService => RuntimeService => ContainerManager
 func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
+	// overwrite config.Devices here & then call CreateContainer ...
+	podName := config.Labels[kubelettypes.KubernetesPodNameLabel]
+	containerName := config.Labels[kubelettypes.KubernetesContainerNameLabel]
+	glog.V(3).Infof("Creating container for pod %v container %v", podName, containerName)
 	return d.DockerService.CreateContainer(podSandboxID, config, sandboxConfig)
 }
 
