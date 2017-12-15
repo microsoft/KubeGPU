@@ -50,8 +50,8 @@ type gpusInfo struct {
 	Gpus    []gpuInfo   `json:"Devices"`
 }
 
-// nvidiaGPUManager manages nvidia gpu devices.
-type nvidiaGPUManager struct {
+// NvidiaGPUManager manages nvidia gpu devices.
+type NvidiaGPUManager struct {
 	sync.Mutex
 	np        NvidiaPlugin
 	gpus      map[string]gpuInfo
@@ -64,8 +64,15 @@ type nvidiaGPUManager struct {
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
 // TODO: Migrate to use pod level cgroups and make it generic to all runtimes.
 func NewNvidiaGPUManager() (types.DeviceManager, error) {
+	ngm := &NvidiaGPUManager{}
+	return ngm, ngm.New()
+}
+
+func (ngm *NvidiaGPUManager) New() error {
 	plugin := &NvidiaDockerPlugin{}
-	return &nvidiaGPUManager{gpus: make(map[string]gpuInfo), np: plugin}, nil
+	ngm.gpus = make(map[string]gpuInfo)
+	ngm.np = plugin
+	return nil
 }
 
 func arrayContains(arr []int32, val int32) bool {
@@ -78,7 +85,7 @@ func arrayContains(arr []int32, val int32) bool {
 }
 
 // topology discovery
-func (ngm *nvidiaGPUManager) topologyDiscovery(links []int32, level int32) {
+func (ngm *NvidiaGPUManager) topologyDiscovery(links []int32, level int32) {
 	for id, copy := range ngm.gpus {
 		copy.TopoDone = false
 		ngm.gpus[id] = copy
@@ -109,7 +116,7 @@ func (ngm *nvidiaGPUManager) topologyDiscovery(links []int32, level int32) {
 }
 
 // Initialize the GPU devices
-func (ngm *nvidiaGPUManager) UpdateGPUInfo() error {
+func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 	ngm.Lock()
 	defer ngm.Unlock()
 
@@ -181,13 +188,13 @@ func (ngm *nvidiaGPUManager) UpdateGPUInfo() error {
 	return nil
 }
 
-func (ngm *nvidiaGPUManager) Start() error {
+func (ngm *NvidiaGPUManager) Start() error {
 	_ = ngm.UpdateGPUInfo() // ignore error in updating, gpus stay at zero
 	return nil
 }
 
 // Get how many GPU cards we have.
-func (ngm *nvidiaGPUManager) Capacity() types.ResourceList {
+func (ngm *NvidiaGPUManager) Capacity() types.ResourceList {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
 	resourceList := make(types.ResourceList)
 	if err != nil {
@@ -204,7 +211,7 @@ func (ngm *nvidiaGPUManager) Capacity() types.ResourceList {
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *nvidiaGPUManager) AllocateDevices(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
+func (ngm *NvidiaGPUManager) AllocateDevices(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""
