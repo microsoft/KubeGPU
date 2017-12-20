@@ -65,3 +65,26 @@ func (da *DeviceAdvertiser) patchResources() error {
 	}
 	return nil
 }
+
+func (da *DeviceAdvertiser) AdvertiseLoop(interval float32, tryAgainInterval float32, done chan) {
+
+	// for {
+		
+	// }
+
+	while (true) {
+		err := da.patchResources()
+		if err != nil {
+			glog.Errorf("Patching resources encountered error %v", err)
+
+		}
+	}
+}
+
+// timer := time.NewTimer(time.Second)
+// go func() {
+// 	<- timer.C
+// 	println("Timer expired")
+// }()
+// stop := timer.Stop()
+// println("Timer cancelled:", stop)
