@@ -3,6 +3,7 @@ package kubeadvertise
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/KubeGPU/devicemanager"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,44 +48,55 @@ func (da *DeviceAdvertiser) patchResources() error {
 		return fmt.Errorf("error clone node %q: %v", da.nodeName, err)
 	}
 
-	originalNode, ok := clonedNode.(*kubev1.Node)
-	if !ok || originalNode == nil {
+	newNode, ok := clonedNode.(*kubev1.Node)
+	if !ok || newNode == nil {
 		return fmt.Errorf("failed to cast %q node object %#v to v1.Node", da.nodeName, clonedNode)
 	}
 
 	// update the node status here with device resources ...
 	resources := da.DevMgr.Capacity()
 	for resName, resVal := range resources {
-		originalNode.ObjectMeta.Annotations[string(resName)] = strconv.FormatInt(resVal, 10)
+		newNode.ObjectMeta.Annotations[string(resName)] = strconv.FormatInt(resVal, 10)
 	}
 
 	// Patch the current status on the API server
-	_, err = nodeutil.PatchNodeStatus(da.KubeClient, types.NodeName(da.nodeName), originalNode, node)
+	_, err = nodeutil.PatchNodeStatus(da.KubeClient, types.NodeName(da.nodeName), node, newNode)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (da *DeviceAdvertiser) AdvertiseLoop(interval float32, tryAgainInterval float32, done chan) {
-
-	// for {
-		
-	// }
-
-	while (true) {
-		err := da.patchResources()
-		if err != nil {
-			glog.Errorf("Patching resources encountered error %v", err)
-
+func (da *DeviceAdvertiser) AdvertiseLoop(intervalMs int, tryAgainIntervalMs int, done chan bool) {
+	intervalDuration := time.Duration(intervalMs) * time.Millisecond
+	tickChan := time.NewTicker(intervalDuration)
+	lastSuccessfulPatch := time.Now()
+	for {
+		select {
+		case <-tickChan.C:
+			if time.Since(lastSuccessfulPatch) > intervalDuration {
+				err := da.patchResources()
+				if err != nil {
+					tickChanOnErr := time.NewTicker(time.Duration(tryAgainIntervalMs) * time.Millisecond)
+					for {
+						select {
+						case <-tickChanOnErr.C:
+							err = da.patchResources()
+						case <-done:
+							return
+						}
+						if err == nil {
+							tickChanOnErr.Stop()
+							//close(tickChanOnErr.C)
+							break // back to original timer
+						}
+					}
+				} else {
+					lastSuccessfulPatch = time.Now()
+				}
+			}
+		case <-done:
+			return
 		}
 	}
 }
-
-// timer := time.NewTimer(time.Second)
-// go func() {
-// 	<- timer.C
-// 	println("Timer expired")
-// }()
-// stop := timer.Stop()
-// println("Timer cancelled:", stop)
