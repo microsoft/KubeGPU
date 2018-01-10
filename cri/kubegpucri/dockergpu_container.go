@@ -118,15 +118,13 @@ func DockerGPUInit(s *options.KubeletServer, f *options.KubeletFlags, c *compone
 		return err
 	}
 
-	// Initialize streaming configuration. (Not using TLS now)
+	// Initialize streaming configuration.
 	hostName, nodeName, err := GetHostName(f)
 	glog.V(2).Infof("Using hostname %v nodeName %v", hostName, nodeName)
 	if err != nil {
 		return err
 	}
 	streamingConfig := &streaming.Config{
-		// Use a relative redirect (no scheme or host).
-		//BaseURL:                         &url.URL{Path: "/cri/"},
 		Addr:                            fmt.Sprintf("%s:%d", hostName, c.Port),
 		StreamIdleTimeout:               c.StreamingConnectionIdleTimeout.Duration,
 		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
