@@ -36,6 +36,20 @@ type PodInfo struct {
 	RunningContainers []ContainerInfo
 }
 
+func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
+	for _, c := range p.InitContainers {
+		if c.Name == name {
+			return &c
+		}
+	}
+	for _, c := range p.RunningContainers {
+		if c.Name == name {
+			return &c
+		}
+	}
+	return nil
+}
+
 type NodeInfo struct {
 	Name        string
 	Capacity    ResourceList

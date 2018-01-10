@@ -1,15 +1,18 @@
 package main
 
 import (
+	"github.com/KubeGPU/kubeinterface"
 	"github.com/KubeGPU/devicemanager"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/KubeGPU/cri/kubeadvertise"
+	"github.com/KubeGPU/types"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 
@@ -37,6 +40,37 @@ type dockerGPUService struct {
 	advertiser *kubeadvertise.DeviceAdvertiser
 }
 
+func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types.ContainerInfo, config *runtimeapi.ContainerConfig) error {
+	nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
+	var newDevices []*runtimeapi.Device
+	// first remove any existing nvidia devices
+	for _, oldDevice := range config.Devices {
+		isNvidiaDevice := false
+		if oldDevice.HostPath == "/dev/nvidiactl" ||
+		   oldDevice.HostPath == "/dev/nvidia-uvm" || 
+		   oldDevice.HostPath == "/dev/nvidia-uvm-tools" {
+			isNvidiaDevice = true
+		}
+		if nvidiaFullpathRE.MatchString(oldDevice.HostPath) {
+			isNvidiaDevice = true
+		}
+		if !isNvidiaDevice {
+			newDevices = append(newDevices, oldDevice)
+		}
+	}
+	// allocate devices for container
+	_, devices, err := d.advertiser.DevMgr.AllocateDevices(pod, cont)
+	if err != nil {
+		return err
+	}
+	// now add devices returned -- skip volumes for now
+	for _, device := range devices {
+		newDevices = append(newDevices, &runtimeapi.Device{HostPath: device, ContainerPath: device, Permissions: "mrw"})
+	}
+	config.Devices = newDevices
+	return nil
+}
+
 // DockerService => RuntimeService => ContainerManager
 func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
 	// overwrite config.Devices here & then call CreateContainer ...
@@ -50,6 +84,15 @@ func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimea
 		glog.Errorf("Retrieving pod %v gives error %v", podName, err)
 	}
 	glog.V(3).Infof("Pod Spec: %v", pod.Spec)
+	// convert to local podInfo structure
+	podInfo := kubeinterface.KubePodInfoToPodInfo(&pod.Spec)
+	// use annotations to add fields to podInfo
+	kubeinterface.AnnotationToPodInfo(&pod.ObjectMeta, podInfo)
+	// modify the container config
+	err = d.modifyContainerConfig(podInfo, podInfo.GetContainerInPod(containerName), config)
+	if err != nil {
+		return "", err
+	}
 	return d.DockerService.CreateContainer(podSandboxID, config, sandboxConfig)
 }
 
