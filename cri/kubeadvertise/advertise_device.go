@@ -2,11 +2,11 @@ package kubeadvertise
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/devicemanager"
+	"github.com/KubeGPU/kubeinterface"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	kubetypes "k8s.io/apimachinery/pkg/types"
@@ -55,10 +55,10 @@ func (da *DeviceAdvertiser) patchResources() error {
 	}
 
 	// update the node status here with device resources ...
-	nodeInfo = &types.NewNodeInfoWithName(da.nodeName)
+	nodeInfo := types.NewNodeInfoWithName(da.nodeName)
 	da.DevMgr.UpdateNodeInfo(nodeInfo)
 	// write node info into annotations
-	kubeinterface.NodeInfoToAnnotations(&newNode.ObjectMeta, nodeInfo)
+	kubeinterface.NodeInfoToAnnotation(&newNode.ObjectMeta, nodeInfo)
 
 	// Patch the current status on the API server
 	_, err = nodeutil.PatchNodeStatus(da.KubeClient, kubetypes.NodeName(da.nodeName), node, newNode)

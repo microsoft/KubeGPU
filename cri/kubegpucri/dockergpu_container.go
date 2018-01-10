@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/KubeGPU/devicemanager"
 	"fmt"
 	"net"
 	"net/http"
@@ -89,6 +90,8 @@ func GetHostName(f *options.KubeletFlags) (string, string, error) {
 }
 
 func DockerGPUInit(s *options.KubeletServer, f *options.KubeletFlags, c *componentconfig.KubeletConfiguration, r *options.ContainerRuntimeOptions) error {
+	// create channel to notify we are finished
+	done := make(chan bool)
 	// Create docker client.
 	dockerClient := libdocker.ConnectToDockerOrDie(r.DockerEndpoint, c.RuntimeRequestTimeout.Duration,
 		r.ImagePullProgressDeadline.Duration)
@@ -148,10 +151,22 @@ func DockerGPUInit(s *options.KubeletServer, f *options.KubeletFlags, c *compone
 		return err
 	}
 
-	da, err := kubeadvertise.NewDeviceAdvertiser(s, nodeName)
+	// create a device manager using nvidiagpu as the only device
+	dm := &devicemanager.DevicesManager{}
+	if err := dm.CreateAndAddDevice("nvidiagpu"); err != nil {
+		return err
+	}
+	// start the device manager
+	dm.Start()
+
+	da, err := kubeadvertise.NewDeviceAdvertiser(s, dm, nodeName)
 	if err != nil {
 		return err
 	}
+	// start the advertisement loop
+	go da.AdvertiseLoop(20000, 1000, done)
+
+	// create the GPU service
 	dsGPU := &dockerGPUService{DockerService: ds, advertiser: da}
 
 	glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
@@ -169,13 +184,17 @@ func DockerGPUInit(s *options.KubeletServer, f *options.KubeletFlags, c *compone
 			MaxHeaderBytes: 1 << 20,
 		}
 		if tlsOptions != nil {
-			return s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
+			// this will listen forever
+			ret := s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
+			done <- true
+			return ret
 		} else {
-			return s.ListenAndServe()
+			ret := s.ListenAndServe()
+			done <- true
+			return ret
 		}
 	} else {
 		// wait forever
-		done := make(chan bool)
 		<-done
 		return nil
 	}

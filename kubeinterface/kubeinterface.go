@@ -2,6 +2,7 @@ package kubeinterface
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -131,7 +132,35 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	}
 }
 
+func addLocToContainerInfo(allocFrom types.ResourceLocation, conts []types.ContainerInfo) {
+	contMap := make(map[string]int) // maps container name to index
+	re := regexp.MustCompile(`(.*?)/` + "AllocateFrom" + `/(.*)`)
+	for allocFrom, allocTo := range allocFrom {
+		matches := re.FindStringSubmatch(string(allocFrom))
+		if len(matches) == 3 {
+			contName := matches[1]
+			contRes := matches[2]
+			index, ok := contMap[contName]
+			if !ok {
+				index = len(conts)
+				contMap[contName] = index
+				newContainer := types.NewContainerInfo()
+				newContainer.Name = contName // not needed as we have map, but add anyways
+				conts = append(conts, *newContainer)
+			}
+			conts[index].AllocateFrom[types.ResourceName(contRes)] = allocTo
+		}
+	}
+}
+
 // AnnotationToPodInfo is used by CRI to obtain AllocateFrom written by scheduler
 func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
-
+	initAllocFrom := make(types.ResourceLocation)
+	runningAllocFrom := make(types.ResourceLocation)
+	for k, v := range meta.Annotations {
+		getToResourceListName("PodInfo/InitContainer", k, v, initAllocFrom)
+		getToResourceListName("PodInfo/RunningContainer", k, v, runningAllocFrom)
+	}
+	addLocToContainerInfo(initAllocFrom, podInfo.InitContainers)
+	addLocToContainerInfo(runningAllocFrom, podInfo.RunningContainers)
 }

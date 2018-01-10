@@ -22,6 +22,7 @@ type DevicesManager struct {
 // AddDevice adds a device to the manager
 func (d *DevicesManager) AddDevice(device types.Device) {
 	d.Devices = append(d.Devices, device)
+	d.Operational = append(d.Operational, false)
 }
 
 func (d *DevicesManager) CreateAndAddDevice(device string) error {
