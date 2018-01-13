@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/KubeGPU/types"
+	kubetypes "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubetypes "k8s.io/kubernetes/pkg/api/v1"
 )
 
 func addResourceList64(keyPrefix string, a map[string]string, list map[types.ResourceName]int64) {

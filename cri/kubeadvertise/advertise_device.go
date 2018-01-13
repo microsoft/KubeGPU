@@ -12,8 +12,8 @@ import (
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	kubev1 "k8s.io/kubernetes/pkg/api/v1"
-	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	kubev1 "k8s.io/api/core/v1"
+	clientset "k8s.io/client-go/kubernetes"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
