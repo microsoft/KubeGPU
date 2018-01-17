@@ -1,14 +1,19 @@
 package kubeinterface
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/KubeGPU/types"
-	kubetypes "k8s.io/api/core/v1"
+	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubetypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	//kubetypes "k8s.io/client-go/vendor/k8s.io/apimachinery/pkg/types"
 )
 
 func addResourceList64(keyPrefix string, a map[string]string, list map[types.ResourceName]int64) {
@@ -100,7 +105,7 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubetypes.Container) {
+func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 	for _, c := range conts {
 		cont := types.NewContainerInfo()
 		cont.Name = c.Name
@@ -112,7 +117,7 @@ func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubetypes.Container)
 }
 
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
-func KubePodInfoToPodInfo(kubePodInfo *kubetypes.PodSpec) *types.PodInfo {
+func KubePodInfoToPodInfo(kubePodInfo *kubev1.PodSpec) *types.PodInfo {
 	podInfo := &types.PodInfo{}
 	addContainersToPodInfo(podInfo, kubePodInfo.InitContainers)
 	addContainersToPodInfo(podInfo, kubePodInfo.Containers)
@@ -163,4 +168,35 @@ func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	}
 	addLocToContainerInfo(initAllocFrom, podInfo.InitContainers)
 	addLocToContainerInfo(runningAllocFrom, podInfo.RunningContainers)
+}
+
+// From nodeutil
+
+// PatchNodeStatus patches node status.
+func PatchNodeStatus(c v1core.CoreV1Interface, nodeName kubetypes.NodeName, oldNode *kubev1.Node, newNode *kubev1.Node) (*kubev1.Node, error) {
+	oldData, err := json.Marshal(oldNode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal old node %#v for node %q: %v", oldNode, nodeName, err)
+	}
+
+	// Reset spec to make sure only patch for Status or ObjectMeta is generated.
+	// Note that we don't reset ObjectMeta here, because:
+	// 1. This aligns with Nodes().UpdateStatus().
+	// 2. Some component does use this to update node annotations.
+	newNode.Spec = oldNode.Spec
+	newData, err := json.Marshal(newNode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal new node %#v for node %q: %v", newNode, nodeName, err)
+	}
+
+	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, kubev1.Node{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create patch for node %q: %v", nodeName, err)
+	}
+
+	updatedNode, err := c.Nodes().Patch(string(nodeName), kubetypes.StrategicMergePatchType, patchBytes, "status")
+	if err != nil {
+		return nil, fmt.Errorf("failed to patch status %q for node %q: %v", patchBytes, nodeName, err)
+	}
+	return updatedNode, nil
 }

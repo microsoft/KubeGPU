@@ -96,16 +96,16 @@ func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimea
 	return d.DockerService.CreateContainer(podSandboxID, config, sandboxConfig)
 }
 
-func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
-	glog.V(5).Infof("Exec sync called %v Cmd %v", containerID, cmd)
-	return d.DockerService.ExecSync(containerID, cmd, timeout)
-}
+// func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
+// 	glog.V(5).Infof("Exec sync called %v Cmd %v", containerID, cmd)
+// 	return d.DockerService.ExecSync(containerID, cmd, timeout)
+// }
 
-func (d *dockerGPUService) Exec(request *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
-	response, err := d.DockerService.Exec(request)
-	glog.V(5).Infof("Exec called %v\n Response %v", request, response)
-	return response, err
-}
+// func (d *dockerGPUService) Exec(request *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
+// 	response, err := d.DockerService.Exec(request)
+// 	glog.V(5).Infof("Exec called %v\n Response %v", request, response)
+// 	return response, err
+// }
 
 // =====================
 // Start the shim

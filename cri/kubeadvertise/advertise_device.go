@@ -7,12 +7,11 @@ import (
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/devicemanager"
 	"github.com/KubeGPU/kubeinterface"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/conversion"
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	kubev1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
@@ -44,15 +43,7 @@ func (da *DeviceAdvertiser) patchResources() error {
 		return fmt.Errorf("error getting current node %q: %v", da.nodeName, err)
 	}
 
-	clonedNode, err := conversion.NewCloner().DeepCopy(node)
-	if err != nil {
-		return fmt.Errorf("error clone node %q: %v", da.nodeName, err)
-	}
-
-	newNode, ok := clonedNode.(*kubev1.Node)
-	if !ok || newNode == nil {
-		return fmt.Errorf("failed to cast %q node object %#v to v1.Node", da.nodeName, clonedNode)
-	}
+	newNode := node.DeepCopy()
 
 	// update the node status here with device resources ...
 	nodeInfo := types.NewNodeInfoWithName(da.nodeName)
@@ -61,7 +52,7 @@ func (da *DeviceAdvertiser) patchResources() error {
 	kubeinterface.NodeInfoToAnnotation(&newNode.ObjectMeta, nodeInfo)
 
 	// Patch the current status on the API server
-	_, err = nodeutil.PatchNodeStatus(da.KubeClient, kubetypes.NodeName(da.nodeName), node, newNode)
+	_, err = nodeutil.PatchNodeStatus(da.KubeClient.CoreV1(), kubetypes.NodeName(da.nodeName), node, newNode)
 	if err != nil {
 		return err
 	}
