@@ -36,6 +36,20 @@ type PodInfo struct {
 	RunningContainers []ContainerInfo
 }
 
+func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
+	for _, c := range p.InitContainers {
+		if c.Name == name {
+			return &c
+		}
+	}
+	for _, c := range p.RunningContainers {
+		if c.Name == name {
+			return &c
+		}
+	}
+	return nil
+}
+
 type NodeInfo struct {
 	Name        string
 	Capacity    ResourceList
@@ -49,23 +63,32 @@ func NewNodeInfo() *NodeInfo {
 		Used: make(ResourceList), Scorer: make(ResourceScorer)}
 }
 
+func NewNodeInfoWithName(name string) *NodeInfo {
+	node := &NodeInfo{Capacity: make(ResourceList), Allocatable: make(ResourceList),
+		Used: make(ResourceList), Scorer: make(ResourceScorer)}
+	node.Name = name
+	return node
+}
+
 type Volume struct {
 	Name   string
 	Driver string
 }
 
-// DeviceManager manages devices
-type DeviceManager interface {
+// Device is a device to use
+type Device interface {
 	// New creates the device and initializes it
 	New() error
 	// Start logically initializes the device
 	Start() error
-	// Capacity returns the capacity of resources
-	Capacity() ResourceList
+	// UpdateNodeInfo - updates a node info structure by writing capacity, allocatable, used, scorer
+	UpdateNodeInfo(*NodeInfo) error
 	// Allocate attempst to allocate the devices
 	// Returns list of (VolumeName, VolumeDriver), and list of Devices to use
 	// Returns an error on failure.
-	AllocateDevices(*PodInfo, *ContainerInfo) ([]Volume, []string, error)
+	Allocate(*PodInfo, *ContainerInfo) ([]Volume, []string, error)
+	// GetName returns the name of a device
+	GetName() string
 }
 
 const (

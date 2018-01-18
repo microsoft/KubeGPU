@@ -2,16 +2,17 @@ package kubeadvertise
 
 import (
 	"fmt"
-	"strconv"
+	"time"
 
+	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/devicemanager"
+	"github.com/KubeGPU/kubeinterface"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/conversion"
-	"k8s.io/apimachinery/pkg/types"
+	kubetypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	kubev1 "k8s.io/kubernetes/pkg/api/v1"
-	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	clientset "k8s.io/client-go/kubernetes"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
@@ -21,7 +22,7 @@ type DeviceAdvertiser struct {
 	nodeName   string
 }
 
-func NewDeviceAdvertiser(s *options.KubeletServer, nodeName string) (*DeviceAdvertiser, error) {
+func NewDeviceAdvertiser(s *options.KubeletServer, dm *devicemanager.DevicesManager, thisNodeName string) (*DeviceAdvertiser, error) {
 	clientConfig, err := app.CreateAPIServerClientConfig(s)
 	if err != nil {
 		return nil, err
@@ -30,7 +31,7 @@ func NewDeviceAdvertiser(s *options.KubeletServer, nodeName string) (*DeviceAdve
 	if err != nil {
 		return nil, err
 	}
-	da := &DeviceAdvertiser{KubeClient: kubeClient}
+	da := &DeviceAdvertiser{KubeClient: kubeClient, DevMgr: dm, nodeName: thisNodeName}
 	return da, nil
 }
 
@@ -42,26 +43,52 @@ func (da *DeviceAdvertiser) patchResources() error {
 		return fmt.Errorf("error getting current node %q: %v", da.nodeName, err)
 	}
 
-	clonedNode, err := conversion.NewCloner().DeepCopy(node)
-	if err != nil {
-		return fmt.Errorf("error clone node %q: %v", da.nodeName, err)
-	}
-
-	originalNode, ok := clonedNode.(*kubev1.Node)
-	if !ok || originalNode == nil {
-		return fmt.Errorf("failed to cast %q node object %#v to v1.Node", da.nodeName, clonedNode)
-	}
+	newNode := node.DeepCopy()
 
 	// update the node status here with device resources ...
-	resources := da.DevMgr.Capacity()
-	for resName, resVal := range resources {
-		originalNode.ObjectMeta.Annotations[string(resName)] = strconv.FormatInt(resVal, 10)
-	}
+	nodeInfo := types.NewNodeInfoWithName(da.nodeName)
+	da.DevMgr.UpdateNodeInfo(nodeInfo)
+	// write node info into annotations
+	kubeinterface.NodeInfoToAnnotation(&newNode.ObjectMeta, nodeInfo)
 
 	// Patch the current status on the API server
-	_, err = nodeutil.PatchNodeStatus(da.KubeClient, types.NodeName(da.nodeName), originalNode, node)
+	_, err = nodeutil.PatchNodeStatus(da.KubeClient.CoreV1(), kubetypes.NodeName(da.nodeName), node, newNode)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (da *DeviceAdvertiser) AdvertiseLoop(intervalMs int, tryAgainIntervalMs int, done chan bool) {
+	intervalDuration := time.Duration(intervalMs) * time.Millisecond
+	tickChan := time.NewTicker(intervalDuration)
+	lastSuccessfulPatch := time.Now()
+	for {
+		select {
+		case <-tickChan.C:
+			if time.Since(lastSuccessfulPatch) > intervalDuration {
+				err := da.patchResources()
+				if err != nil {
+					tickChanOnErr := time.NewTicker(time.Duration(tryAgainIntervalMs) * time.Millisecond)
+					for {
+						select {
+						case <-tickChanOnErr.C:
+							err = da.patchResources()
+						case <-done:
+							return
+						}
+						if err == nil {
+							tickChanOnErr.Stop()
+							//close(tickChanOnErr.C)
+							break // back to original timer
+						}
+					}
+				} else {
+					lastSuccessfulPatch = time.Now()
+				}
+			}
+		case <-done:
+			return
+		}
+	}
 }

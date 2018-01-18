@@ -63,7 +63,7 @@ type NvidiaGPUManager struct {
 
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
 // TODO: Migrate to use pod level cgroups and make it generic to all runtimes.
-func NewNvidiaGPUManager() (types.DeviceManager, error) {
+func NewNvidiaGPUManager() (types.Device, error) {
 	ngm := &NvidiaGPUManager{}
 	return ngm, ngm.New()
 }
@@ -82,6 +82,10 @@ func arrayContains(arr []int32, val int32) bool {
 		}
 	}
 	return false
+}
+
+func (ngm *NvidiaGPUManager) GetName() string {
+	return "nvidiagpu"
 }
 
 // topology discovery
@@ -194,24 +198,23 @@ func (ngm *NvidiaGPUManager) Start() error {
 }
 
 // Get how many GPU cards we have.
-func (ngm *NvidiaGPUManager) Capacity() types.ResourceList {
+func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
-	resourceList := make(types.ResourceList)
 	if err != nil {
 		ngm.numGpus = 0
-		return resourceList // empty resource list
+		return err
 	}
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
-			resource.AddGroupResource(resourceList, val.Name+"/memory", val.Memory.Global)
-			resource.AddGroupResource(resourceList, val.Name+"/cards", int64(1))
+			resource.AddGroupResource(nodeInfo.Capacity, val.Name+"/memory", val.Memory.Global)
+			resource.AddGroupResource(nodeInfo.Allocatable, val.Name+"/cards", int64(1))
 		}
 	}
-	return resourceList
+	return nil
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *NvidiaGPUManager) AllocateDevices(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
+func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""

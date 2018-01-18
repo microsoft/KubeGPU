@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/blang/semver"
-	dockertypes "github.com/docker/engine-api/types"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/google/cadvisor/container"
 	"github.com/google/cadvisor/container/libcontainer"
 	"github.com/google/cadvisor/devicemapper"
@@ -35,12 +35,16 @@ import (
 	dockerutil "github.com/google/cadvisor/utils/docker"
 	"github.com/google/cadvisor/zfs"
 
-	docker "github.com/docker/engine-api/client"
+	docker "github.com/docker/docker/client"
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
 )
 
 var ArgDockerEndpoint = flag.String("docker", "unix:///var/run/docker.sock", "docker endpoint")
+var ArgDockerTLS = flag.Bool("docker-tls", false, "use TLS to connect to docker")
+var ArgDockerCert = flag.String("docker-tls-cert", "cert.pem", "path to client certificate")
+var ArgDockerKey = flag.String("docker-tls-key", "key.pem", "path to private key")
+var ArgDockerCA = flag.String("docker-tls-ca", "ca.pem", "path to trusted CA")
 
 // The namespace under which Docker aliases are unique.
 const DockerNamespace = "docker"
@@ -336,7 +340,8 @@ func Register(factory info.MachineInfoFactory, fsInfo fs.FsInfo, ignoreMetrics c
 			glog.Errorf("devicemapper filesystem stats will not be reported: %v", err)
 		}
 
-		status := StatusFromDockerInfo(*dockerInfo)
+		// Safe to ignore error - driver status should always be populated.
+		status, _ := StatusFromDockerInfo(*dockerInfo)
 		thinPoolName = status.DriverStatus[dockerutil.DriverStatusPoolName]
 	}
 
@@ -348,7 +353,7 @@ func Register(factory info.MachineInfoFactory, fsInfo fs.FsInfo, ignoreMetrics c
 		}
 	}
 
-	glog.Infof("Registering Docker factory")
+	glog.V(1).Infof("Registering Docker factory")
 	f := &dockerFactory{
 		cgroupSubsystems:   cgroupSubsystems,
 		client:             client,

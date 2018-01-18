@@ -44,7 +44,7 @@ func RegisterHandlers(mux httpmux.Mux, containerManager manager.Manager, httpAut
 	mux.HandleFunc(validate.ValidatePage, func(w http.ResponseWriter, r *http.Request) {
 		err := validate.HandleRequest(w, containerManager)
 		if err != nil {
-			fmt.Fprintf(w, "%s", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	})
 
@@ -60,7 +60,7 @@ func RegisterHandlers(mux httpmux.Mux, containerManager manager.Manager, httpAut
 
 	// Setup the authenticator object
 	if httpAuthFile != "" {
-		glog.Infof("Using auth file %s", httpAuthFile)
+		glog.V(1).Infof("Using auth file %s", httpAuthFile)
 		secrets := auth.HtpasswdFileProvider(httpAuthFile)
 		authenticator := auth.NewBasicAuthenticator(httpAuthRealm, secrets)
 		mux.HandleFunc(static.StaticResource, authenticator.Wrap(staticHandler))
@@ -70,7 +70,7 @@ func RegisterHandlers(mux httpmux.Mux, containerManager manager.Manager, httpAut
 		authenticated = true
 	}
 	if httpAuthFile == "" && httpDigestFile != "" {
-		glog.Infof("Using digest file %s", httpDigestFile)
+		glog.V(1).Infof("Using digest file %s", httpDigestFile)
 		secrets := auth.HtdigestFileProvider(httpDigestFile)
 		authenticator := auth.NewDigestAuthenticator(httpDigestRealm, secrets)
 		mux.HandleFunc(static.StaticResource, authenticator.Wrap(staticHandler))
@@ -104,15 +104,9 @@ func RegisterPrometheusHandler(mux httpmux.Mux, containerManager manager.Manager
 }
 
 func staticHandlerNoAuth(w http.ResponseWriter, r *http.Request) {
-	err := static.HandleRequest(w, r.URL)
-	if err != nil {
-		fmt.Fprintf(w, "%s", err)
-	}
+	static.HandleRequest(w, r.URL)
 }
 
 func staticHandler(w http.ResponseWriter, r *auth.AuthenticatedRequest) {
-	err := static.HandleRequest(w, r.URL)
-	if err != nil {
-		fmt.Fprintf(w, "%s", err)
-	}
+	static.HandleRequest(w, r.URL)
 }

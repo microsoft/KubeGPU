@@ -26,7 +26,7 @@ func (np *NvidiaFakePlugin) GetGPUCommandLine(devices []int) ([]byte, error) {
 	return []byte(cliString), nil
 }
 
-func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string) (types.DeviceManager, error) {
+func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string) (types.Device, error) {
 	plugin := &NvidiaFakePlugin{
 		gInfo:        *info,
 		volume:       volume,
