@@ -115,22 +115,22 @@ func GetHostName(f *options.KubeletFlags) (string, string, error) {
 	// 2) If the user has specified an IP to HostnameOverride, use it
 	// 3) Lookup the IP from node name by DNS and use the first non-loopback ipv4 address
 	// 4) Try to get the IP from the network interface used as default gateway
-	name := ""
-	hostName := nodeutil.GetHostname(f.HostnameOverride)
+	ipName := ""
+	nodeName := nodeutil.GetHostname(f.HostnameOverride)
 	if f.NodeIP != "" {
-		name = f.NodeIP
+		ipName = f.NodeIP
 	} else {
 		var addr net.IP
-		if addr = net.ParseIP(hostName); addr == nil {
+		if addr = net.ParseIP(nodeName); addr == nil {
 			var err error
 			addr, err = utilnet.ChooseHostInterface()
 			if err != nil {
-				return "", hostName, err
+				return "", nodeName, err
 			}
 		}
-		name = addr.String()
+		ipName = addr.String()
 	}
-	return name, hostName, nil
+	return ipName, nodeName, nil
 }
 
 func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertise.DeviceAdvertiser, error) {
@@ -142,7 +142,7 @@ func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertis
 	// start the device manager
 	dm.Start()
 
-	_, nodeName, err := GetHostName(&s.KubeletFlags)
+	_, nodeName, err := GetHostName(&s.KubeletFlags) // nodeName is name of machine
 	if err != nil {
 		return nil, err
 	}	
@@ -184,13 +184,13 @@ func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 	if err != nil {
 		return err
 	}
-	hostName, nodeName, err := GetHostName(f)
-	glog.V(2).Infof("Using hostname %v nodeName %v", hostName, nodeName)
+	ipName, nodeName, err := GetHostName(f)
+	glog.V(2).Infof("Using ipname %v nodeName %v", ipName, nodeName)
 	if err != nil {
 		return err
 	}
 	streamingConfig := &streaming.Config{
-		Addr:                            fmt.Sprintf("%s:%d", hostName, c.Port),
+		Addr:                            fmt.Sprintf("%s:%d", ipName, c.Port),
 		StreamIdleTimeout:               c.StreamingConnectionIdleTimeout.Duration,
 		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
 		SupportedRemoteCommandProtocols: streaming.DefaultConfig.SupportedRemoteCommandProtocols,
