@@ -59,11 +59,13 @@ func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types
 			newDevices = append(newDevices, oldDevice)
 		}
 	}
+	glog.V(3).Infof("Modified devices: %v", newDevices)
 	// allocate devices for container
 	_, devices, err := d.devmgr.AllocateDevices(pod, cont)
 	if err != nil {
 		return err
 	}
+	glog.V(3).Infof("New devices to add: %v", devices)
 	// now add devices returned -- skip volumes for now
 	for _, device := range devices {
 		newDevices = append(newDevices, &runtimeapi.Device{HostPath: device, ContainerPath: device, Permissions: "mrw"})

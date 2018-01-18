@@ -70,6 +70,7 @@ func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.Contain
 		if d.Operational[i] {
 			volumeD, deviceD, err := device.Allocate(pod, cont)
 			if err == nil {
+				// appending nil to nil is okay
 				volumes = append(volumes, volumeD...)
 				devices = append(devices, deviceD...)
 			} else {
