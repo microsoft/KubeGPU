@@ -14,22 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+// +k8s:deepcopy-gen=package
 
-import (
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-func GetControllerRef(pod *v1.Pod) *metav1.OwnerReference {
-	if len(pod.OwnerReferences) == 0 {
-		return nil
-	}
-	for i := range pod.OwnerReferences {
-		ref := &pod.OwnerReferences[i]
-		if ref.Controller != nil && *ref.Controller {
-			return ref
-		}
-	}
-	return nil
-}
+// Package v1 contains scheduler plugin API objects.
+package v1 // import "k8s.io/kubernetes/plugin/pkg/scheduler/api/v1"
