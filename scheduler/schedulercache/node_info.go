@@ -20,6 +20,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
+	extypes "github.com/KubeGPU/types"
+	"github.com/KubeGPU/kubeinterface"
+	"github.com/KubeGPU/"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	clientcache "k8s.io/client-go/tools/cache"
@@ -34,6 +37,7 @@ var emptyResource = Resource{}
 type NodeInfo struct {
 	// Overall node information.
 	node *v1.Node
+	nodeEx *extypes.NodeInfo
 
 	pods             []*v1.Pod
 	podsWithAffinity []*v1.Pod
@@ -122,6 +126,7 @@ func (r *Resource) SetOpaque(name v1.ResourceName, quantity int64) {
 // the returned object.
 func NewNodeInfo(pods ...*v1.Pod) *NodeInfo {
 	ni := &NodeInfo{
+		nodeEx:              extypes.NewNodeInfo(),
 		requestedResource:   &Resource{},
 		nonzeroRequest:      &Resource{},
 		allocatableResource: &Resource{},
@@ -286,6 +291,10 @@ func (n *NodeInfo) addPod(pod *v1.Pod) {
 	// Consume ports when pods added.
 	n.updateUsedPorts(pod, true)
 
+	// convert pod annotations to resources and use them
+	exPodInfo := kubeinterface.KubePodInfoToPodInfo(pod.Spec)
+	grpalloc.TakePodResources(n.nodeEx, exPodInfo)
+
 	n.generation++
 }
 
@@ -336,6 +345,10 @@ func (n *NodeInfo) removePod(pod *v1.Pod) error {
 
 			// Release ports when remove Pods.
 			n.updateUsedPorts(pod, false)
+
+			// convert pod annotations to resources and use them
+			exPodInfo := kubeinterface.KubePodInfoToPodInfo(pod.Spec)
+			grpalloc.ReturnPodResources(n.nodeEx, exPodInfo)
 
 			n.generation++
 
