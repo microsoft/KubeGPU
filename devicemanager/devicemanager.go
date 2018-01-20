@@ -3,7 +3,6 @@ package devicemanager
 import (
 	"reflect"
 
-	"github.com/KubeGPU/gpu"
 	"github.com/KubeGPU/gpu/nvidia"
 	"github.com/KubeGPU/types"
 	"github.com/golang/glog"
@@ -79,18 +78,4 @@ func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.Contain
 		}
 	}
 	return volumes, devices, errRet
-}
-
-// translate all device resources
-func TranslateResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	for index, cont := range podInfo.InitContainers {
-		// translate gpu resources
-		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		podInfo.InitContainers[index].Requests = gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
-	}
-	for index, cont := range podInfo.RunningContainers {
-		// translate gpu resources
-		numGPUs := cont.Requests[types.ResourceNvidiaGPU]
-		podInfo.RunningContainers[index].Requests = gpu.TranslateGPUResources(numGPUs, nodeInfo.Allocatable, cont.Requests)
-	}
 }

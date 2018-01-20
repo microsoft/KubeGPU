@@ -22,7 +22,6 @@ import (
 	"github.com/golang/glog"
 	extypes "github.com/KubeGPU/types"
 	"github.com/KubeGPU/kubeinterface"
-	"github.com/KubeGPU/"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

@@ -91,6 +91,14 @@ type Device interface {
 	GetName() string
 }
 
+// used by scheduler
+type DeviceScheduler interface {
+	// Translation of resources if needed - first is allocatable, second is requests, returns modified resource list
+	TranslateResource(ResourceList, ResourceList) ResourceList
+	// GetName returns the name of a device
+	GetName() string
+}
+
 const (
 	DefaultScorer = iota // 0
 	LeftOverScorer

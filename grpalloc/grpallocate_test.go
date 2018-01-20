@@ -190,7 +190,10 @@ func translatePod(node *types.NodeInfo, podEx *PodEx) {
 		enc.Encode(podEx.podOrig)
 		dec.Decode(&podEx.pod)
 	}
-	devicemanager.TranslateResources(node, podEx.pod)
+	// create a translator & translate
+	ds := &devicemanager.DevicesScheduler{}
+	ds.CreateAndAddDeviceScheduler("nvidiagpu")
+	ds.TranslateResources(node, podEx.pod)
 }
 
 func sampleTest(pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {

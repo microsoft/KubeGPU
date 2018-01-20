@@ -13,7 +13,6 @@ import (
 	kubetypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
-	//kubetypes "k8s.io/client-go/vendor/k8s.io/apimachinery/pkg/types"
 )
 
 func addResourceList64(keyPrefix string, a map[string]string, list map[types.ResourceName]int64) {
@@ -128,11 +127,11 @@ func KubePodInfoToPodInfo(kubePodInfo *kubev1.PodSpec) *types.PodInfo {
 // only allocate from needs to be written, other info is already avialable in pod spec
 func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	for _, c := range podInfo.InitContainers {
-		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom/%s", c.Name)
+		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
 	}
 	for _, c := range podInfo.RunningContainers {
-		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom/%s", c.Name)
+		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
 	}
 }
