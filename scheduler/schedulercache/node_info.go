@@ -449,6 +449,11 @@ func (n *NodeInfo) updateUsedPorts(pod *v1.Pod, used bool) {
 // Sets the overall node information.
 func (n *NodeInfo) SetNode(node *v1.Node) error {
 	n.node = node
+	// extract annotations from node info
+	n.nodeEx, err := kubeinterface.AnnotationToNodeInfo(node.ObjectMeta)
+	if err != nil {
+		return err
+	}
 
 	n.allocatableResource = NewResource(node.Status.Allocatable)
 
@@ -475,6 +480,7 @@ func (n *NodeInfo) RemoveNode(node *v1.Node) error {
 	// and thus can potentially be observed later, even though they happened before
 	// node removal. This is handled correctly in cache.go file.
 	n.node = nil
+	n.nodeEx = nil
 	n.allocatableResource = &Resource{}
 	n.taints, n.taintsErr = nil, nil
 	n.memoryPressureCondition = v1.ConditionUnknown
