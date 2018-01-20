@@ -1,19 +1,39 @@
 package devicemanager
 
 import (
+	"reflect"
+
 	"github.com/KubeGPU/gpu"
+	"github.com/KubeGPU/gpu/nvidia"
 	"github.com/KubeGPU/types"
+	"github.com/golang/glog"
 )
+
+var DeviceRegistry = map[string]reflect.Type{
+	(&nvidia.NvidiaGPUManager{}).GetName(): reflect.TypeOf(nvidia.NvidiaGPUManager{}),
+}
 
 // DeviceManager manages multiple devices
 type DevicesManager struct {
 	Operational []bool
-	Devices     []types.DeviceManager
+	Devices     []types.Device
 }
 
 // AddDevice adds a device to the manager
-func (d *DevicesManager) AddDevice(device types.DeviceManager) {
+func (d *DevicesManager) AddDevice(device types.Device) {
 	d.Devices = append(d.Devices, device)
+	d.Operational = append(d.Operational, false)
+}
+
+func (d *DevicesManager) CreateAndAddDevice(device string) error {
+	o := reflect.New(DeviceRegistry[device])
+	t := o.Interface().(types.Device)
+	err := t.New()
+	if err != nil {
+		return err
+	}
+	d.AddDevice(t)
+	return nil
 }
 
 // Start starts all devices in manager
@@ -28,18 +48,16 @@ func (d *DevicesManager) Start() {
 	}
 }
 
-// Capacity returns aggregate capacity
-func (d *DevicesManager) Capacity() types.ResourceList {
-	list := make(types.ResourceList)
+// UpdateNodeInfo updates a node info strucutre with resources available on device
+func (d *DevicesManager) UpdateNodeInfo(info *types.NodeInfo) {
 	for i, device := range d.Devices {
 		if d.Operational[i] {
-			capD := device.Capacity()
-			for k, v := range capD {
-				list[k] = v
+			err := device.UpdateNodeInfo(info)
+			if err != nil {
+				glog.Errorf("Unable to update device %s encounter error %v", device.GetName(), err)
 			}
 		}
 	}
-	return list
 }
 
 // AllocateDevices allocates devices using device manager interface
@@ -50,8 +68,9 @@ func (d *DevicesManager) AllocateDevices(pod *types.PodInfo, cont *types.Contain
 	errRet = nil
 	for i, device := range d.Devices {
 		if d.Operational[i] {
-			volumeD, deviceD, err := device.AllocateDevices(pod, cont)
+			volumeD, deviceD, err := device.Allocate(pod, cont)
 			if err == nil {
+				// appending nil to nil is okay
 				volumes = append(volumes, volumeD...)
 				devices = append(devices, deviceD...)
 			} else {

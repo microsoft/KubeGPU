@@ -12,16 +12,26 @@ type commonResult struct {
 	gophercloud.Result
 }
 
+// CreateResult is the response of a Get operations. Call its Extract method to
+// interpret it as a Flavor.
 type CreateResult struct {
 	commonResult
 }
 
-// GetResult temporarily holds the response from a Get call.
+// GetResult is the response of a Get operations. Call its Extract method to
+// interpret it as a Flavor.
 type GetResult struct {
 	commonResult
 }
 
-// Extract provides access to the individual Flavor returned by the Get and Create functions.
+// DeleteResult is the result from a Delete operation. Call its ExtractErr
+// method to determine if the call succeeded or failed.
+type DeleteResult struct {
+	gophercloud.ErrResult
+}
+
+// Extract provides access to the individual Flavor returned by the Get and
+// Create functions.
 func (r commonResult) Extract() (*Flavor, error) {
 	var s struct {
 		Flavor *Flavor `json:"flavor"`
@@ -30,24 +40,32 @@ func (r commonResult) Extract() (*Flavor, error) {
 	return s.Flavor, err
 }
 
-// Flavor records represent (virtual) hardware configurations for server resources in a region.
+// Flavor represent (virtual) hardware configurations for server resources
+// in a region.
 type Flavor struct {
-	// The Id field contains the flavor's unique identifier.
-	// For example, this identifier will be useful when specifying which hardware configuration to use for a new server instance.
+	// ID is the flavor's unique ID.
 	ID string `json:"id"`
-	// The Disk and RA< fields provide a measure of storage space offered by the flavor, in GB and MB, respectively.
+
+	// Disk is the amount of root disk, measured in GB.
 	Disk int `json:"disk"`
-	RAM  int `json:"ram"`
-	// The Name field provides a human-readable moniker for the flavor.
-	Name       string  `json:"name"`
+
+	// RAM is the amount of memory, measured in MB.
+	RAM int `json:"ram"`
+
+	// Name is the name of the flavor.
+	Name string `json:"name"`
+
+	// RxTxFactor describes bandwidth alterations of the flavor.
 	RxTxFactor float64 `json:"rxtx_factor"`
-	// Swap indicates how much space is reserved for swap.
-	// If not provided, this field will be set to 0.
+
+	// Swap is the amount of swap space, measured in MB.
 	Swap int `json:"swap"`
+
 	// VCPUs indicates how many (virtual) CPUs are available for this flavor.
 	VCPUs int `json:"vcpus"`
+
 	// IsPublic indicates whether the flavor is public.
-	IsPublic bool `json:"is_public"`
+	IsPublic bool `json:"os-flavor-access:is_public"`
 }
 
 func (r *Flavor) UnmarshalJSON(b []byte) error {
@@ -82,18 +100,19 @@ func (r *Flavor) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// FlavorPage contains a single page of the response from a List call.
+// FlavorPage contains a single page of all flavors from a ListDetails call.
 type FlavorPage struct {
 	pagination.LinkedPageBase
 }
 
-// IsEmpty determines if a page contains any results.
+// IsEmpty determines if a FlavorPage contains any results.
 func (page FlavorPage) IsEmpty() (bool, error) {
 	flavors, err := ExtractFlavors(page)
 	return len(flavors) == 0, err
 }
 
-// NextPageURL uses the response's embedded link reference to navigate to the next page of results.
+// NextPageURL uses the response's embedded link reference to navigate to the
+// next page of results.
 func (page FlavorPage) NextPageURL() (string, error) {
 	var s struct {
 		Links []gophercloud.Link `json:"flavors_links"`
@@ -105,11 +124,41 @@ func (page FlavorPage) NextPageURL() (string, error) {
 	return gophercloud.ExtractNextURL(s.Links)
 }
 
-// ExtractFlavors provides access to the list of flavors in a page acquired from the List operation.
+// ExtractFlavors provides access to the list of flavors in a page acquired
+// from the ListDetail operation.
 func ExtractFlavors(r pagination.Page) ([]Flavor, error) {
 	var s struct {
 		Flavors []Flavor `json:"flavors"`
 	}
 	err := (r.(FlavorPage)).ExtractInto(&s)
 	return s.Flavors, err
+}
+
+// AccessPage contains a single page of all FlavorAccess entries for a flavor.
+type AccessPage struct {
+	pagination.SinglePageBase
+}
+
+// IsEmpty indicates whether an AccessPage is empty.
+func (page AccessPage) IsEmpty() (bool, error) {
+	v, err := ExtractAccesses(page)
+	return len(v) == 0, err
+}
+
+// ExtractAccesses interprets a page of results as a slice of FlavorAccess.
+func ExtractAccesses(r pagination.Page) ([]FlavorAccess, error) {
+	var s struct {
+		FlavorAccesses []FlavorAccess `json:"flavor_access"`
+	}
+	err := (r.(AccessPage)).ExtractInto(&s)
+	return s.FlavorAccesses, err
+}
+
+// FlavorAccess represents an ACL of tenant access to a specific Flavor.
+type FlavorAccess struct {
+	// FlavorID is the unique ID of the flavor.
+	FlavorID string `json:"flavor_id"`
+
+	// TenantID is the unique ID of the tenant.
+	TenantID string `json:"tenant_id"`
 }

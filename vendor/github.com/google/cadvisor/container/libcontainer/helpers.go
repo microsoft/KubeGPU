@@ -33,6 +33,11 @@ import (
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 )
 
+/*
+#include <unistd.h>
+*/
+import "C"
+
 type CgroupSubsystems struct {
 	// Cgroup subsystem mounts.
 	// e.g.: "/sys/fs/cgroup/cpu" -> ["cpu", "cpuacct"]
@@ -50,19 +55,36 @@ func GetCgroupSubsystems() (CgroupSubsystems, error) {
 	if err != nil {
 		return CgroupSubsystems{}, err
 	}
+
+	return getCgroupSubsystemsHelper(allCgroups)
+}
+
+func getCgroupSubsystemsHelper(allCgroups []cgroups.Mount) (CgroupSubsystems, error) {
 	if len(allCgroups) == 0 {
 		return CgroupSubsystems{}, fmt.Errorf("failed to find cgroup mounts")
 	}
 
 	// Trim the mounts to only the subsystems we care about.
 	supportedCgroups := make([]cgroups.Mount, 0, len(allCgroups))
+	recordedMountpoints := make(map[string]struct{}, len(allCgroups))
 	mountPoints := make(map[string]string, len(allCgroups))
 	for _, mount := range allCgroups {
 		for _, subsystem := range mount.Subsystems {
-			if _, ok := supportedSubsystems[subsystem]; ok {
-				supportedCgroups = append(supportedCgroups, mount)
-				mountPoints[subsystem] = mount.Mountpoint
+			if _, ok := supportedSubsystems[subsystem]; !ok {
+				// Unsupported subsystem
+				continue
 			}
+			if _, ok := mountPoints[subsystem]; ok {
+				// duplicate mount for this subsystem; use the first one we saw
+				glog.V(5).Infof("skipping %s, already using mount at %s", mount.Mountpoint, mountPoints[subsystem])
+				continue
+			}
+			if _, ok := recordedMountpoints[mount.Mountpoint]; !ok {
+				// avoid appending the same mount twice in e.g. `cpu,cpuacct` case
+				supportedCgroups = append(supportedCgroups, mount)
+				recordedMountpoints[mount.Mountpoint] = struct{}{}
+			}
+			mountPoints[subsystem] = mount.Mountpoint
 		}
 	}
 
@@ -79,6 +101,7 @@ var supportedSubsystems map[string]struct{} = map[string]struct{}{
 	"memory":  {},
 	"cpuset":  {},
 	"blkio":   {},
+	"devices": {},
 }
 
 // Get cgroup and networking stats of the specified container
@@ -99,7 +122,7 @@ func GetStats(cgroupManager cgroups.Manager, rootFs string, pid int, ignoreMetri
 	if !ignoreMetrics.Has(container.NetworkUsageMetrics) {
 		netStats, err := networkStatsFromProc(rootFs, pid)
 		if err != nil {
-			glog.V(2).Infof("Unable to get network stats from pid %d: %v", pid, err)
+			glog.V(4).Infof("Unable to get network stats from pid %d: %v", pid, err)
 		} else {
 			stats.Network.Interfaces = append(stats.Network.Interfaces, netStats...)
 		}
@@ -107,14 +130,14 @@ func GetStats(cgroupManager cgroups.Manager, rootFs string, pid int, ignoreMetri
 	if !ignoreMetrics.Has(container.NetworkTcpUsageMetrics) {
 		t, err := tcpStatsFromProc(rootFs, pid, "net/tcp")
 		if err != nil {
-			glog.V(2).Infof("Unable to get tcp stats from pid %d: %v", pid, err)
+			glog.V(4).Infof("Unable to get tcp stats from pid %d: %v", pid, err)
 		} else {
 			stats.Network.Tcp = t
 		}
 
 		t6, err := tcpStatsFromProc(rootFs, pid, "net/tcp6")
 		if err != nil {
-			glog.V(2).Infof("Unable to get tcp6 stats from pid %d: %v", pid, err)
+			glog.V(4).Infof("Unable to get tcp6 stats from pid %d: %v", pid, err)
 		} else {
 			stats.Network.Tcp6 = t6
 		}
@@ -122,14 +145,14 @@ func GetStats(cgroupManager cgroups.Manager, rootFs string, pid int, ignoreMetri
 	if !ignoreMetrics.Has(container.NetworkUdpUsageMetrics) {
 		u, err := udpStatsFromProc(rootFs, pid, "net/udp")
 		if err != nil {
-			glog.V(2).Infof("Unable to get udp stats from pid %d: %v", pid, err)
+			glog.V(4).Infof("Unable to get udp stats from pid %d: %v", pid, err)
 		} else {
 			stats.Network.Udp = u
 		}
 
 		u6, err := udpStatsFromProc(rootFs, pid, "net/udp6")
 		if err != nil {
-			glog.V(2).Infof("Unable to get udp6 stats from pid %d: %v", pid, err)
+			glog.V(4).Infof("Unable to get udp6 stats from pid %d: %v", pid, err)
 		} else {
 			stats.Network.Udp6 = u6
 		}
@@ -433,22 +456,69 @@ func DiskStatsCopy(blkio_stats []cgroups.BlkioStatEntry) (stat []info.PerDiskSta
 	return DiskStatsCopy1(disk_stat)
 }
 
+func minUint32(x, y uint32) uint32 {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+// var to allow unit tests to stub it out
+var numCpusFunc = getNumberOnlineCPUs
+
 // Convert libcontainer stats to info.ContainerStats.
 func setCpuStats(s *cgroups.Stats, ret *info.ContainerStats) {
 	ret.Cpu.Usage.User = s.CpuStats.CpuUsage.UsageInUsermode
 	ret.Cpu.Usage.System = s.CpuStats.CpuUsage.UsageInKernelmode
-	n := len(s.CpuStats.CpuUsage.PercpuUsage)
-	ret.Cpu.Usage.PerCpu = make([]uint64, n)
-
 	ret.Cpu.Usage.Total = 0
-	for i := 0; i < n; i++ {
+	ret.Cpu.CFS.Periods = s.CpuStats.ThrottlingData.Periods
+	ret.Cpu.CFS.ThrottledPeriods = s.CpuStats.ThrottlingData.ThrottledPeriods
+	ret.Cpu.CFS.ThrottledTime = s.CpuStats.ThrottlingData.ThrottledTime
+
+	if len(s.CpuStats.CpuUsage.PercpuUsage) == 0 {
+		// libcontainer's 'GetStats' can leave 'PercpuUsage' nil if it skipped the
+		// cpuacct subsystem.
+		return
+	}
+
+	numPossible := uint32(len(s.CpuStats.CpuUsage.PercpuUsage))
+	// Note that as of https://patchwork.kernel.org/patch/8607101/ (kernel v4.7),
+	// the percpu usage information includes extra zero values for all additional
+	// possible CPUs. This is to allow statistic collection after CPU-hotplug.
+	// We intentionally ignore these extra zeroes.
+	numActual, err := numCpusFunc()
+	if err != nil {
+		glog.Errorf("unable to determine number of actual cpus; defaulting to maximum possible number: errno %v", err)
+		numActual = numPossible
+	}
+	if numActual > numPossible {
+		// The real number of cores should never be greater than the number of
+		// datapoints reported in cpu usage.
+		glog.Errorf("PercpuUsage had %v cpus, but the actual number is %v; ignoring extra CPUs", numPossible, numActual)
+	}
+	numActual = minUint32(numPossible, numActual)
+	ret.Cpu.Usage.PerCpu = make([]uint64, numActual)
+
+	for i := uint32(0); i < numActual; i++ {
 		ret.Cpu.Usage.PerCpu[i] = s.CpuStats.CpuUsage.PercpuUsage[i]
 		ret.Cpu.Usage.Total += s.CpuStats.CpuUsage.PercpuUsage[i]
 	}
 
-	ret.Cpu.CFS.Periods = s.CpuStats.ThrottlingData.Periods
-	ret.Cpu.CFS.ThrottledPeriods = s.CpuStats.ThrottlingData.ThrottledPeriods
-	ret.Cpu.CFS.ThrottledTime = s.CpuStats.ThrottlingData.ThrottledTime
+}
+
+// Copied from
+// https://github.com/moby/moby/blob/8b1adf55c2af329a4334f21d9444d6a169000c81/daemon/stats/collector_unix.go#L73
+// Apache 2.0, Copyright Docker, Inc.
+func getNumberOnlineCPUs() (uint32, error) {
+	i, err := C.sysconf(C._SC_NPROCESSORS_ONLN)
+	// According to POSIX - errno is undefined after successful
+	// sysconf, and can be non-zero in several cases, so look for
+	// error in returned value not in errno.
+	// (https://sourceware.org/bugzilla/show_bug.cgi?id=21536)
+	if i == -1 {
+		return 0, err
+	}
+	return uint32(i), nil
 }
 
 func setDiskIoStats(s *cgroups.Stats, ret *info.ContainerStats) {
@@ -464,10 +534,17 @@ func setDiskIoStats(s *cgroups.Stats, ret *info.ContainerStats) {
 
 func setMemoryStats(s *cgroups.Stats, ret *info.ContainerStats) {
 	ret.Memory.Usage = s.MemoryStats.Usage.Usage
+	ret.Memory.MaxUsage = s.MemoryStats.Usage.MaxUsage
 	ret.Memory.Failcnt = s.MemoryStats.Usage.Failcnt
 	ret.Memory.Cache = s.MemoryStats.Stats["cache"]
-	ret.Memory.RSS = s.MemoryStats.Stats["rss"]
-	ret.Memory.Swap = s.MemoryStats.Stats["swap"]
+
+	if s.MemoryStats.UseHierarchy {
+		ret.Memory.RSS = s.MemoryStats.Stats["total_rss"]
+		ret.Memory.Swap = s.MemoryStats.Stats["total_swap"]
+	} else {
+		ret.Memory.RSS = s.MemoryStats.Stats["rss"]
+		ret.Memory.Swap = s.MemoryStats.Stats["swap"]
+	}
 	if v, ok := s.MemoryStats.Stats["pgfault"]; ok {
 		ret.Memory.ContainerData.Pgfault = v
 		ret.Memory.HierarchicalData.Pgfault = v
