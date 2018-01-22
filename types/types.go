@@ -1,5 +1,7 @@
 package types
 
+import "github.com/KubeGPU/scheduler/algorithm"
+
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
@@ -95,6 +97,8 @@ type Device interface {
 type DeviceScheduler interface {
 	// Translation of resources if needed - first is allocatable, second is requests, returns modified resource list
 	TranslateResource(ResourceList, ResourceList) ResourceList
+	// see if pod fits on node & return device score
+	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []algorithm.PredicateFailureReason, float64)
 	// GetName returns the name of a device
 	GetName() string
 }

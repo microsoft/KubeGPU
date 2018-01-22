@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KubeGPU/devicemanager"
+	"github.com/KubeGPU/device"
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -191,7 +191,7 @@ func translatePod(node *types.NodeInfo, podEx *PodEx) {
 		dec.Decode(&podEx.pod)
 	}
 	// create a translator & translate
-	ds := &devicemanager.DevicesScheduler{}
+	ds := &device.DevicesScheduler{}
 	ds.CreateAndAddDeviceScheduler("nvidiagpu")
 	ds.TranslateResources(node, podEx.pod)
 }

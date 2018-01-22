@@ -1,4 +1,4 @@
-package devicemanager
+package device
 
 import (
 	"reflect"
