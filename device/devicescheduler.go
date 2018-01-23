@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/KubeGPU/gpu/nvidia"
-	"github.com/KubeGPU/scheduler/algorithm"
+	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
 	"github.com/KubeGPU/types"
 )
 

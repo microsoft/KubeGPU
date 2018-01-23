@@ -22,7 +22,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/predicates"
+	"github.com/KubeGPU/scheduler/algorithm/predicates"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/core"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/factory"
@@ -79,6 +79,8 @@ func init() {
 	factory.RegisterFitPredicate("HostName", predicates.PodFitsHost)
 	// Fit is determined by node selector query.
 	factory.RegisterFitPredicate("MatchNodeSelector", predicates.PodMatchNodeSelector)
+	// Register device predicates
+	factory.RegisterFitPredicate("PodFitsDevices", predicates.PodFitsDevices)
 
 	// Use equivalence class to speed up heavy predicates phase.
 	factory.RegisterGetEquivalencePodFunction(

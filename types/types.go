@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/KubeGPU/scheduler/algorithm"
+	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
 )
 
 const (
