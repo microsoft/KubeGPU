@@ -331,9 +331,11 @@ func (n *NodeInfo) AddPod(pod *v1.Pod) {
 	// Consume ports when pods added.
 	n.updateUsedPorts(pod, true)
 
-	// convert pod annotations to resources and use them
-	exPodInfo := kubeinterface.KubePodInfoToPodInfo(pod.Spec)
-	grpalloc.TakePodResources(n.nodeEx, exPodInfo)
+	// consume device resources
+	err := TakePodDeviceResources(pod, n)
+	if err != nil {
+		panic(fmt.Sprintf("Pod Info annotations are not correct and cannot be parsed %v", pod.Spec))
+	}
 
 	n.generation++
 }
@@ -386,9 +388,11 @@ func (n *NodeInfo) RemovePod(pod *v1.Pod) error {
 			// Release ports when remove Pods.
 			n.updateUsedPorts(pod, false)
 
-			// convert pod annotations to resources and use them
-			exPodInfo := kubeinterface.KubePodInfoToPodInfo(pod.Spec)
-			grpalloc.ReturnPodResources(n.nodeEx, exPodInfo)
+			// return device resources
+			err := ReturnPodDeviceResources(pod, n)
+			if err != nil {
+				return err
+			}
 
 			n.generation++
 
@@ -449,10 +453,11 @@ func (n *NodeInfo) updateUsedPorts(pod *v1.Pod, used bool) {
 func (n *NodeInfo) SetNode(node *v1.Node) error {
 	n.node = node
 	// extract annotations from node info
-	n.nodeEx, err := kubeinterface.AnnotationToNodeInfo(node.ObjectMeta)
+	exNodeInfo, err := kubeinterface.AnnotationToNodeInfo(&node.ObjectMeta)
 	if err != nil {
 		return err
 	}
+	n.nodeEx = exNodeInfo
 
 	n.allocatableResource = NewResource(node.Status.Allocatable)
 

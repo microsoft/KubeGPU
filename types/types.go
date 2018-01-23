@@ -103,6 +103,10 @@ type DeviceScheduler interface {
 	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []algorithm.PredicateFailureReason, float64)
 	// allocate resources
 	PodAllocate(*NodeInfo, *PodInfo, bool) error
+	// take resources from node
+	TakePodResources(*NodeInfo, *PodInfo, bool) error
+	// return resources to node
+	ReturnPodResources(*NodeInfo, *PodInfo, bool) error
 	// GetName returns the name of a device
 	GetName() string
 	// Tells whether group scheduler is being used?

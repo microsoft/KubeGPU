@@ -1,16 +1,11 @@
 package device
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/KubeGPU/gpu/nvidia"
-	"github.com/KubeGPU/kubeinterface"
 	"github.com/KubeGPU/scheduler/algorithm"
 	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/scheduler/schedulercache"
-
-	"k8s.io/api/core/v1"
 )
 
 var DeviceSchedulerRegistry = map[string]reflect.Type{
@@ -21,6 +16,9 @@ type DevicesScheduler struct {
 	Devices           []types.DeviceScheduler
 	RunGroupScheduler []bool
 }
+
+// essentially a static variable
+var DeviceScheduler = &DevicesScheduler{}
 
 func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	o := reflect.New(DeviceSchedulerRegistry[device])
@@ -38,25 +36,8 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	return nil
 }
 
-func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo) (*types.PodInfo, *types.NodeInfo, error) {
-	// grab node information
-	nodeEx := nodeInfo.nodeEx
-	if nodeEx == nil {
-		return nil, nil, fmt.Errorf("node not found")
-	}
-	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod)
-	if err != nil {
-		return nil, nil, err
-	}
-	return podInfo, nodeEx, nil
-}
-
 // predicate
-func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
-	podInfo, nodeInfo, err := GetPodAndNode(pod, node)
-	if err != nil {
-		return false, nil, err
-	}
+func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
 	totalScore := 0.0
 	totalFit := true
 	var totalReasons []algorithm.PredicateFailureReason
@@ -71,17 +52,34 @@ func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{},
 }
 
 // allocate devices & write into annotations
-func (ds *DevicesScheduler) PodAllocate(pod *v1.Pod, node *schedulercache.NodeInfo) error {
-	podInfo, nodeInfo, err := GetPodAndNode(pod, node)
-	if err != nil {
-		return false, nil, err
-	}
+func (ds *DevicesScheduler) PodAllocate(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) error {
 	for index, d := range ds.Devices {
-		err = d.PodAllocate(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		err := d.PodAllocate(nodeInfo, podInfo, ds.RunGroupScheduler[index])
 		if err != nil {
 			return err
 		}
 	}
-	kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo)
+	return nil
+}
+
+// take pod resources used by devices
+func (ds *DevicesScheduler) TakePodResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) error {
+	for index, d := range ds.Devices {
+		err := d.TakePodResources(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// return pod resources used by devices
+func (ds *DevicesScheduler) ReturnPodResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) error {
+	for index, d := range ds.Devices {
+		err := d.ReturnPodResources(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

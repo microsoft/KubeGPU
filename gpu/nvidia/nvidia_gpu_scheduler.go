@@ -45,6 +45,20 @@ func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *typ
 	return nil
 }
 
+func (ns *NvidiaGPUScheduler) TakePodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
+	if runGrpScheduler {
+		grpalloc.TakePodGroupResource(nodeInfo, podInfo)
+	}
+	return nil
+}
+
+func (ns *NvidiaGPUScheduler) ReturnPodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
+	if runGrpScheduler {
+		grpalloc.ReturnPodGroupResource(nodeInfo, podInfo)
+	}
+	return nil
+}
+
 func (ns *NvidiaGPUScheduler) GetName() string {
 	return "nvidiagpu"
 }
