@@ -46,7 +46,6 @@ func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache) (*types.PodInfo, *type
 	return podInfo, nodeEx, nil
 }
 
-
 // predicate
 func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
 	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)

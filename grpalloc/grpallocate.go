@@ -9,7 +9,7 @@ import (
 	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
 
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
+	"github.com/KubeGPU/scheduler/algorithm"
 )
 
 // ===================================================
