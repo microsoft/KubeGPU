@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/KubeGPU/gpu/nvidia"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
 	"github.com/KubeGPU/types"
 )
 
@@ -37,10 +36,10 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 }
 
 // predicate
-func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
+func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) (bool, []types.PredicateFailureReason, error) {
 	totalScore := 0.0
 	totalFit := true
-	var totalReasons []algorithm.PredicateFailureReason
+	var totalReasons []types.PredicateFailureReason
 	for index, d := range ds.Devices {
 		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, ds.RunGroupScheduler[index])
 		// early terminate? - but score will not be correct then

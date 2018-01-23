@@ -8,8 +8,6 @@ import (
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
-
-	"github.com/KubeGPU/scheduler/algorithm"
 )
 
 // ===================================================
@@ -139,7 +137,7 @@ func (grp *GrpAllocator) resetGroup(restorePoint *GrpAllocator) {
 // returns whether resource available and score
 // can use hash of scorers for different resources
 // simple leftover for now for score, 0 is low, 1.0 is high score
-func (grp *GrpAllocator) resourceAvailable(resourceLocation string) (bool, []algorithm.PredicateFailureReason) {
+func (grp *GrpAllocator) resourceAvailable(resourceLocation string) (bool, []types.PredicateFailureReason) {
 	grpAllocRes := grp.GrpAllocResource[resourceLocation]
 
 	glog.V(5).Infoln("Resource requirments")
@@ -148,7 +146,7 @@ func (grp *GrpAllocator) resourceAvailable(resourceLocation string) (bool, []alg
 	printResMap(grp.AllocResource, grpAllocRes, grp.IsAllocSubGrp)
 
 	found := true
-	var predicateFails []algorithm.PredicateFailureReason
+	var predicateFails []types.PredicateFailureReason
 	for grpReqKey, grpReqElem := range grp.GrpRequiredResource {
 		if !grp.IsReqSubGrp[grpReqKey] {
 			// see if resource exists
@@ -195,10 +193,10 @@ func (grp *GrpAllocator) allocateSubGroups(
 	allocLocationName string,
 	subgrpsReq map[string](map[string](map[string]string)),
 	subgrpsAllocRes map[string](map[string](map[string]string))) (
-	bool, []algorithm.PredicateFailureReason) {
+	bool, []types.PredicateFailureReason) {
 
 	found := true
-	var predicateFails []algorithm.PredicateFailureReason
+	var predicateFails []types.PredicateFailureReason
 	sortedSubGrpsReqKeys := utils.SortedStringKeys(subgrpsReq)
 	for _, subgrpsKey := range sortedSubGrpsReqKeys {
 		subgrpsElemGrp := subgrpsReq[subgrpsKey]
@@ -220,9 +218,9 @@ func (grp *GrpAllocator) allocateSubGroups(
 	return found, predicateFails
 }
 
-func (grp *GrpAllocator) findScoreAndUpdate(location string) (bool, []algorithm.PredicateFailureReason) {
+func (grp *GrpAllocator) findScoreAndUpdate(location string) (bool, []types.PredicateFailureReason) {
 	found := true
-	var predicateFails []algorithm.PredicateFailureReason
+	var predicateFails []types.PredicateFailureReason
 
 	// first compute list of requested resources to alloctable resources
 	requestedResource := make(map[string]([]int64))
@@ -264,7 +262,7 @@ func (grp *GrpAllocator) findScoreAndUpdate(location string) (bool, []algorithm.
 }
 
 func (grp *GrpAllocator) allocateGroupAt(location string,
-	subgrpsReq map[string](map[string](map[string]string))) (bool, []algorithm.PredicateFailureReason) {
+	subgrpsReq map[string](map[string](map[string]string))) (bool, []types.PredicateFailureReason) {
 
 	allocLocationName := grp.AllocBaseGroupPrefix + "/" + location
 	grpsAllocResElem := grp.GrpAllocResource[location]
@@ -312,7 +310,7 @@ func (grp *GrpAllocator) allocateGroupAt(location string,
 // usedResource is the amount of utilized resource in the global resource list
 // i.e. usedResource[grpAllocRes[i][n]] is used when considering the "i"th alloctable group of the "n"th resource
 // i.e. usedResource[allocated[grpReq[n]]] is subtracted from after allocation
-func (grp *GrpAllocator) allocateGroup() (bool, []algorithm.PredicateFailureReason) {
+func (grp *GrpAllocator) allocateGroup() (bool, []types.PredicateFailureReason) {
 	if len(grp.GrpRequiredResource) == 0 {
 		return true, nil
 	}
@@ -322,7 +320,7 @@ func (grp *GrpAllocator) allocateGroup() (bool, []algorithm.PredicateFailureReas
 	maxScoreGrp := grp
 	maxIsUsedGroup := false
 	maxGroupName := ""
-	var predicateFails []algorithm.PredicateFailureReason
+	var predicateFails []types.PredicateFailureReason
 
 	// find subgroups for required resources
 	subgrpsReq, isSubGrp := findSubGroups(grp.ReqBaseGroupName, grp.GrpRequiredResource)
@@ -390,7 +388,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	allocatable types.ResourceList, allocScorer map[string]scorer.ResourceScoreFunc,
 	podResource map[string]int64, nodeResource map[string]int64,
 	usedGroups map[string]bool, bPreferUsed bool, bSetAllocateFrom bool) (
-	*GrpAllocator, bool, []algorithm.PredicateFailureReason, float64) {
+	*GrpAllocator, bool, []types.PredicateFailureReason, float64) {
 
 	grp := &GrpAllocator{}
 
@@ -456,7 +454,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	grp.NodeResource = nodeResource
 
 	var found bool
-	var reasons []algorithm.PredicateFailureReason
+	var reasons []types.PredicateFailureReason
 	var score float64
 
 	if contReq.AllocateFrom == nil || (len(contReq.AllocateFrom) == 0 && len(req) > 0) {
@@ -516,12 +514,12 @@ func setScoreFunc(n *types.NodeInfo) map[string]scorer.ResourceScoreFunc {
 }
 
 // PodFitsGroupConstraints tells if pod fits constraints, score returned is score of running containers
-func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating bool) (bool, []algorithm.PredicateFailureReason, float64) {
+func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating bool) (bool, []types.PredicateFailureReason, float64) {
 	podResource := make(map[string]int64)
 	nodeResource := initNodeResource(n)
 	usedGroups := make(map[string]bool)
 	totalScore := 0.0
-	var predicateFails []algorithm.PredicateFailureReason
+	var predicateFails []types.PredicateFailureReason
 	found := true
 
 	// set score function for alloctable resources at node

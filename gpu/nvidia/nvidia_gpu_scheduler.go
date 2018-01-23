@@ -6,7 +6,6 @@ import (
 	"github.com/KubeGPU/gpu"
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/grpalloc"
-	"github.com/KubeGPU/scheduler/algorithm"
 )
 
 type NvidiaGPUScheduler struct {
@@ -26,7 +25,7 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
 	}
 }
 
-func (ns *NvidiaGPUManager) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) (bool, []algorithm.PredicateFailureReason, float64) {
+func (ns *NvidiaGPUManager) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) (bool, []types.PredicateFailureReason, float64) {
 	TranslateGPUResorces(nodeInfo, podInfo)
 	if runGrpScheduler {
 		return grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, false)

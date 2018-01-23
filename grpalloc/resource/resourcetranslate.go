@@ -120,3 +120,7 @@ func NewInsufficientResourceError(resourceName types.ResourceName, requested, us
 func (e *InsufficientResourceError) GetReason() string {
 	return fmt.Sprintf("Insufficient %v", e.ResourceName)
 }
+
+func (e *InsufficientResourceError) GetInfo() (types.ResourceName, int64, int64, int64) {
+	return e.ResourceName, e.requested, e.used, e.capacity
+}

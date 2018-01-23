@@ -22,7 +22,7 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 // FitPredicate is a function that indicates if a pod fits into an existing node.

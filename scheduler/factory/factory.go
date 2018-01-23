@@ -60,7 +60,7 @@ import (
 	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/api/validation"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/core"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/schedulercache"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/util"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/volumebinder"
 )

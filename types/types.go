@@ -1,9 +1,5 @@
 package types
 
-import (
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
-)
-
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
@@ -97,10 +93,15 @@ type Device interface {
 	GetName() string
 }
 
+type PredicateFailureReason interface {
+	GetReason() string
+	GetInfo() 	(ResourceName, int64, int64, int64)
+}
+
 // used by scheduler
 type DeviceScheduler interface {
 	// see if pod fits on node & return device score
-	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []algorithm.PredicateFailureReason, float64)
+	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []PredicateFailureReason, float64)
 	// allocate resources
 	PodAllocate(*NodeInfo, *PodInfo, bool) error
 	// take resources from node

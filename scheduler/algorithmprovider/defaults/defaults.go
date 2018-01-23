@@ -23,6 +23,7 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
 	"github.com/KubeGPU/scheduler/algorithm/predicates"
+	"github.com/KubeGPU/device"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/core"
 	"k8s.io/kubernetes/plugin/pkg/scheduler/factory"
@@ -80,6 +81,7 @@ func init() {
 	// Fit is determined by node selector query.
 	factory.RegisterFitPredicate("MatchNodeSelector", predicates.PodMatchNodeSelector)
 	// Register device predicates
+	device.DeviceScheduler.CreateAndAddDevice("nvidiagpu")
 	factory.RegisterFitPredicate("PodFitsDevices", predicates.PodFitsDevices)
 
 	// Use equivalence class to speed up heavy predicates phase.
