@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/kubernetes/pkg/api/v1"
 	v1helper "k8s.io/kubernetes/pkg/api/v1/helper"
-	priorityutil "k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities/util"
-	schedutil "k8s.io/kubernetes/plugin/pkg/scheduler/util"
+	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
+	schedutil "github.com/KubeGPU/scheduler/util"
 )
 
 func deepEqualWithoutGeneration(t *testing.T, testcase int, actual, expected *NodeInfo) {

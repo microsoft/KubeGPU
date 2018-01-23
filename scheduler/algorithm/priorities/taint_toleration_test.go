@@ -22,8 +22,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/api/v1"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 func nodeWithTaints(nodeName string, taints []v1.Taint) *v1.Node {

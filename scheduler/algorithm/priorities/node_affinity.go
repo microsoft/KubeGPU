@@ -22,8 +22,8 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 // CalculateNodeAffinityPriority prioritizes nodes according to node affinity scheduling preferences

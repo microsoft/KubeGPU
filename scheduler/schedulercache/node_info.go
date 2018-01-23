@@ -27,8 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	clientcache "k8s.io/client-go/tools/cache"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	priorityutil "k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities/util"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/util"
+	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/KubeGPU/scheduler/util"
 )
 
 var emptyResource = Resource{}

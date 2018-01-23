@@ -21,9 +21,9 @@ import (
 
 	"k8s.io/api/core/v1"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	priorityutil "k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities/util"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 func CalculateNodePreferAvoidPodsPriorityMap(pod *v1.Pod, meta interface{}, nodeInfo *schedulercache.NodeInfo) (schedulerapi.HostPriority, error) {

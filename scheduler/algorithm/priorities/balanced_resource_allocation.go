@@ -21,9 +21,9 @@ import (
 	"math"
 
 	"k8s.io/api/core/v1"
-	priorityutil "k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/priorities/util"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/schedulercache"
 
 	"github.com/golang/glog"
 )

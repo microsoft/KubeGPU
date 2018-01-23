@@ -20,7 +20,7 @@ import (
 	"k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 // FakeCache is used for testing

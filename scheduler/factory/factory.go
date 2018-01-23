@@ -54,15 +54,15 @@ import (
 	"k8s.io/kubernetes/pkg/apis/core/helper"
 	"k8s.io/kubernetes/pkg/features"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	"k8s.io/kubernetes/plugin/pkg/scheduler"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/predicates"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/api/validation"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/core"
+	"github.com/KubeGPU/scheduler"
+	"github.com/KubeGPU/scheduler/algorithm"
+	"github.com/KubeGPU/scheduler/algorithm/predicates"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/api/validation"
+	"github.com/KubeGPU/scheduler/core"
 	"github.com/KubeGPU/scheduler/schedulercache"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/util"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/volumebinder"
+	"github.com/KubeGPU/scheduler/util"
+	"github.com/KubeGPU/scheduler/volumebinder"
 )
 
 const (

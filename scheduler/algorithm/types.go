@@ -21,7 +21,7 @@ import (
 	"k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
 	"github.com/KubeGPU/scheduler/schedulercache"
 )
 

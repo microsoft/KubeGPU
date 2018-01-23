@@ -23,7 +23,7 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	hashutil "k8s.io/kubernetes/pkg/util/hash"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
+	"github.com/KubeGPU/scheduler/algorithm"
 
 	"github.com/golang/glog"
 	"github.com/golang/groupcache/lru"

@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	_ "k8s.io/kubernetes/plugin/pkg/scheduler/api/v1"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	_ "github.com/KubeGPU/scheduler/api/v1"
 )
 
 // Version is the string that represents the current external default version.

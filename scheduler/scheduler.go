@@ -29,16 +29,16 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm/predicates"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/core"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/metrics"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/util"
+	"github.com/KubeGPU/scheduler/algorithm"
+	"github.com/KubeGPU/scheduler/algorithm/predicates"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/core"
+	"github.com/KubeGPU/scheduler/metrics"
+	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/util"
 
 	"github.com/golang/glog"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/volumebinder"
+	"github.com/KubeGPU/scheduler/volumebinder"
 )
 
 // Binder knows how to write a binding.
