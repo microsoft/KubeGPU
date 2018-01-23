@@ -66,6 +66,14 @@ func getToResourceListName(keyPrefix string, key string, val string, list map[ty
 	return nil
 }
 
+func getToStringMap(keyPrefix string, key string, val string, list map[string]string) error {
+	keyPrefix = keyPrefix + "/"
+	if strings.HasPrefix(key, keyPrefix) {
+		list[strings.TrimPrefix(key, keyPrefix)] = val
+	}
+	return nil
+}
+
 // NodeInfoToAnnotation is used by device advertiser to convert node info to annotation
 func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 	a := meta.Annotations
@@ -117,14 +125,17 @@ func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 }
 
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
-func KubePodInfoToPodInfo(kubePodInfo *kubev1.PodSpec) *types.PodInfo {
+func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod) (*types.PodInfo, error) {
 	podInfo := &types.PodInfo{}
 	// add default kuberenetes requests
-	addContainersToPodInfo(podInfo, kubePodInfo.InitContainers)
-	addContainersToPodInfo(podInfo, kubePodInfo.Containers)
+	addContainersToPodInfo(podInfo, kubePodInfo.Spec.InitContainers)
+	addContainersToPodInfo(podInfo, kubePodInfo.Spec.Containers)
 	// generate new requests from annotations
-	AnnotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
-	return podInfo
+	err := AnnotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
+	if err != nil {
+		return nil, err
+	}
+	return podInfo, nil
 }
 
 // PodInfoToAnnotation is used by scheduler to write allocate from field into annotations
@@ -137,7 +148,7 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
 		if c.Scorer != nil {
 			keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
-			addResourceList32(keyPrefix, met.Annotations, c.Scorer)
+			addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
 		}
 	}
 	for _, c := range podInfo.RunningContainers {
@@ -147,18 +158,18 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
 		if c.Scorer != nil {
 			keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
-			addResourceList32(keyPrefix, met.Annotations, c.Scorer)
+			addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
 		}
 	}
 }
 
-func getFromContainerInfo(info map[ResourceName]ResourceName, searchFor string) map[string](map[string]string) {
+func getFromContainerInfo(info map[string]string, searchFor string) map[string](map[string]string) {
 	infoMap := make(map[string](map[string]string))
 	re := regexp.MustCompile(`(.*?)/` + searchFor + `/(.*)`)
 	for key, val := range info {
 		matches := re.FindStringSubmatch(string(key))
 		if len(matches) == 3 {
-			utils.AssignMap(infoMap, []string{matches[1], matches[2], val})
+			utils.AssignMap(infoMap, []string{matches[1], matches[2]}, val)
 		}
 	}
 	return infoMap
@@ -176,45 +187,60 @@ func getContainer(containerName string, contMap map[string]int, conts []types.Co
 	return &conts[index]
 }
 
-func generateContainerInfo(info map[ResourceName]ResourceName, conts []types.ContainerInfo) {
+func generateContainerInfo(info map[string]string, conts []types.ContainerInfo) error {
 	contMap := make(map[string]int) // container name to index map
 	reqs := getFromContainerInfo(info, "Requests")
+	var err error
 	for cName, cont := range reqs {
-		container := getContainer(cName, conts)
+		container := getContainer(cName, contMap, conts)
 		for key, val := range cont {
-			container.Requests[key] = strconv.ParseInt(val, 10, 64)
+			container.Requests[types.ResourceName(key)], err = strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	reqs = getFromContainerInfo(info, "Scorer")
 	for cName, cont := range reqs {
-		container := getContainer(cName, conts)
+		container := getContainer(cName, contMap, conts)
 		for key, val := range cont {
-			container.Scorer[key] = int32(strconv.ParseInt(val, 10, 32))
+			int64Val, err := strconv.ParseInt(val, 10, 32)
+			if err != nil {
+				return err
+			}
+			container.Scorer[types.ResourceName(key)] = int32(int64Val)
 		}
 	}
 	reqs = getFromContainerInfo(info, "AllocateFrom")
 	for cName, cont := range reqs {
-		container := getContainer(cName, conts)
+		container := getContainer(cName, contMap, conts)
 		for key, val := range cont {
-			container.AllocateFrom[key] = val
+			container.AllocateFrom[types.ResourceName(key)] = types.ResourceName(val)
 		}
 	}
+	return nil
 }
 
 // AnnotationToPodInfo is used by CRI to obtain AllocateFrom written by scheduler
-func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
-	init := make(map[ResourceName]ResourceName)
-	running := make(map[ResourceName]ResourceName)
+func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error {
+	init := make(map[string]string)
+	running := make(map[string]string)
 	for k, v := range meta.Annotations {
-		getToResourceListName("PodInfo/InitContainer", k, v, init)
-		getToResourceListName("PodInfo/RunningContainer", k, v, running)
+		getToStringMap("PodInfo/InitContainer", k, v, init)
+		getToStringMap("PodInfo/RunningContainer", k, v, running)
 	}
-	generateContainerInfo(initAllocFrom, podInfo.InitContainers)
-	generateContainerInfo(runningAllocFrom, podInfo.RunningContainers)
+	err := generateContainerInfo(init, podInfo.InitContainers)
+	if (err != nil) {
+		return err
+	}
+	err = generateContainerInfo(running, podInfo.RunningContainers)
+	if (err != nil) {
+		return err
+	}
+	return nil
 }
 
 // From nodeutil
-
 // PatchNodeStatus patches node status.
 func PatchNodeStatus(c v1core.CoreV1Interface, nodeName kubetypes.NodeName, oldNode *kubev1.Node, newNode *kubev1.Node) (*kubev1.Node, error) {
 	oldData, err := json.Marshal(oldNode)
@@ -244,12 +270,3 @@ func PatchNodeStatus(c v1core.CoreV1Interface, nodeName kubetypes.NodeName, oldN
 	return updatedNode, nil
 }
 
-func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache) (*types.PodInfo, *types.NodeInfo, error) {
-	// grab node information
-	nodeEx := nodeInfo.nodeEx
-	if nodeEx == nil {
-		return nil, nil, fmt.Errorf("node not found")
-	}
-	podInfo := KubePodInfoToPodInfo(&pod.Spec)
-	return podInfo, nodeEx, nil
-}

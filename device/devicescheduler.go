@@ -36,6 +36,17 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	return nil
 }
 
+func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache) (*types.PodInfo, *types.NodeInfo, error) {
+	// grab node information
+	nodeEx := nodeInfo.nodeEx
+	if nodeEx == nil {
+		return nil, nil, fmt.Errorf("node not found")
+	}
+	podInfo := KubePodInfoToPodInfo(&pod.Spec)
+	return podInfo, nodeEx, nil
+}
+
+
 // predicate
 func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
 	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)
