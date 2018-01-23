@@ -1,14 +1,16 @@
 package device
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/KubeGPU/gpu/nvidia"
 	"github.com/KubeGPU/kubeinterface"
 	"github.com/KubeGPU/scheduler/algorithm"
 	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/scheduler/schedulercache"
+
 	"k8s.io/api/core/v1"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
 )
 
 var DeviceSchedulerRegistry = map[string]reflect.Type{
@@ -36,38 +38,41 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	return nil
 }
 
-func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache) (*types.PodInfo, *types.NodeInfo, error) {
+func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo) (*types.PodInfo, *types.NodeInfo, error) {
 	// grab node information
 	nodeEx := nodeInfo.nodeEx
 	if nodeEx == nil {
 		return nil, nil, fmt.Errorf("node not found")
 	}
-	podInfo := KubePodInfoToPodInfo(&pod.Spec)
+	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod)
+	if err != nil {
+		return nil, nil, err
+	}
 	return podInfo, nodeEx, nil
 }
 
 // predicate
 func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
-	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)
+	podInfo, nodeInfo, err := GetPodAndNode(pod, node)
 	if err != nil {
 		return false, nil, err
 	}
 	totalScore := 0.0
 	totalFit := true
-	var totalReasons []algoruthm.PredicateFailureReason
+	var totalReasons []algorithm.PredicateFailureReason
 	for index, d := range ds.Devices {
 		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, ds.RunGroupScheduler[index])
 		// early terminate? - but score will not be correct then
 		totalScore += score
-		totalFit &= fit
-		totalReasons = append(totalReasons, reasons)
+		totalFit = totalFit && fit
+		totalReasons = append(totalReasons, reasons...)
 	}
 	return totalFit, totalReasons, nil
 }
 
 // allocate devices & write into annotations
 func (ds *DevicesScheduler) PodAllocate(pod *v1.Pod, node *schedulercache.NodeInfo) error {
-	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)
+	podInfo, nodeInfo, err := GetPodAndNode(pod, node)
 	if err != nil {
 		return false, nil, err
 	}
