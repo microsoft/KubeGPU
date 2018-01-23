@@ -22,13 +22,14 @@ type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
 	Name         string
+	KubeRequests ResourceList // requests being handled by kubernetes core - only needed here for resource translation
 	Requests     ResourceList
-	AllocateFrom ResourceLocation
+	AllocateFrom ResourceLocation // only valid for extended resources being advertised here
 	Scorer       ResourceScorer
 }
 
 func NewContainerInfo() *ContainerInfo {
-	return &ContainerInfo{Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer)}
+	return &ContainerInfo{KubeRequests: make(ResourceList), Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer)}
 }
 
 type PodInfo struct {
@@ -52,6 +53,7 @@ func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
 	return nil
 }
 
+// NodeInfo only holds resources being advertised by the device advertisers through annotations
 type NodeInfo struct {
 	Name        string
 	Capacity    ResourceList
@@ -95,12 +97,14 @@ type Device interface {
 
 // used by scheduler
 type DeviceScheduler interface {
-	// Translation of resources if needed - first is allocatable, second is requests, returns modified resource list
-	TranslateResource(ResourceList, ResourceList) ResourceList
 	// see if pod fits on node & return device score
 	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []algorithm.PredicateFailureReason, float64)
+	// allocate resources
+	PodAllocate(*NodeInfo, *PodInfo, bool) error
 	// GetName returns the name of a device
 	GetName() string
+	// Tells whether group scheduler is being used?
+	UsingGroupScheduler() bool
 }
 
 const (

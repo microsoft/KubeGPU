@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/utils"
 	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
@@ -109,7 +110,7 @@ func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 		cont := types.NewContainerInfo()
 		cont.Name = c.Name
 		for kr, vr := range c.Resources.Requests {
-			cont.Requests[types.ResourceName(kr)] = vr.Value()
+			cont.KubeRequests[types.ResourceName(kr)] = vr.Value()
 		}
 		podInfo.InitContainers = append(podInfo.InitContainers, *cont)
 	}
@@ -118,8 +119,11 @@ func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
 func KubePodInfoToPodInfo(kubePodInfo *kubev1.PodSpec) *types.PodInfo {
 	podInfo := &types.PodInfo{}
+	// add default kuberenetes requests
 	addContainersToPodInfo(podInfo, kubePodInfo.InitContainers)
 	addContainersToPodInfo(podInfo, kubePodInfo.Containers)
+	// generate new requests from annotations
+	AnnotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
 	return podInfo
 }
 
@@ -129,44 +133,84 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	for _, c := range podInfo.InitContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Requests", c.Name)
+		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
+		if c.Scorer != nil {
+			keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
+			addResourceList32(keyPrefix, met.Annotations, c.Scorer)
+		}
 	}
 	for _, c := range podInfo.RunningContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Requests", c.Name)
+		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
+		if c.Scorer != nil {
+			keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
+			addResourceList32(keyPrefix, met.Annotations, c.Scorer)
+		}
 	}
 }
 
-func addLocToContainerInfo(allocFrom types.ResourceLocation, conts []types.ContainerInfo) {
-	contMap := make(map[string]int) // maps container name to index
-	re := regexp.MustCompile(`(.*?)/` + "AllocateFrom" + `/(.*)`)
-	for allocFrom, allocTo := range allocFrom {
-		matches := re.FindStringSubmatch(string(allocFrom))
+func getFromContainerInfo(info map[ResourceName]ResourceName, searchFor string) map[string](map[string]string) {
+	infoMap := make(map[string](map[string]string))
+	re := regexp.MustCompile(`(.*?)/` + searchFor + `/(.*)`)
+	for key, val := range info {
+		matches := re.FindStringSubmatch(string(key))
 		if len(matches) == 3 {
-			contName := matches[1]
-			contRes := matches[2]
-			index, ok := contMap[contName]
-			if !ok {
-				index = len(conts)
-				contMap[contName] = index
-				newContainer := types.NewContainerInfo()
-				newContainer.Name = contName // not needed as we have map, but add anyways
-				conts = append(conts, *newContainer)
-			}
-			conts[index].AllocateFrom[types.ResourceName(contRes)] = allocTo
+			utils.AssignMap(infoMap, []string{matches[1], matches[2], val})
+		}
+	}
+	return infoMap
+}
+
+func getContainer(containerName string, contMap map[string]int, conts []types.ContainerInfo) *types.ContainerInfo {
+	index, ok := contMap[containerName]
+	if !ok {
+		index = len(conts)
+		contMap[containerName] = index
+		newContainer := types.NewContainerInfo()
+		newContainer.Name = containerName
+		conts = append(conts, *newContainer)
+	}
+	return &conts[index]
+}
+
+func generateContainerInfo(info map[ResourceName]ResourceName, conts []types.ContainerInfo) {
+	contMap := make(map[string]int) // container name to index map
+	reqs := getFromContainerInfo(info, "Requests")
+	for cName, cont := range reqs {
+		container := getContainer(cName, conts)
+		for key, val := range cont {
+			container.Requests[key] = strconv.ParseInt(val, 10, 64)
+		}
+	}
+	reqs = getFromContainerInfo(info, "Scorer")
+	for cName, cont := range reqs {
+		container := getContainer(cName, conts)
+		for key, val := range cont {
+			container.Scorer[key] = int32(strconv.ParseInt(val, 10, 32))
+		}
+	}
+	reqs = getFromContainerInfo(info, "AllocateFrom")
+	for cName, cont := range reqs {
+		container := getContainer(cName, conts)
+		for key, val := range cont {
+			container.AllocateFrom[key] = val
 		}
 	}
 }
 
 // AnnotationToPodInfo is used by CRI to obtain AllocateFrom written by scheduler
 func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
-	initAllocFrom := make(types.ResourceLocation)
-	runningAllocFrom := make(types.ResourceLocation)
+	init := make(map[ResourceName]ResourceName)
+	running := make(map[ResourceName]ResourceName)
 	for k, v := range meta.Annotations {
-		getToResourceListName("PodInfo/InitContainer", k, v, initAllocFrom)
-		getToResourceListName("PodInfo/RunningContainer", k, v, runningAllocFrom)
+		getToResourceListName("PodInfo/InitContainer", k, v, init)
+		getToResourceListName("PodInfo/RunningContainer", k, v, running)
 	}
-	addLocToContainerInfo(initAllocFrom, podInfo.InitContainers)
-	addLocToContainerInfo(runningAllocFrom, podInfo.RunningContainers)
+	generateContainerInfo(initAllocFrom, podInfo.InitContainers)
+	generateContainerInfo(runningAllocFrom, podInfo.RunningContainers)
 }
 
 // From nodeutil
@@ -198,4 +242,14 @@ func PatchNodeStatus(c v1core.CoreV1Interface, nodeName kubetypes.NodeName, oldN
 		return nil, fmt.Errorf("failed to patch status %q for node %q: %v", patchBytes, nodeName, err)
 	}
 	return updatedNode, nil
+}
+
+func GetPodAndNode(pod *v1.Pod, nodeInfo *schedulercache) (*types.PodInfo, *types.NodeInfo, error) {
+	// grab node information
+	nodeEx := nodeInfo.nodeEx
+	if nodeEx == nil {
+		return nil, nil, fmt.Errorf("node not found")
+	}
+	podInfo := KubePodInfoToPodInfo(&pod.Spec)
+	return podInfo, nodeEx, nil
 }

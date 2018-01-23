@@ -1,7 +1,6 @@
 package device
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/KubeGPU/gpu/nvidia"
@@ -17,55 +16,57 @@ var DeviceSchedulerRegistry = map[string]reflect.Type{
 }
 
 type DevicesScheduler struct {
-	Devices []types.DeviceScheduler
+	Devices           []types.DeviceScheduler
+	RunGroupScheduler []bool
 }
 
-func (d *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
+func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	o := reflect.New(DeviceSchedulerRegistry[device])
 	t := o.Interface().(types.DeviceScheduler)
-	d.Devices = append(d.Devices, t)
+	ds.Devices = append(ds.Devices, t)
+	usingGroupScheduler := t.UsingGroupScheduler()
+	if usingGroupScheduler {
+		for i := range ds.RunGroupScheduler {
+			ds.RunGroupScheduler[i] = false
+		}
+		ds.RunGroupScheduler = append(ds.RunGroupScheduler, true)
+	} else {
+		ds.RunGroupScheduler = append(ds.RunGroupScheduler, false)
+	}
 	return nil
 }
 
-// translate all device resources
-func (ds *DevicesScheduler) TranslateResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	for index := range podInfo.InitContainers {
-		for _, device := range ds.Devices {
-			podInfo.InitContainers[index].Requests = device.TranslateResource(nodeInfo.Allocatable, podInfo.InitContainers[index].Requests)
-		}
-	}
-	for index := range podInfo.RunningContainers {
-		for _, device := range ds.Devices {
-			podInfo.RunningContainers[index].Requests = device.TranslateResource(nodeInfo.Allocatable, podInfo.RunningContainers[index].Requests)
-		}
-	}
-}
-
 // predicate
-func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, nodeInfo *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
-	// grab node information
-	nodeEx := nodeInfo.nodeEx
-	if nodeEx == nil {
-		return false, nil, fmt.Errorf("node not found")
+func (ds *DevicesScheduler) PodFitsGroupResources(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {
+	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)
+	if err != nil {
+		return false, nil, err
 	}
-	// now extract podInfo & resource translation
-	podInfo := kubeinterface.KubePodInfoToPodInfo(&pod.Spec)
-	ds.TranslateResources(nodeEx, podInfo)
-
 	totalScore := 0.0
 	totalFit := true
 	var totalReasons []algoruthm.PredicateFailureReason
 	for index, d := range ds.Devices {
-		fit, reasons, score := d.PodFitsDevice(nodeEx, podInfo)
+		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		// early terminate? - but score will not be correct then
 		totalScore += score
 		totalFit &= fit
 		totalReasons = append(totalReasons, reasons)
 	}
-
 	return totalFit, totalReasons, nil
 }
 
-// allocate devices
-func (ds *DevicesScheduler) PodAllocate(pod *v1.Pod, nodeInfo *schedulercache.NodeInfo) error {
-
+// allocate devices & write into annotations
+func (ds *DevicesScheduler) PodAllocate(pod *v1.Pod, node *schedulercache.NodeInfo) error {
+	podInfo, nodeInfo, err := kubeinterface.GetPodAndNode(pod, node)
+	if err != nil {
+		return false, nil, err
+	}
+	for index, d := range ds.Devices {
+		err = d.PodAllocate(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		if err != nil {
+			return err
+		}
+	}
+	kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo)
+	return nil
 }
