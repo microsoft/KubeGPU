@@ -26,7 +26,7 @@ import (
 	"k8s.io/kubernetes/pkg/apis/componentconfig/v1alpha1"
 	"k8s.io/kubernetes/pkg/client/leaderelection"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/factory"
+	"github.com/KubeGPU/scheduler/factory"
 
 	// add the kubernetes feature gates
 	_ "k8s.io/kubernetes/pkg/features"

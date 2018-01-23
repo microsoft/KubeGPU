@@ -38,11 +38,11 @@ import (
 
 	clientv1 "k8s.io/client-go/pkg/api/v1"
 
-	"k8s.io/kubernetes/plugin/pkg/scheduler"
-	_ "k8s.io/kubernetes/plugin/pkg/scheduler/algorithmprovider"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	latestschedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api/latest"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/factory"
+	"github.com/KubeGPU/scheduler"
+	_ "github.com/KubeGPU/scheduler/algorithmprovider"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	latestschedulerapi "github.com/KubeGPU/scheduler/api/latest"
+	"github.com/KubeGPU/scheduler/factory"
 
 	"github.com/golang/glog"
 )
