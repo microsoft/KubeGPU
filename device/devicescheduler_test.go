@@ -1,4 +1,4 @@
-package grpalloc
+package device
 
 // to test: run
 // go test --args -log_dir=/home/sanjeevm/logs -v=10
@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KubeGPU/device"
+	"github.com/KubeGPU/grpalloc"
 	"github.com/KubeGPU/types"
 	"github.com/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -39,9 +39,9 @@ type PodEx struct {
 
 func printContainerAllocation(cont *types.ContainerInfo) {
 	//glog.V(5).Infoln("Allocated", cont.Resources.Allocated)
-	sortedKeys := utils.SortedStringKeys(cont.Requests)
+	sortedKeys := utils.SortedStringKeys(cont.DevRequests)
 	for _, resKey := range sortedKeys {
-		resVal := cont.Requests[types.ResourceName(resKey)]
+		resVal := cont.DevRequests[types.ResourceName(resKey)]
 		fmt.Println("Resource", cont.Name+"/"+string(resKey),
 			"TakenFrom", cont.AllocateFrom[types.ResourceName(resKey)],
 			"Amt", resVal)
@@ -66,15 +66,15 @@ func setRes(res types.ResourceList, name string, amt int64) {
 }
 
 func setGrpRes(res types.ResourceList, name string, amt int64) {
-	fullName := types.ResourceName(types.ResourceGroupPrefix + "/" + name)
+	fullName := types.ResourceName(types.DeviceGroupPrefix + "/" + name)
 	res[fullName] = amt
 }
 
-func addContainer(cont *[]types.ContainerInfo, name string) types.ResourceList {
+func addContainer(cont *[]types.ContainerInfo, name string) *types.ContainerInfo {
 	c := types.NewContainerInfo()
 	c.Name = name
 	*cont = append(*cont, *c)
-	return c.Requests
+	return c
 }
 
 // ResourceList is a map, no need for pointer
@@ -86,6 +86,12 @@ func setResource(alloc types.ResourceList, res map[string]int64, grpres map[stri
 	// set group resource
 	for key, val := range grpres {
 		setGrpRes(alloc, key, val)
+	}
+}
+
+func setKubeResource(alloc types.ResourceList, res map[string]int64) {
+	for key, val := range res {
+		alloc[types.ResourceName(key)] = val
 	}
 }
 
@@ -134,19 +140,19 @@ func setExpectedResources(c *cont) {
 			for keyRes := range c.grpres {
 				//matches := re.FindStringSubmatch(keyRes)
 				if strings.HasSuffix(key, prefix[keyRes]) {
-					newKey := types.ResourceGroupPrefix + "/" + key + "/" + suffix[keyRes]
-					newVal := types.ResourceGroupPrefix + "/" + val + "/" + suffix[keyRes]
+					newKey := types.DeviceGroupPrefix + "/" + key + "/" + suffix[keyRes]
+					newVal := types.DeviceGroupPrefix + "/" + val + "/" + suffix[keyRes]
 					expectedGrpLoc[newKey] = newVal
 				}
 				// if len(matches) >= 2 {
-				// 	newKey := types.ResourceGroupPrefix + "/" + key + "/" + matches[1]
-				// 	newVal := types.ResourceGroupPrefix + "/" + val + "/" + matches[1]
+				// 	newKey := types.DeviceGroupPrefix + "/" + key + "/" + matches[1]
+				// 	newVal := types.DeviceGroupPrefix + "/" + val + "/" + matches[1]
 				// 	expectedGrpLoc[newKey] = newVal
 				// }
 			}
 		} else {
-			newKey := types.ResourceGroupPrefix + "/" + key + "/cards"
-			newVal := types.ResourceGroupPrefix + "/" + val + "/cards"
+			newKey := types.DeviceGroupPrefix + "/" + key + "/cards"
+			newVal := types.DeviceGroupPrefix + "/" + val + "/cards"
 			expectedGrpLoc[newKey] = newVal
 		}
 	}
@@ -158,18 +164,22 @@ func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*ty
 
 	glog.V(2).Infof("Working on pod %s", pod.Name)
 
-	var contR types.ResourceList
-
 	for index, icont := range iconts {
 		setExpectedResources(&iconts[index])
-		contR = addContainer(&pod.InitContainers, icont.name)
-		setResource(contR, icont.res, icont.grpres)
+		container := addContainer(&pod.InitContainers, icont.name)
+		setResource(container.DevRequests, icont.res, icont.grpres)
+		setKubeResource(container.KubeRequests, icont.res)
+		//pod.InitContainers[index].DevRequests = pod.InitContainers[index].Requests
+		//fmt.Printf("Len: %d\n", len(pod.InitContainers))
+		//fmt.Printf("Req: %v\n", pod.InitContainers[index].Requests)
 		glog.V(7).Infoln(icont.name, pod.InitContainers[index].Requests)
 	}
 	for index, rcont := range rconts {
 		setExpectedResources(&rconts[index])
-		contR = addContainer(&pod.RunningContainers, rcont.name)
-		setResource(contR, rcont.res, rcont.grpres)
+		container := addContainer(&pod.RunningContainers, rcont.name)
+		setResource(container.DevRequests, rcont.res, rcont.grpres)
+		setKubeResource(container.KubeRequests, rcont.res)
+		//pod.RunningContainers[index].DevRequests = pod.RunningContainers[index].Requests
 		glog.V(7).Infoln(rcont.name, pod.RunningContainers[index].Requests)
 	}
 
@@ -183,24 +193,21 @@ func translatePod(node *types.NodeInfo, podEx *PodEx) {
 	enc := gob.NewEncoder(buffer)
 	dec := gob.NewDecoder(buffer)
 	if podEx.podOrig == nil {
-		//deep copy
+		//deep copy pod into podorig
 		enc.Encode(podEx.pod)
 		dec.Decode(&podEx.podOrig)
 	} else {
+		// deep copy podoring into pod
 		enc.Encode(podEx.podOrig)
 		dec.Decode(&podEx.pod)
 	}
-	// create a translator & translate
-	ds := &device.DevicesScheduler{}
-	ds.CreateAndAddDeviceScheduler("nvidiagpu")
-	ds.TranslateResources(node, podEx.pod)
 }
 
-func sampleTest(pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+func sampleTest(ds *DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	//fmt.Printf("Node: %v\n", nodeInfo)
 	//fmt.Printf("Pod: %v\n", pod)
 	// now perform allocation
-	found, reasons, score := PodFitsGroupConstraints(nodeInfo, pod, true)
+	found, reasons, score := ds.PodFitsResources(pod, nodeInfo, true)
 	//fmt.Println("AllocatedFromF", spec.InitContainers[0].Resources)
 	fmt.Printf("Test %d\n", testCnt)
 	fmt.Printf("Found: %t Score: %f\n", found, score)
@@ -210,8 +217,8 @@ func sampleTest(pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, test
 	}
 	if found {
 		printPodAllocation(pod)
-		usedResources, _ := ComputePodGroupResources(nodeInfo, pod, false)
-		TakePodGroupResource(nodeInfo, pod)
+		usedResources, _ := grpalloc.ComputePodGroupResources(nodeInfo, pod, false)
+		ds.TakePodResources(pod, nodeInfo)
 
 		for usedRes, usedAmt := range usedResources {
 			fmt.Println("Resource", usedRes, "AmtUsed", usedAmt)
@@ -248,8 +255,8 @@ func testContainerAllocs(t *testing.T, conts []cont, podConts []types.ContainerI
 }
 
 func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.NodeInfo, testCnt int) {
-	usedResources, nodeResources := ComputePodGroupResources(nodeInfo, pod, false)
-	TakePodGroupResource(nodeInfo, pod)
+	usedResources, nodeResources := grpalloc.ComputePodGroupResources(nodeInfo, pod, false)
+	grpalloc.TakePodGroupResource(nodeInfo, pod)
 	if len(usedResources) == 0 {
 		t.Errorf("Test %d no resources being used", testCnt)
 	}
@@ -264,7 +271,7 @@ func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.Node
 		}
 	}
 	// now return the resource and check
-	usedResourcesReturn, usedResourcesNode := ComputePodGroupResources(nodeInfo, pod, true)
+	usedResourcesReturn, usedResourcesNode := grpalloc.ComputePodGroupResources(nodeInfo, pod, true)
 	if len(usedResources) != len(usedResourcesReturn) {
 		t.Errorf("Test %d used resource lengths do not match - now %d - before %d",
 			testCnt, len(usedResourcesReturn), len(usedResources))
@@ -276,10 +283,11 @@ func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.Node
 	}
 }
 
-func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+func testPodAllocs(t *testing.T, ds *DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+	//fmt.Printf("=====TESTING CNT %d======", testCnt)
 	//fmt.Printf("Node: %v\n", nodeInfo)
 	//fmt.Printf("Pod: %v\n", pod)
-	found, _, score := PodFitsGroupConstraints(nodeInfo, pod, true)
+	found, _, score := ds.PodFitsResources(pod, nodeInfo, true)
 	if found {
 		if podEx.rcont[0].expectedGrpLoc == nil {
 			t.Errorf("Test %d Group allocation found when it should not be found", testCnt)
@@ -290,7 +298,7 @@ func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *typ
 			testContainerAllocs(t, podEx.icont, pod.InitContainers, testCnt)
 			testContainerAllocs(t, podEx.rcont, pod.RunningContainers, testCnt)
 			// repeat - now should go through findScoreAndUpdate path
-			found2, _, score2 := PodFitsGroupConstraints(nodeInfo, pod, true)
+			found2, _, score2 := ds.PodFitsResources(pod, nodeInfo, true)
 			if found2 != found || math.Abs(score-score2)/score > 0.01 {
 				t.Errorf("Test %d Repeat Score does not match - expected %v %v - have %v %v",
 					testCnt, found, score, found2, score2)
@@ -306,6 +314,12 @@ func testPodAllocs(t *testing.T, pod *types.PodInfo, podEx *PodEx, nodeInfo *typ
 }
 
 func TestGrpAllocate1(t *testing.T) {
+	// create a translator & translate
+	ds := &DevicesScheduler{}
+	ds.CreateAndAddDeviceScheduler("nvidiagpu")
+	//gpusched := &nvidia.NvidiaGPUScheduler{}
+	//ds.Devices = append(ds.Devices, gpusched)
+
 	testCnt := 0
 	flag.Parse()
 
@@ -347,7 +361,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	// test with init resources more than running
 	nodeInfo = createNodeArgs(&nodeArgs)
@@ -379,7 +393,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	// test with just numgpu
 	nodeInfo, nodeArgs = createNode("node1",
@@ -412,7 +426,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	// test gpu affinity group
 	nodeInfo, _ = createNode("node1",
@@ -460,7 +474,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	// test gpu affinity group
 	nodeInfo, nodeArgs = createNode("node1",
@@ -492,7 +506,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	// recreate node
 	nodeInfo = createNodeArgs(&nodeArgs)
@@ -523,7 +537,7 @@ func TestGrpAllocate1(t *testing.T) {
 	translatePod(nodeInfo, podEx)
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
-	testPodAllocs(t, pod, podEx, nodeInfo, testCnt)
+	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
 
 	glog.Flush()
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/golang/glog"
 )
 
-// TranslateGPUResources translates GPU resources to max level
+// TranslateGPUResources translates GPU resources to max level advertised by the node
 func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, containerRequests types.ResourceList) types.ResourceList {
 	// First stage translation, translate # of cards to simple GPU resources - extra stage
-	re := regexp.MustCompile(types.ResourceGroupPrefix + `.*/gpu/(.*?)/cards`)
+	re := regexp.MustCompile(types.DeviceGroupPrefix + `.*/gpu/(.*?)/cards`)
 
 	needTranslation := false
 	for res := range nodeResources {

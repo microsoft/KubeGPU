@@ -400,9 +400,9 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	allocName := make(map[string](map[string]string))
 	alloc := make(map[string]int64)
 	glog.V(5).Infoln("Allocating for container", contReq.Name)
-	glog.V(7).Infoln("Requests", contReq.Requests)
+	glog.V(7).Infoln("Requests", contReq.DevRequests)
 	glog.V(7).Infoln("AllocatableRes", allocatable)
-	for reqRes, reqVal := range contReq.Requests {
+	for reqRes, reqVal := range contReq.DevRequests {
 		if !resource.PrecheckedResource(reqRes) {
 			reqName[string(reqRes)] = string(reqRes)
 			req[string(reqRes)] = reqVal
@@ -419,7 +419,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	glog.V(7).Infoln("Required", reqName, req)
 
 	re := regexp.MustCompile(`(\S*)/(\S*)`)
-	matches := re.FindStringSubmatch(types.ResourceGroupPrefix)
+	matches := re.FindStringSubmatch(types.DeviceGroupPrefix)
 	var grpPrefix string
 	var grpName string
 	if len(matches) != 3 {
@@ -446,7 +446,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	grp.UsedGroups = usedGroups
 	grp.GrpRequiredResource = reqName
 	grp.GrpAllocResource = allocName
-	grp.ReqBaseGroupName = types.ResourceGroupPrefix
+	grp.ReqBaseGroupName = types.DeviceGroupPrefix
 	grp.AllocBaseGroupPrefix = grpPrefix
 	grp.Score = 0.0
 	// pick up current resource usage
@@ -542,7 +542,7 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 
 	// now go over initialization containers, try to reutilize used groups
 	for i := range spec.InitContainers {
-		// container.Resources.Requests contains a map, alloctable contains type Resource
+		// container.Resources.DevRequests contains a map, alloctable contains type Resource
 		// prefer groups which are already used by running containers
 		grp, fits, reasons, _ := containerFitsGroupConstraints(&spec.InitContainers[i], true, n.Allocatable,
 			scorer, podResource, nodeResource, usedGroups, true, allocating)
@@ -564,7 +564,7 @@ func updateGroupResourceForContainer(n *types.NodeInfo, cont *types.ContainerInf
 	podResources types.ResourceList, updatedUsedByNode types.ResourceList) {
 
 	for resource, allocatedFrom := range cont.AllocateFrom {
-		val := cont.Requests[resource]
+		val := cont.DevRequests[resource]
 		allocatableRes := n.Allocatable[allocatedFrom]
 		podRes := podResources[allocatedFrom]
 		nodeRes := updatedUsedByNode[allocatedFrom]

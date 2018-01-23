@@ -16,6 +16,7 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// Add values to annotation map
 func addResourceList64(keyPrefix string, a map[string]string, list map[types.ResourceName]int64) {
 	for k, v := range list {
 		a[keyPrefix+"/"+string(k)] = strconv.FormatInt(v, 10)
@@ -34,6 +35,7 @@ func addResourceListName(keyPrefix string, a map[string]string, list map[types.R
 	}
 }
 
+// Get values from annotation map
 func getToResourceList64(keyPrefix string, key string, val string, list map[types.ResourceName]int64) error {
 	keyPrefix = keyPrefix + "/"
 	if strings.HasPrefix(key, keyPrefix) {
@@ -87,8 +89,7 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 // AnnotationToNodeInfo is used by scheduler to convert annotation to node info
 func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	nodeInfo := types.NewNodeInfo()
-	a := meta.Annotations
-	for k, v := range a {
+	for k, v := range meta.Annotations {
 		if k == "NodeInfo/Name" {
 			nodeInfo.Name = k
 		} else {
@@ -113,6 +114,18 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
+func clearPodInfoAnnotations(meta *metav1.ObjectMeta) {
+	var newAnnotations map[string]string
+	re = regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests|ValidForNode)`)
+	for k, v := range meta.Annotations {
+		matches := re.FindStringSubmatch(k)
+		if len(matches) == 0 {
+			newAnnotations[k] = v
+		}
+	}
+	meta.Annotations = newAnnotations
+}
+
 func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 	for _, c := range conts {
 		cont := types.NewContainerInfo()
@@ -125,41 +138,54 @@ func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
 }
 
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
-func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod) (*types.PodInfo, error) {
+func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
 	podInfo := &types.PodInfo{}
 	// add default kuberenetes requests
 	addContainersToPodInfo(podInfo, kubePodInfo.Spec.InitContainers)
 	addContainersToPodInfo(podInfo, kubePodInfo.Spec.Containers)
 	// generate new requests from annotations
-	err := AnnotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
+	if invalidateExistingAnnotations {
+		clearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
+	}
+	err := annotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
 	if err != nil {
 		return nil, err
+	}
+	if invalidateExistingAnnotations {
+		// now copy original requests to device requests
+		for name, req := podInfo.Requests {
+			podInfo.DevRequests[name] = req
+		}
 	}
 	return podInfo, nil
 }
 
 // PodInfoToAnnotation is used by scheduler to write allocate from field into annotations
 // only allocate from needs to be written, other info is already avialable in pod spec
-func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
+func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo, nodeName string) {
 	for _, c := range podInfo.InitContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
 		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Requests", c.Name)
 		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
-		if c.Scorer != nil {
-			keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
-			addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
-		}
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/DevRequests", c.Name)
+		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
+		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
+		key := fmt.Sprintf("PodInfo/InitContainer/%s/ValidForNode/Name", c.Name)
+		meta.Annotations[key] = nodeName
 	}
 	for _, c := range podInfo.RunningContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Requests", c.Name)
 		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
-		if c.Scorer != nil {
-			keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
-			addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
-		}
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/DevRequests", c.Name)
+		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
+		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
+		key := fmt.Sprintf("PodInfo/RunningContainer/%s/ValidForNode/Name", c.Name)
+		meta.Annotations[key] = nodeName
 	}
 }
 
@@ -211,6 +237,17 @@ func generateContainerInfo(info map[string]string, conts []types.ContainerInfo) 
 			container.Scorer[types.ResourceName(key)] = int32(int64Val)
 		}
 	}
+	// following will only exist if they have not been invalidated
+	reqs = getFromContainerInfo(info, "DevRequests")
+	for cName, cont := range reqs {
+		container := getContainer(cName, contMap, conts)
+		for key, val := range cont {
+			container.DevRequests[types.ResourceName(key)], err = strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return err
+			}
+		}
+	}	
 	reqs = getFromContainerInfo(info, "AllocateFrom")
 	for cName, cont := range reqs {
 		container := getContainer(cName, contMap, conts)
@@ -218,11 +255,21 @@ func generateContainerInfo(info map[string]string, conts []types.ContainerInfo) 
 			container.AllocateFrom[types.ResourceName(key)] = types.ResourceName(val)
 		}
 	}
+	reqs = getFromContainerInfo(info, "ValidForNode")
+	for cName, cont := range reqs {
+		container := getContainer(cName, contMap, conts)
+		if len(cont) > 1 {
+			return fmt.Errorf("ValidForNode should only have one value, has %v", cont)
+		}
+		for key, val := range cont {
+			container.NodeName = val
+		}
+	}
 	return nil
 }
 
-// AnnotationToPodInfo is used by CRI to obtain AllocateFrom written by scheduler
-func AnnotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error {
+// annotationToPodInfo is used by CRI to obtain AllocateFrom written by scheduler
+func annotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error {
 	init := make(map[string]string)
 	running := make(map[string]string)
 	for k, v := range meta.Annotations {

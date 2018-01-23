@@ -225,8 +225,8 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 		return nil, nil, nil
 	}
 
-	//re := regexp.MustCompile(types.ResourceGroupPrefix + "/gpu/" + `(.*?)/cards`)
-	re := regexp.MustCompile(types.ResourceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
+	//re := regexp.MustCompile(types.DeviceGroupPrefix + "/gpu/" + `(.*?)/cards`)
+	re := regexp.MustCompile(types.DeviceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
 
 	devices := []int{}
 	for _, res := range container.AllocateFrom {

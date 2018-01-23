@@ -3,8 +3,8 @@ package types
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
-	// Namespace prefix for group resources (alpha).
-	ResourceGroupPrefix = "alpha.kubernetes.io/group-resource"
+	// Namespace prefix for group resources.
+	DeviceGroupPrefix = "alpha/devresource"
 )
 
 type ResourceName string
@@ -20,14 +20,16 @@ type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
 	Name         string
+	NodeName     string // the node for which DevRequests and AllocateFrom are valid
 	KubeRequests ResourceList // requests being handled by kubernetes core - only needed here for resource translation
-	Requests     ResourceList
+	Requests     ResourceList // requests specified in annotations in the pod spec
+	DevRequests  ResourceList // requests after translation - these are used by scheduler to schedule
 	AllocateFrom ResourceLocation // only valid for extended resources being advertised here
-	Scorer       ResourceScorer
+	Scorer       ResourceScorer // scorer function specified in pod specificiation annotations
 }
 
 func NewContainerInfo() *ContainerInfo {
-	return &ContainerInfo{KubeRequests: make(ResourceList), Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer)}
+	return &ContainerInfo{KubeRequests: make(ResourceList), Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer), DevRequests: make(ResourceList)}
 }
 
 type PodInfo struct {
@@ -101,9 +103,9 @@ type PredicateFailureReason interface {
 // used by scheduler
 type DeviceScheduler interface {
 	// see if pod fits on node & return device score
-	PodFitsDevice(*NodeInfo, *PodInfo, bool) (bool, []PredicateFailureReason, float64)
+	PodFitsDevice(nodeInfo *NodeInfo, podInfo *PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []PredicateFailureReason, float64)
 	// allocate resources
-	PodAllocate(*NodeInfo, *PodInfo, bool) error
+	PodAllocate(nodeInfo *NodeInfo, podInfo *PodInfo, runGrpScheduler bool) error
 	// take resources from node
 	TakePodResources(*NodeInfo, *PodInfo, bool) error
 	// return resources to node

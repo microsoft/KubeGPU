@@ -36,18 +36,18 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 }
 
 // predicate
-func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) (bool, []types.PredicateFailureReason, error) {
+func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo, fillAllocateFrom bool) (bool, []types.PredicateFailureReason, float64) {
 	totalScore := 0.0
 	totalFit := true
 	var totalReasons []types.PredicateFailureReason
 	for index, d := range ds.Devices {
-		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, ds.RunGroupScheduler[index])
+		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, fillAllocateFrom, ds.RunGroupScheduler[index])
 		// early terminate? - but score will not be correct then
 		totalScore += score
 		totalFit = totalFit && fit
 		totalReasons = append(totalReasons, reasons...)
 	}
-	return totalFit, totalReasons, nil
+	return totalFit, totalReasons, totalScore
 }
 
 // allocate devices & write into annotations
