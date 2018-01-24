@@ -47,4 +47,4 @@ func ReturnPodDeviceResources(pod *v1.Pod, node *NodeInfo) error {
 	return device.DeviceScheduler.ReturnPodResources(podInfo, nodeInfo)
 }
 
-//kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo)
+

@@ -37,6 +37,8 @@ import (
 	schedulerapi "github.com/KubeGPU/scheduler/api"
 	"github.com/KubeGPU/scheduler/schedulercache"
 	"github.com/KubeGPU/scheduler/util"
+	"github.com/KubeGPU/device"
+	"github.com/KubeGPU/kubeinterface"
 
 	"github.com/golang/glog"
 	"github.com/KubeGPU/scheduler/volumebinder"
@@ -103,6 +105,21 @@ type genericScheduler struct {
 	volumeBinder      *volumebinder.VolumeBinder
 }
 
+// allocate onto device - rerun scheduling to set allocatefrom
+func (g *genericScheduler) allocateDevices(pod *v1.Pod, node *schedulercache.NodeInfo) error {
+	podInfo, nodeInfo, err := schedulercache.GetPodAndNode(pod, node, true)
+	if err != nil {
+		return err
+	}
+	err = device.DeviceScheduler.PodAllocate(podInfo, nodeInfo) // fill allocatefrom field
+	if err != nil {
+		return err
+	}
+	// convert to pod annotations
+	kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo, node.Node().ObjectMeta.Name)
+	return nil
+}
+
 // Schedule tries to schedule the given pod to one of node in the node list.
 // If it succeeds, it will return the name of the node.
 // If it fails, it will return a Fiterror error with reasons.
@@ -152,7 +169,17 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 	}
 
 	trace.Step("Selecting host")
-	return g.selectHost(priorityList)
+	suggestedHost, err := g.selectHost(priorityList)
+	if err != nil {
+		return suggestedHost, err
+	}
+
+	err = g.allocateDevices(pod, g.cachedNodeInfoMap[suggestedHost])
+	if err != nil {
+		return suggestedHost, err
+	}
+
+	return suggestedHost, nil
 }
 
 // Prioritizers returns a slice containing all the scheduler's priority
