@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	//"github.com/golang/glog"
-	extypes "github.com/KubeGPU/types"
 	"github.com/KubeGPU/device"
 	"github.com/KubeGPU/kubeinterface"
+	extypes "github.com/KubeGPU/types"
 
 	"k8s.io/api/core/v1"
 )
@@ -22,14 +22,15 @@ func GetPodAndNode(pod *v1.Pod, node *NodeInfo, invalidatePodAnnotations bool) (
 		return nil, nil, err
 	}
 	if !invalidatePodAnnotations {
-		if podInfo.NodeName != node.Node.metav1.ObjectMeta.Name {
-			return nil, nil, fmt.Errorf("Node name is not correct - pod expects %v, but node has %v", podInfo.NodeName, node.Node.Name)
+		nodeName := node.node.ObjectMeta.Name
+		if podInfo.NodeName != nodeName {
+			return nil, nil, fmt.Errorf("Node name is not correct - pod expects %v, but node has %v", podInfo.NodeName, nodeName)
 		}
 	}
 	return podInfo, nodeInfo, nil
 }
 
-func TakePodDeviceResources(pod *v1.Pod, node *NodeInfo) error {	
+func TakePodDeviceResources(pod *v1.Pod, node *NodeInfo) error {
 	// convert pod annotations to resources and use them -- should not return error as pod annotations should be correct
 	podInfo, nodeInfo, err := GetPodAndNode(pod, node, false)
 	if err != nil {
@@ -43,7 +44,7 @@ func ReturnPodDeviceResources(pod *v1.Pod, node *NodeInfo) error {
 	if err != nil {
 		return err
 	}
-	return device.DeviceScheduler.ReturnPodResources(podInfo, nodeInfo)	
+	return device.DeviceScheduler.ReturnPodResources(podInfo, nodeInfo)
 }
 
 //kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo)
