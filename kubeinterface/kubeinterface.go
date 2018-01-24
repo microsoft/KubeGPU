@@ -288,33 +288,47 @@ func annotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 	return nil
 }
 
-// From nodeutil
-// PatchNodeStatus patches node status.
-func PatchNodeStatus(c v1core.CoreV1Interface, nodeName kubetypes.NodeName, oldNode *kubev1.Node, newNode *kubev1.Node) (*kubev1.Node, error) {
-	oldData, err := json.Marshal(oldNode)
+func GetPatchBytes(c v1core.CoreV1Interface, resourceName string, old, new, dataStruct interface{}) ([]byte, error) {
+	oldData, err := json.Marshal(old)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal old node %#v for node %q: %v", oldNode, nodeName, err)
+		return nil, fmt.Errorf("failed to marshal old resource %#v with name %s: %v", old, resourceName, err)
 	}
 
-	// Reset spec to make sure only patch for Status or ObjectMeta is generated.
-	// Note that we don't reset ObjectMeta here, because:
-	// 1. This aligns with Nodes().UpdateStatus().
-	// 2. Some component does use this to update node annotations.
-	newNode.Spec = oldNode.Spec
-	newData, err := json.Marshal(newNode)
+	newData, err := json.Marshal(new)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal new node %#v for node %q: %v", newNode, nodeName, err)
+		return nil, fmt.Errorf("failed to marshal new resource %#v with name %s: %v", new, resourceName, err)
 	}
 
-	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, kubev1.Node{})
+	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, dataStruct)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create patch for node %q: %v", nodeName, err)
+		return nil, fmt.Errorf("failed to create patch for resource %s: %v", resourceName, err)
+	}
+	return patchBytes, nil
+}
+
+func PatchNodeMetadata(c v1core.CoreV1Interface, nodeName string, oldNode *kubev1.Node, newNode *kubev1.Node) (*kubev1.Node, error) {
+	patchBytes, err := GetPatchBytes(c, nodeName, oldNode, newNode, kubev1.Node{})
+	if err != nil {
+		return nil, err
 	}
 
-	updatedNode, err := c.Nodes().Patch(string(nodeName), kubetypes.StrategicMergePatchType, patchBytes, "status")
+	updatedNode, err := c.Nodes().Patch(nodeName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
 	if err != nil {
-		return nil, fmt.Errorf("failed to patch status %q for node %q: %v", patchBytes, nodeName, err)
+		return nil, fmt.Errorf("failed to patch metadata %q for node %q: %v", patchBytes, nodeName, err)
 	}
 	return updatedNode, nil
+}
+
+func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.Pod, newPod *kubev1.Pod) (*kubev1.Pod, error) {
+	patchBytes, err := GetPatchBytes(c, podName, oldPod, newPod, kubev1.Pod{})
+	if err != nil {
+		return nil, err
+	}
+
+	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
+	if err != nil {
+		return nil, fmt.Errorf("failed topatch metadata %q for pod %q: %v", patchBytes, podName, err)
+	}
+	return updatedPod, nil
 }
 
