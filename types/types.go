@@ -20,7 +20,6 @@ type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
 	Name         string
-	NodeName     string // the node for which DevRequests and AllocateFrom are valid
 	KubeRequests ResourceList // requests being handled by kubernetes core - only needed here for resource translation
 	Requests     ResourceList // requests specified in annotations in the pod spec
 	DevRequests  ResourceList // requests after translation - these are used by scheduler to schedule
@@ -33,8 +32,8 @@ func NewContainerInfo() *ContainerInfo {
 }
 
 type PodInfo struct {
-	Name string
-	// requests
+	Name              string
+	NodeName          string // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
 	InitContainers    []ContainerInfo
 	RunningContainers []ContainerInfo
 }

@@ -116,45 +116,56 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 
 func clearPodInfoAnnotations(meta *metav1.ObjectMeta) {
 	var newAnnotations map[string]string
-	re = regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests|ValidForNode)`)
+	re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
 	for k, v := range meta.Annotations {
-		matches := re.FindStringSubmatch(k)
-		if len(matches) == 0 {
-			newAnnotations[k] = v
+		if k != "PodInfo/ValidForNode" {
+			matches := re.FindStringSubmatch(k)
+			if len(matches) == 0 {
+				newAnnotations[k] = v
+			}
 		}
 	}
 	meta.Annotations = newAnnotations
 }
 
-func addContainersToPodInfo(podInfo *types.PodInfo, conts []kubev1.Container) {
+func addContainersToPodInfo(containers []types.ContainerInfo, conts []kubev1.Container) []types.ContainerInfo {
 	for _, c := range conts {
 		cont := types.NewContainerInfo()
 		cont.Name = c.Name
 		for kr, vr := range c.Resources.Requests {
 			cont.KubeRequests[types.ResourceName(kr)] = vr.Value()
 		}
-		podInfo.InitContainers = append(podInfo.InitContainers, *cont)
+		containers = append(containers, *cont)
 	}
+	return containers
 }
 
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
 func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
 	podInfo := &types.PodInfo{}
 	// add default kuberenetes requests
-	addContainersToPodInfo(podInfo, kubePodInfo.Spec.InitContainers)
-	addContainersToPodInfo(podInfo, kubePodInfo.Spec.Containers)
-	// generate new requests from annotations
+	podInfo.InitContainers = addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers)
+	podInfo.RunningContainers = addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers)
+	// if desired, clear existing pod annotations for DevRequests, AllocateFrom, NodeName
 	if invalidateExistingAnnotations {
 		clearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
 	}
+	// generate new requests from annotations
 	err := annotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
 	if err != nil {
 		return nil, err
 	}
 	if invalidateExistingAnnotations {
 		// now copy original requests to device requests
-		for name, req := podInfo.Requests {
-			podInfo.DevRequests[name] = req
+		for index := range podInfo.InitContainers {
+			for name, req := range podInfo.InitContainers[index].Requests { // from annotation
+				podInfo.InitContainers[index].DevRequests[name] = req
+			}
+		}
+		for index := range podInfo.RunningContainers {
+			for name, req := range podInfo.RunningContainers[index].Requests {
+				podInfo.RunningContainers[index].DevRequests[name] = req
+			}
 		}
 	}
 	return podInfo, nil
@@ -172,8 +183,6 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo, nodeNa
 		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
 		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
 		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
-		key := fmt.Sprintf("PodInfo/InitContainer/%s/ValidForNode/Name", c.Name)
-		meta.Annotations[key] = nodeName
 	}
 	for _, c := range podInfo.RunningContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
@@ -184,9 +193,8 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo, nodeNa
 		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
 		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
-		key := fmt.Sprintf("PodInfo/RunningContainer/%s/ValidForNode/Name", c.Name)
-		meta.Annotations[key] = nodeName
 	}
+	meta.Annotations["PodInfo/ValidForNode"] = nodeName
 }
 
 func getFromContainerInfo(info map[string]string, searchFor string) map[string](map[string]string) {
@@ -255,16 +263,6 @@ func generateContainerInfo(info map[string]string, conts []types.ContainerInfo) 
 			container.AllocateFrom[types.ResourceName(key)] = types.ResourceName(val)
 		}
 	}
-	reqs = getFromContainerInfo(info, "ValidForNode")
-	for cName, cont := range reqs {
-		container := getContainer(cName, contMap, conts)
-		if len(cont) > 1 {
-			return fmt.Errorf("ValidForNode should only have one value, has %v", cont)
-		}
-		for key, val := range cont {
-			container.NodeName = val
-		}
-	}
 	return nil
 }
 
@@ -275,6 +273,9 @@ func annotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 	for k, v := range meta.Annotations {
 		getToStringMap("PodInfo/InitContainer", k, v, init)
 		getToStringMap("PodInfo/RunningContainer", k, v, running)
+		if k == "PodInfo/ValidForNode" {
+			podInfo.NodeName = v
+		}
 	}
 	err := generateContainerInfo(init, podInfo.InitContainers)
 	if (err != nil) {
