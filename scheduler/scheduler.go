@@ -36,6 +36,7 @@ import (
 	"github.com/KubeGPU/scheduler/metrics"
 	"github.com/KubeGPU/scheduler/schedulercache"
 	"github.com/KubeGPU/scheduler/util"
+	"github.com/KubeGPU/kubeinterface"
 
 	"github.com/golang/glog"
 	"github.com/KubeGPU/scheduler/volumebinder"
@@ -115,6 +116,9 @@ type Config struct {
 	// PodPreemptor is used to evict pods and update pod annotations.
 	PodPreemptor PodPreemptor
 
+	// Kubeclient
+	Client clientset.Interface
+	
 	// NextPod should be a function that blocks until the next pod
 	// is available. We don't use a channel for this, because scheduling
 	// a pod may take some amount of time and we don't want pods to get
@@ -400,11 +404,16 @@ func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 // handle binding metrics internally.
 func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	bindingStart := time.Now()
-	// If binding succeeded then PodScheduled condition will be updated in apiserver so that
-	// it's atomic with setting host.
-	err := sched.config.Binder.Bind(b)
-	if err := sched.config.SchedulerCache.FinishBinding(assumed); err != nil {
-		glog.Errorf("scheduler cache FinishBinding failed: %v", err)
+	// prior to binding update the pod annotations
+	_, err := kubeinterface.UpdatePodMetadata(sched.config.Client.CoreV1(), assumed)
+	if err == nil {
+		// If binding succeeded then PodScheduled condition will be updated in apiserver so that
+		// it's atomic with setting host.
+		err = sched.config.Binder.Bind(b)
+		err = sched.config.SchedulerCache.FinishBinding(assumed)
+		if err != nil {
+			glog.Errorf("scheduler cache FinishBinding failed: %v", err)
+		}
 	}
 	if err != nil {
 		glog.V(1).Infof("Failed to bind pod: %v/%v", assumed.Namespace, assumed.Name)

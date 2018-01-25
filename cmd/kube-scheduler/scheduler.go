@@ -20,8 +20,8 @@ import (
 	"k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
 	"k8s.io/kubernetes/pkg/version/verflag"
-	"k8s.io/kubernetes/plugin/cmd/kube-scheduler/app"
-	"k8s.io/kubernetes/plugin/cmd/kube-scheduler/app/options"
+	"github.com/KubeGPU/cmd/kube-scheduler/app"
+	"github.com/KubeGPU/cmd/kube-scheduler/app/options"
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
