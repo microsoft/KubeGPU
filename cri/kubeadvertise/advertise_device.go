@@ -4,25 +4,25 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/devicemanager"
+	"github.com/KubeGPU/device"
 	"github.com/KubeGPU/kubeinterface"
+	"github.com/KubeGPU/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubetypes "k8s.io/apimachinery/pkg/types"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	clientset "k8s.io/client-go/kubernetes"
-	nodeutil "k8s.io/kubernetes/pkg/util/node"
+	//kubetypes "k8s.io/apimachinery/pkg/types"
+	//nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
 type DeviceAdvertiser struct {
 	KubeClient *clientset.Clientset
-	DevMgr     *devicemanager.DevicesManager
+	DevMgr     *device.DevicesManager
 	nodeName   string
 }
 
-func NewDeviceAdvertiser(s *options.KubeletServer, dm *devicemanager.DevicesManager, thisNodeName string) (*DeviceAdvertiser, error) {
+func NewDeviceAdvertiser(s *options.KubeletServer, dm *device.DevicesManager, thisNodeName string) (*DeviceAdvertiser, error) {
 	clientConfig, err := app.CreateAPIServerClientConfig(s)
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (da *DeviceAdvertiser) patchResources() error {
 	kubeinterface.NodeInfoToAnnotation(&newNode.ObjectMeta, nodeInfo)
 
 	// Patch the current status on the API server
-	_, err = nodeutil.PatchNodeStatus(da.KubeClient.CoreV1(), kubetypes.NodeName(da.nodeName), node, newNode)
+	_, err = kubeinterface.PatchNodeMetadata(da.KubeClient.CoreV1(), da.nodeName, node, newNode)
 	if err != nil {
 		return err
 	}

@@ -26,9 +26,9 @@ import (
 	apps "k8s.io/kubernetes/pkg/apis/apps/v1beta1"
 	extensions "k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
-	schedulertesting "k8s.io/kubernetes/plugin/pkg/scheduler/testing"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/KubeGPU/scheduler/schedulercache"
+	schedulertesting "github.com/KubeGPU/scheduler/testing"
 )
 
 func controllerRef(kind, name, uid string) []metav1.OwnerReference {

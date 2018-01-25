@@ -1,14 +1,15 @@
 package main
 
 import (
-	"github.com/KubeGPU/kubeinterface"
-	"github.com/KubeGPU/devicemanager"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/KubeGPU/device"
+	"github.com/KubeGPU/kubeinterface"
 
 	"github.com/KubeGPU/cri/kubeadvertise"
 	"github.com/KubeGPU/types"
@@ -23,9 +24,9 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	"k8s.io/kubernetes/pkg/kubelet/apis/kubeletconfig"
 	"k8s.io/kubernetes/pkg/kubelet"
 	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/v1alpha1/runtime"
+	"k8s.io/kubernetes/pkg/kubelet/apis/kubeletconfig"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
@@ -38,7 +39,7 @@ import (
 type dockerGPUService struct {
 	dockershim.DockerService
 	kubeclient *clientset.Clientset
-	devmgr     *devicemanager.DevicesManager
+	devmgr     *device.DevicesManager
 }
 
 func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types.ContainerInfo, config *runtimeapi.ContainerConfig) error {
@@ -48,8 +49,8 @@ func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types
 	for _, oldDevice := range config.Devices {
 		isNvidiaDevice := false
 		if oldDevice.HostPath == "/dev/nvidiactl" ||
-		   oldDevice.HostPath == "/dev/nvidia-uvm" || 
-		   oldDevice.HostPath == "/dev/nvidia-uvm-tools" {
+			oldDevice.HostPath == "/dev/nvidia-uvm" ||
+			oldDevice.HostPath == "/dev/nvidia-uvm-tools" {
 			isNvidiaDevice = true
 		}
 		if nvidiaFullpathRE.MatchString(oldDevice.HostPath) {
@@ -137,7 +138,7 @@ func GetHostName(f *options.KubeletFlags) (string, string, error) {
 
 func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertise.DeviceAdvertiser, error) {
 	// create a device manager using nvidiagpu as the only device
-	dm := &devicemanager.DevicesManager{}
+	dm := &device.DevicesManager{}
 	if err := dm.CreateAndAddDevice("nvidiagpu"); err != nil {
 		return nil, err
 	}
@@ -147,7 +148,7 @@ func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertis
 	_, nodeName, err := GetHostName(&s.KubeletFlags) // nodeName is name of machine
 	if err != nil {
 		return nil, err
-	}	
+	}
 	da, err := kubeadvertise.NewDeviceAdvertiser(s, dm, nodeName)
 	if err != nil {
 		return nil, err
@@ -158,7 +159,7 @@ func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertis
 	return da, nil
 }
 
-func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguration, client *clientset.Clientset, dev *devicemanager.DevicesManager) error {
+func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguration, client *clientset.Clientset, dev *device.DevicesManager) error {
 	r := &f.ContainerRuntimeOptions
 
 	// Initialize docker client configuration.
@@ -202,9 +203,8 @@ func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 		streamingConfig.TLSConfig = tlsOptions.Config
 	}
 
-
 	ds, err := dockershim.NewDockerService(dockerClientConfig, r.PodSandboxImage, streamingConfig, &pluginSettings,
-		f.RuntimeCgroups, c.CgroupDriver, r.DockershimRootDirectory, r.DockerDisableSharedPID)	
+		f.RuntimeCgroups, c.CgroupDriver, r.DockershimRootDirectory, r.DockerDisableSharedPID)
 
 	if err != nil {
 		return err
@@ -299,7 +299,6 @@ func main() {
 	if err := DockerGPUInit(kubeletFlags, kubeletConfig, da.KubeClient, da.DevMgr); err != nil {
 		die(err)
 	}
-	<- done // wait forever
+	<-done // wait forever
 	done <- true
 }
-
