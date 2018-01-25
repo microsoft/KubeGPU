@@ -13,7 +13,7 @@ import (
 
 // IsGroupResourceName returns true if the resource name has the group resource prefix
 func IsGroupResourceName(name types.ResourceName) bool {
-	return strings.HasPrefix(string(name), types.ResourceGroupPrefix)
+	return strings.HasPrefix(string(name), types.DeviceGroupPrefix)
 }
 
 // IsEnumResource returns true if resource name is an "enum" resource
@@ -27,7 +27,7 @@ func IsEnumResource(res types.ResourceName) bool {
 }
 
 func AddGroupResource(list types.ResourceList, key string, val int64) {
-	list[types.ResourceName(types.ResourceGroupPrefix+"/"+key)] = val
+	list[types.ResourceName(types.DeviceGroupPrefix+"/"+key)] = val
 }
 
 // Resource translation to max level specified in nodeInfo
@@ -119,4 +119,8 @@ func NewInsufficientResourceError(resourceName types.ResourceName, requested, us
 
 func (e *InsufficientResourceError) GetReason() string {
 	return fmt.Sprintf("Insufficient %v", e.ResourceName)
+}
+
+func (e *InsufficientResourceError) GetInfo() (types.ResourceName, int64, int64, int64) {
+	return e.ResourceName, e.requested, e.used, e.capacity
 }

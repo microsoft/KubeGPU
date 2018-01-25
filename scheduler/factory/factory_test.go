@@ -34,11 +34,11 @@ import (
 	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 	informers "k8s.io/kubernetes/pkg/client/informers/informers_generated/externalversions"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/algorithm"
-	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api"
-	latestschedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api/latest"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/util"
+	"github.com/KubeGPU/scheduler/algorithm"
+	schedulerapi "github.com/KubeGPU/scheduler/api"
+	latestschedulerapi "github.com/KubeGPU/scheduler/api/latest"
+	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/util"
 )
 
 func TestCreate(t *testing.T) {

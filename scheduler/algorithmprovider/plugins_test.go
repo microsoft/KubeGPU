@@ -19,7 +19,7 @@ package algorithmprovider
 import (
 	"testing"
 
-	"k8s.io/kubernetes/plugin/pkg/scheduler/factory"
+	"github.com/KubeGPU/scheduler/factory"
 )
 
 var (

@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/kubernetes/pkg/api/v1"
-	"k8s.io/kubernetes/plugin/pkg/scheduler/schedulercache"
+	"github.com/KubeGPU/scheduler/schedulercache"
 )
 
 // EmptyMetadataProducer should returns a no-op MetadataProducer type.
