@@ -143,13 +143,14 @@ func addContainersToPodInfo(containers []types.ContainerInfo, conts []kubev1.Con
 // KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
 func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
 	podInfo := &types.PodInfo{}
-	// add default kuberenetes requests
-	podInfo.InitContainers = addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers)
-	podInfo.RunningContainers = addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers)
 	// if desired, clear existing pod annotations for DevRequests, AllocateFrom, NodeName
 	if invalidateExistingAnnotations {
 		clearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
 	}
+	// add default kuberenetes requests
+	podInfo.Name = kubePodInfo.ObjectMeta.Name
+	podInfo.InitContainers = addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers)
+	podInfo.RunningContainers = addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers)
 	// generate new requests from annotations
 	err := annotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
 	if err != nil {
