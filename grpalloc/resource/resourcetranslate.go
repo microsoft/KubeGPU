@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/utils"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
 )
 

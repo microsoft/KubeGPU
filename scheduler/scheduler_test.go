@@ -34,11 +34,11 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/testapi"
 	"k8s.io/kubernetes/pkg/api/v1"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	"github.com/KubeGPU/scheduler/core"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedulertesting "github.com/KubeGPU/scheduler/testing"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	"github.com/Microsoft/KubeGPU/scheduler/core"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedulertesting "github.com/Microsoft/KubeGPU/scheduler/testing"
 )
 
 type fakeBinder struct {

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/KubeGPU/grpalloc"
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/utils"
+	"github.com/Microsoft/KubeGPU/grpalloc"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
 
 	"regexp"

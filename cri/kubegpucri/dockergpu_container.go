@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/kubeinterface"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
 
-	"github.com/KubeGPU/cri/kubeadvertise"
-	"github.com/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/cri/kubeadvertise"
+	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 

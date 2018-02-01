@@ -17,8 +17,8 @@ limitations under the License.
 package factory
 
 import (
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/api"
 	"testing"
 )
 

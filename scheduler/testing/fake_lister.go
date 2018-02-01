@@ -24,8 +24,8 @@ import (
 	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	. "github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	. "github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 var _ NodeLister = &FakeNodeLister{}

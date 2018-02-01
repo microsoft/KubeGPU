@@ -32,16 +32,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/errors"
 	utiltrace "k8s.io/apiserver/pkg/util/trace"
 	"k8s.io/client-go/util/workqueue"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	"github.com/KubeGPU/scheduler/util"
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/kubeinterface"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
 
 	"github.com/golang/glog"
-	"github.com/KubeGPU/scheduler/volumebinder"
+	"github.com/Microsoft/KubeGPU/scheduler/volumebinder"
 )
 
 type FailedPredicateMap map[string][]algorithm.PredicateFailureReason

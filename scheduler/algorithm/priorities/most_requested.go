@@ -20,8 +20,8 @@ import (
 	"fmt"
 
 	"k8s.io/api/core/v1"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 
 	"github.com/golang/glog"
 )

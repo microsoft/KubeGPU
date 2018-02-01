@@ -35,9 +35,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	"github.com/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
 
 	"github.com/golang/glog"
 	"reflect"

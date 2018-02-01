@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/kubeinterface"
-	"github.com/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	"github.com/Microsoft/KubeGPU/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"

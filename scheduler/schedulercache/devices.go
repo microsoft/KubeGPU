@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	//"github.com/golang/glog"
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/kubeinterface"
-	extypes "github.com/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	extypes "github.com/Microsoft/KubeGPU/types"
 
 	"k8s.io/api/core/v1"
 )

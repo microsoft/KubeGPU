@@ -3,8 +3,8 @@ package kubeinterface
 import (
 	"reflect"
 	"testing"
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/utils"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

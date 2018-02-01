@@ -25,8 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"github.com/KubeGPU/scheduler/algorithm"
-	schedutil "github.com/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	schedutil "github.com/Microsoft/KubeGPU/scheduler/util"
 )
 
 // FindLabelsInSet gets as many key/value pairs as possible out of a label set.

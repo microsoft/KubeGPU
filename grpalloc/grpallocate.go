@@ -3,10 +3,10 @@ package grpalloc
 import (
 	"regexp"
 
-	"github.com/KubeGPU/grpalloc/resource"
-	"github.com/KubeGPU/grpalloc/scorer"
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/utils"
+	"github.com/Microsoft/KubeGPU/grpalloc/resource"
+	"github.com/Microsoft/KubeGPU/grpalloc/scorer"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
 )
 
