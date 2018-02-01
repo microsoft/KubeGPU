@@ -25,11 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 
 	"github.com/golang/glog"
 )

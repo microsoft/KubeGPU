@@ -21,12 +21,12 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
 	"k8s.io/kubernetes/pkg/features"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/scheduler/algorithm/priorities"
-	"github.com/KubeGPU/scheduler/core"
-	"github.com/KubeGPU/scheduler/factory"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities"
+	"github.com/Microsoft/KubeGPU/scheduler/core"
+	"github.com/Microsoft/KubeGPU/scheduler/factory"
 
 	"github.com/golang/glog"
 )

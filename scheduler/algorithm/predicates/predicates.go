@@ -39,13 +39,13 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
-	"github.com/KubeGPU/scheduler/algorithm"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedutil "github.com/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedutil "github.com/Microsoft/KubeGPU/scheduler/util"
 
 	"github.com/golang/glog"
-	"github.com/KubeGPU/scheduler/volumebinder"
+	"github.com/Microsoft/KubeGPU/scheduler/volumebinder"
 )
 
 const (

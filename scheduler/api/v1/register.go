@@ -19,7 +19,7 @@ package v1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
 )
 
 // SchemeGroupVersion is group version used to register these objects

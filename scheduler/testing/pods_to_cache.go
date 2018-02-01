@@ -19,7 +19,7 @@ package testing
 import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 // PodsToCache is used for testing

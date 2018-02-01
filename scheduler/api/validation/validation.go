@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
 )
 
 // ValidatePolicy checks for errors in the Config

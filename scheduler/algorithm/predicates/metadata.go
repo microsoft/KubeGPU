@@ -22,9 +22,9 @@ import (
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedutil "github.com/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedutil "github.com/Microsoft/KubeGPU/scheduler/util"
 
 	"github.com/golang/glog"
 )

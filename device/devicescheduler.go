@@ -3,8 +3,8 @@ package device
 import (
 	"reflect"
 
-	"github.com/KubeGPU/gpu/nvidia"
-	"github.com/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/gpu/nvidia"
+	"github.com/Microsoft/KubeGPU/types"
 )
 
 var DeviceSchedulerRegistry = map[string]reflect.Type{

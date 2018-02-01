@@ -23,8 +23,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/kubernetes/pkg/api/v1"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 func TestNodeAffinityPriority(t *testing.T) {

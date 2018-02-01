@@ -24,9 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/kubernetes/pkg/api/v1"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedulertesting "github.com/KubeGPU/scheduler/testing"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedulertesting "github.com/Microsoft/KubeGPU/scheduler/testing"
 )
 
 type FakeNodeListInfo []*v1.Node
