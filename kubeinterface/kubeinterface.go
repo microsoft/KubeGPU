@@ -114,7 +114,7 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func clearPodInfoAnnotations(meta *metav1.ObjectMeta) {
+func ClearPodInfoAnnotations(meta *metav1.ObjectMeta) {
 	var newAnnotations map[string]string
 	re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
 	for k, v := range meta.Annotations {
@@ -145,7 +145,7 @@ func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations
 	podInfo := &types.PodInfo{}
 	// if desired, clear existing pod annotations for DevRequests, AllocateFrom, NodeName
 	if invalidateExistingAnnotations {
-		clearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
+		ClearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
 	}
 	// add default kuberenetes requests
 	podInfo.Name = kubePodInfo.ObjectMeta.Name
@@ -174,7 +174,7 @@ func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations
 
 // PodInfoToAnnotation is used by scheduler to write allocate from field into annotations
 // only allocate from needs to be written, other info is already avialable in pod spec
-func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo, nodeName string) {
+func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	for _, c := range podInfo.InitContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
 		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
@@ -195,7 +195,7 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo, nodeNa
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
 		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
 	}
-	meta.Annotations["PodInfo/ValidForNode"] = nodeName
+	meta.Annotations["PodInfo/ValidForNode"] = podInfo.NodeName
 }
 
 func getFromContainerInfo(info map[string]string, searchFor string) map[string](map[string]string) {
