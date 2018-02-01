@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/api/v1"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 func TestPriorityMetadata(t *testing.T) {

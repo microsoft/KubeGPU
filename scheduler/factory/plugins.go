@@ -24,13 +24,13 @@ import (
 	"sync"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/algorithm/predicates"
-	"github.com/KubeGPU/scheduler/algorithm/priorities"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
 
 	"github.com/golang/glog"
-	"github.com/KubeGPU/scheduler/volumebinder"
+	"github.com/Microsoft/KubeGPU/scheduler/volumebinder"
 )
 
 // PluginFactoryArgs are passed to all plugin factory functions.

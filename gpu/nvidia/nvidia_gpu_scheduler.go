@@ -3,9 +3,9 @@ package nvidia
 import (
 	"fmt"
 
-	"github.com/KubeGPU/gpu"
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/grpalloc"
+	"github.com/Microsoft/KubeGPU/gpu"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/grpalloc"
 )
 
 type NvidiaGPUScheduler struct {

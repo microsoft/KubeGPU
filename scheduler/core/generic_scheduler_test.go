@@ -32,13 +32,13 @@ import (
 	"k8s.io/kubernetes/pkg/api/v1"
 	apps "k8s.io/kubernetes/pkg/apis/apps/v1beta1"
 	extensions "k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
-	"github.com/KubeGPU/scheduler/algorithm"
-	algorithmpredicates "github.com/KubeGPU/scheduler/algorithm/predicates"
-	algorithmpriorities "github.com/KubeGPU/scheduler/algorithm/priorities"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedulertesting "github.com/KubeGPU/scheduler/testing"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	algorithmpredicates "github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	algorithmpriorities "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedulertesting "github.com/Microsoft/KubeGPU/scheduler/testing"
 )
 
 func falsePredicate(pod *v1.Pod, meta interface{}, nodeInfo *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {

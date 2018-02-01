@@ -27,10 +27,10 @@ import (
 	"k8s.io/kubernetes/pkg/api/v1"
 	v1helper "k8s.io/kubernetes/pkg/api/v1/helper"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/schedulercache"
-	schedulertesting "github.com/KubeGPU/scheduler/testing"
-	schedutil "github.com/KubeGPU/scheduler/util"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	schedulertesting "github.com/Microsoft/KubeGPU/scheduler/testing"
+	schedutil "github.com/Microsoft/KubeGPU/scheduler/util"
 )
 
 type FakeNodeInfo v1.Node

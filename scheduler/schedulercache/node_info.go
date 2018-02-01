@@ -20,15 +20,15 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	extypes "github.com/KubeGPU/types"
-	"github.com/KubeGPU/kubeinterface"
+	extypes "github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	clientcache "k8s.io/client-go/tools/cache"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	priorityutil "github.com/KubeGPU/scheduler/algorithm/priorities/util"
-	"github.com/KubeGPU/scheduler/util"
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
 )
 
 var emptyResource = Resource{}

@@ -18,9 +18,9 @@ package priorities
 
 import (
 	"k8s.io/api/core/v1"
-	"github.com/KubeGPU/scheduler/algorithm"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 // NormalizeReduce generates a PriorityReduceFunction that can normalize the result

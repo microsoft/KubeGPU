@@ -20,8 +20,8 @@ import (
 	"fmt"
 
 	"k8s.io/api/core/v1"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 // ImageLocalityPriorityMap is a priority function that favors nodes that already have requested pod container's images.

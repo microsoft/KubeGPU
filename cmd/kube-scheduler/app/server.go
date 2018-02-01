@@ -60,12 +60,12 @@ import (
 	"k8s.io/kubernetes/pkg/util/configz"
 	"k8s.io/kubernetes/pkg/version"
 	"k8s.io/kubernetes/pkg/version/verflag"
-	"github.com/KubeGPU/scheduler"
-	"github.com/KubeGPU/scheduler/algorithmprovider"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	latestschedulerapi "github.com/KubeGPU/scheduler/api/latest"
+	"github.com/Microsoft/KubeGPU/scheduler"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithmprovider"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	latestschedulerapi "github.com/Microsoft/KubeGPU/scheduler/api/latest"
 
-	"github.com/KubeGPU/scheduler/factory"
+	"github.com/Microsoft/KubeGPU/scheduler/factory"
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"

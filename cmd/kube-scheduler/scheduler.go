@@ -26,7 +26,7 @@ import (
 	"k8s.io/apiserver/pkg/util/logs"
 	_ "k8s.io/kubernetes/pkg/client/metrics/prometheus" // for client metric registration
 	_ "k8s.io/kubernetes/pkg/version/prometheus"        // for version metric registration
-	"github.com/KubeGPU/cmd/kube-scheduler/app"
+	"github.com/Microsoft/KubeGPU/cmd/kube-scheduler/app"
 )
 
 func main() {

@@ -18,8 +18,8 @@ package algorithm
 
 import (
 	"k8s.io/api/core/v1"
-	schedulerapi "github.com/KubeGPU/scheduler/api"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 // SchedulerExtender is an interface for external processes to influence scheduling

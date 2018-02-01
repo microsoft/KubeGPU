@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/types"
 
 	"strconv"
 )

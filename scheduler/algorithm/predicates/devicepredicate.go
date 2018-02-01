@@ -2,9 +2,9 @@ package predicates
 
 import (
 	"k8s.io/api/core/v1"
-	"github.com/KubeGPU/device"
-	"github.com/KubeGPU/scheduler/algorithm"
-	"github.com/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
 )
 
 func PodFitsDevices(pod *v1.Pod, meta algorithm.PredicateMetadata, node *schedulercache.NodeInfo) (bool, []algorithm.PredicateFailureReason, error) {

@@ -19,7 +19,7 @@ package validation
 import (
 	"testing"
 
-	"github.com/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/api"
 )
 
 func TestValidatePriorityWithNoWeight(t *testing.T) {

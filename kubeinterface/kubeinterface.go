@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/KubeGPU/types"
-	"github.com/KubeGPU/utils"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
