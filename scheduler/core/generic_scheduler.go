@@ -116,7 +116,8 @@ func (g *genericScheduler) allocateDevices(pod *v1.Pod, node *schedulercache.Nod
 		return err
 	}
 	// convert to pod annotations
-	kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo, node.Node().ObjectMeta.Name)
+	podInfo.NodeName = node.Node().ObjectMeta.Name
+	kubeinterface.PodInfoToAnnotation(&pod.ObjectMeta, podInfo)
 	return nil
 }
 
