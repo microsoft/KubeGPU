@@ -46,6 +46,8 @@ func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types
 	nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
 	var newDevices []*runtimeapi.Device
 	// first remove any existing nvidia devices
+	numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
+	numRequestedGPU := 0
 	for _, oldDevice := range config.Devices {
 		isNvidiaDevice := false
 		if oldDevice.HostPath == "/dev/nvidiactl" ||
@@ -55,10 +57,14 @@ func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types
 		}
 		if nvidiaFullpathRE.MatchString(oldDevice.HostPath) {
 			isNvidiaDevice = true
+			numRequestedGPU++
 		}
-		if !isNvidiaDevice {
+		if !isNvidiaDevice || 0==numAllocateFrom {
 			newDevices = append(newDevices, oldDevice)
 		}
+	}
+	if (numAllocateFrom > 0) && (numRequestedGPU > 0) && (numAllocateFrom != numRequestedGPU) {
+		return fmt.Errorf("Number of AllocateFrom is different than number of requested GPUs")
 	}
 	glog.V(3).Infof("Modified devices: %v", newDevices)
 	// allocate devices for container
@@ -88,10 +94,11 @@ func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimea
 		glog.Errorf("Retrieving pod %v gives error %v", podName, err)
 	}
 	glog.V(3).Infof("Pod Spec: %v", pod.Spec)
-	// convert to local podInfo structure
-	podInfo := kubeinterface.KubePodInfoToPodInfo(&pod.Spec)
-	// use annotations to add fields to podInfo
-	kubeinterface.AnnotationToPodInfo(&pod.ObjectMeta, podInfo)
+	// convert to local podInfo structure using annotations available
+	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod, false)
+	if err != nil {
+		return "", err
+	}
 	// modify the container config
 	err = d.modifyContainerConfig(podInfo, podInfo.GetContainerInPod(containerName), config)
 	if err != nil {
