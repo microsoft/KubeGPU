@@ -404,7 +404,7 @@ func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 // handle binding metrics internally.
 func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	bindingStart := time.Now()
-	// prior to binding update the pod annotations
+	// prior to binding update the pod annotations with information on device requests being used and allocation information
 	_, err := kubeinterface.UpdatePodMetadata(sched.config.Client.CoreV1(), assumed)
 	if err == nil {
 		// If binding succeeded then PodScheduled condition will be updated in apiserver so that

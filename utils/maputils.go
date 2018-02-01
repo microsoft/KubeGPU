@@ -1,6 +1,9 @@
 package utils
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 func toInterfaceArray(val interface{}) []interface{} {
 	t := reflect.TypeOf(val)
@@ -62,4 +65,57 @@ func getMapK(x interface{}, keys []interface{}) interface{} {
 
 func GetMap(x interface{}, keys interface{}) interface{} {
 	return getMapK(x, toInterfaceArray(keys))
+}
+
+// Cannot do since no way to figure out if map contains a particular value, MapIndex only returns zero value, not a bool specifying
+// if map contains key
+//
+// func CompareMaps(x interface {}, y interface{}) {
+// 	tx := reflect.TypeOf(x)
+// 	ty := reflect.TypeOf(y)
+// 	if !(tx.Kind() == reflect.Map && ty.Kind() == reflect.Map) {
+// 		fmt.Printf("Both are not map types: %v %v", tx.Kind(), ty.Kind())
+// 		return
+// 	}
+// 	mx := reflect.ValueOf(x)
+// 	my := reflect.ValueOf(y)
+// 	ex := reflect.TypeOf(mx.Elem())
+// 	ey := reflect.TypeOf(my.Elem())
+// 	if (ex != ey) {
+// 		fmt.Printf("Map types don't match %v %v", ex, ey)
+// 		return
+// 	}
+// 	if (ex.Key() != ey.Key()) {
+// 		fmt.Printf("Map keys don't match %v %v", ex.Key(), ey.Key())
+// 		return
+// 	}
+
+// 	if (mx.Len != my.Len) {
+// 		fmt.Printf("Lengths don't match first: %d second: %d", mx.Len, my.Len)
+// 	}
+// 	keyx := mx.Keys()
+// 	keyy := my.Keys()
+// 	for _, key := range keyx {
+// 		vx := 
+// 	}
+// }
+
+func CompareMapStringString(x map[string]string, y map[string]string) {
+	if (len(x) != len(y)) {
+		fmt.Printf("Lengths don't match %d %d\n", len(x), len(y))
+	}
+	for keyx, valx := range x {
+		valy, ok := y[keyx]
+		if !ok {
+			fmt.Printf("Key %s does not exist in second first: %s\n", keyx, valx)
+		} else if valx != valy {
+			fmt.Printf("Key %s does not match first: %s second: %s\n", keyx, valx, valy)
+		}
+	}
+	for keyy, valy := range y {
+		_, ok := x[keyy]
+		if !ok {
+			fmt.Printf("Key %s does not exist in first second: %s\n", keyy, valy)
+		}
+	}	
 }

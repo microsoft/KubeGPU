@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"github.com/KubeGPU/types"
+	"github.com/KubeGPU/utils"
 	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,14 +37,14 @@ func TestConvert(t *testing.T) {
 		"NodeInfo/Scorer/A": "4", 
 	}
 	if !reflect.DeepEqual(annotationExpect, nodeMeta.Annotations) {
-		t.Errorf("Node info annotations not what is expectred, expected: %v, have: %v", annotationExpect, nodeMeta.Annotations)
+		t.Errorf("Node info annotations not what is expectred, expected: %+v, have: %+v", annotationExpect, nodeMeta.Annotations)
 	}
 	nodeInfoGet, err := AnnotationToNodeInfo(nodeMeta)
 	if err != nil {
 		t.Errorf("Error encountered when converting annotation to node info: %v", err)
 	}
 	if !reflect.DeepEqual(nodeInfo, nodeInfoGet) {
-		t.Errorf("Get node is not same, expect: %v, get: %v", nodeInfo, nodeInfoGet)
+		t.Errorf("Get node is not same, expect: %+v, get: %+v", nodeInfo, nodeInfoGet)
 	}
 
 	// test pod conversion
@@ -92,7 +93,7 @@ func TestConvert(t *testing.T) {
 		},
 	}
 
-	// convert to pod info and clear
+	// convert to pod info and clear some annotations
 	podInfo, err := KubePodInfoToPodInfo(kubePod, true)
 	if err != nil {
 		t.Errorf("encounter error %v", err)
@@ -104,8 +105,8 @@ func TestConvert(t *testing.T) {
 			{
 				Name: "Init0",
 				KubeRequests: types.ResourceList{"CPU": 4, "Memory": 100000, "Other": 20},
-				Requests: types.ResourceList{"alpha/devresource/gpu/0/cards": 1, "devresource/gpu/0/memory": 100000},
-				DevRequests: types.ResourceList{"alpha/devresource/gpu/0/cards": 1, "devresource/gpu/0/memory": 100000},
+				Requests: types.ResourceList{"alpha/devresource/gpu/0/cards": 1, "alpha/devresource/gpu/0/memory": 100000},
+				DevRequests: types.ResourceList{"alpha/devresource/gpu/0/cards": 1, "alpha/devresource/gpu/0/memory": 100000},
 				AllocateFrom: types.ResourceLocation{},
 				Scorer: types.ResourceScorer{},
 			},
@@ -114,8 +115,8 @@ func TestConvert(t *testing.T) {
 			{
 				Name: "Run0",
 				KubeRequests: types.ResourceList{"CPU": 8, "Memory": 200000},
-				Requests: types.ResourceList{"devresource/gpu/A/cards": 4},
-				DevRequests: types.ResourceList{"devresource/gpu/A/cards": 4},
+				Requests: types.ResourceList{"alpha/devresource/gpu/A/cards": 4},
+				DevRequests: types.ResourceList{"alpha/devresource/gpu/A/cards": 4},
 				AllocateFrom: types.ResourceLocation{},
 				Scorer: types.ResourceScorer{},
 			},
@@ -130,19 +131,20 @@ func TestConvert(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(podInfo, expectedPodInfo) {
-		t.Errorf("PodInfo is not what is expected, expect: %v, have: %v", expectedPodInfo, podInfo)
+		t.Errorf("PodInfo is not what is expected\n expect:\n%+v\n have:\n%+v", expectedPodInfo, podInfo)
 	}
 
-	// set allocate from and devrequests
-	podInfo.RunningContainers[0].DevRequests = types.ResourceList{"alpha/devresource/gpugrp/A/gpu/0/cards": 4}
+	// set allocate from and devrequests after translation and allocation
 	podInfo.InitContainers[0].DevRequests = types.ResourceList{"alpha/devresource/gpugrp/0/gpu/0/cards": 1, "alpha/devresource/gpugrp/0/gpu/0/memory": 200000}
-	podInfo.RunningContainers[0].AllocateFrom = types.ResourceLocation{
-		"alpha/devresource/gpugrp/A/gpu/0/cards": "alpha/devresource/gpugrp/0/gpu/43-21/cards",
-	}
 	podInfo.InitContainers[0].AllocateFrom = types.ResourceLocation{
 		"alpha/devresource/gpugrp/0/gpu/0/cards": "alpha/devresource/gpugrp/A/gpu/12/cards",
 		"alpha/devresource/gpugrp/0/gpu/0/memory": "alpha/devresource/gpugrp/A/gpu/12/memory",
 	}
+	podInfo.RunningContainers[0].DevRequests = types.ResourceList{"alpha/devresource/gpugrp/A/gpu/0/cards": 4}
+	podInfo.RunningContainers[0].AllocateFrom = types.ResourceLocation{
+		"alpha/devresource/gpugrp/A/gpu/0/cards": "alpha/devresource/gpugrp/0/gpu/43-21/cards",
+	}
+	podInfo.RunningContainers[1].DevRequests = types.ResourceList{}
 	podInfo.NodeName = "NodeNewD"
 
 	// clear existing annotations
@@ -155,6 +157,7 @@ func TestConvert(t *testing.T) {
 		"PodInfo/InitContainer/Init0/Requests/alpha/devresource/gpu/0/cards": "1",
 		"PodInfo/InitContainer/Init0/Requests/alpha/devresource/gpu/0/memory": "100000",
 		"PodInfo/RunningContainer/Run0/Requests/alpha/devresource/gpu/A/cards": "4",
+		"PodInfo/RunningContainer/Run1/Requests/alpha/devresource/gpu/A/cards": "6",
 		"PodInfo/RunningContainer/Run1/Scorer/alpha/devresource/gpu/A/cards": "10",
 		"PodInfo/RunningContainer/Run0/DevRequests/alpha/devresource/gpugrp/A/gpu/0/cards": "4",
 		"PodInfo/RunningContainer/Run0/AllocateFrom/alpha/devresource/gpugrp/A/gpu/0/cards": "alpha/devresource/gpugrp/0/gpu/43-21/cards",
@@ -165,7 +168,8 @@ func TestConvert(t *testing.T) {
 		"PodInfo/ValidForNode": "NodeNewD",
 	}
 	if !reflect.DeepEqual(kubePod.ObjectMeta.Annotations, expectedAnnotations)  {
-		t.Errorf("Pod annotations are not what is expected, expect: %v, have: %v", expectedAnnotations, kubePod.ObjectMeta.Annotations)
+		t.Errorf("Pod annotations are not what is expected\nexpect:\n%v\nhave:\n%v", expectedAnnotations, kubePod.ObjectMeta.Annotations)
+		utils.CompareMapStringString(expectedAnnotations, kubePod.ObjectMeta.Annotations)
 	}
 
 	// convert back and check podinfo
