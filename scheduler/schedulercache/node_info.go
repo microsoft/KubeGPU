@@ -334,7 +334,7 @@ func (n *NodeInfo) AddPod(pod *v1.Pod) {
 	// consume device resources
 	err := TakePodDeviceResources(pod, n)
 	if err != nil {
-		panic(fmt.Sprintf("Pod Info annotations are not correct and cannot be parsed %v", pod.Spec))
+		panic(fmt.Sprintf("Pod Info annotations are not correct and cannot be parsed %+v", pod))
 	}
 
 	n.generation++

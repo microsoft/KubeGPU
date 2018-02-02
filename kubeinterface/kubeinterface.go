@@ -118,17 +118,19 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 }
 
 func ClearPodInfoAnnotations(meta *metav1.ObjectMeta) {
-	newAnnotations := make(map[string]string)
-	re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
-	for k, v := range meta.Annotations {
-		if k != "PodInfo/ValidForNode" {
-			matches := re.FindStringSubmatch(k)
-			if len(matches) == 0 {
-				newAnnotations[k] = v
+	if meta.Annotations != nil {
+		newAnnotations := make(map[string]string)
+		re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
+		for k, v := range meta.Annotations {
+			if k != "PodInfo/ValidForNode" {
+				matches := re.FindStringSubmatch(k)
+				if len(matches) == 0 {
+					newAnnotations[k] = v
+				}
 			}
 		}
+		meta.Annotations = newAnnotations
 	}
-	meta.Annotations = newAnnotations
 }
 
 func addContainersToPodInfo(containers []types.ContainerInfo, conts []kubev1.Container) []types.ContainerInfo {
