@@ -365,6 +365,7 @@ func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Po
 	modifiedPod := oldPod.DeepCopy()
 	modifiedPod.ObjectMeta.Annotations = newPod.ObjectMeta.Annotations // take new annotations
 	// now perform update - guarantee that only annotations will be modified
-	return PatchPodMetadata(c, modifiedPod.ObjectMeta.Name, oldPod, modifiedPod)
+	//return PatchPodMetadata(c, modifiedPod.ObjectMeta.Name, oldPod, modifiedPod)
+	return c.Pods(modifiedPod.ObjectMeta.Namespace).Update(modifiedPod)
 }
 
