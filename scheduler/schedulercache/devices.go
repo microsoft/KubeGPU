@@ -3,7 +3,7 @@ package schedulercache
 import (
 	"fmt"
 
-	//"github.com/golang/glog"
+	"github.com/golang/glog"
 	"github.com/Microsoft/KubeGPU/device"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 	extypes "github.com/Microsoft/KubeGPU/types"
@@ -23,8 +23,11 @@ func GetPodAndNode(pod *v1.Pod, node *NodeInfo, invalidatePodAnnotations bool) (
 	}
 	if !invalidatePodAnnotations {
 		nodeName := node.node.ObjectMeta.Name
-		if podInfo.NodeName != nodeName {
-			return nil, nil, fmt.Errorf("Node name is not correct - pod expects %v, but node has %v", podInfo.NodeName, nodeName)
+		// empty strin for default pods (not from scheduler)
+		if (podInfo.NodeName != nodeName) && (podInfo.NodeName != "") {
+			errStr := fmt.Sprintf("Node name is not correct - pod expects %v, but node has %v", podInfo.NodeName, nodeName)
+			glog.Errorf(errStr)
+			return nil, nil, fmt.Errorf(errStr)
 		}
 	}
 	return podInfo, nodeInfo, nil
