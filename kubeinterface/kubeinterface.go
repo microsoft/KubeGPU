@@ -350,17 +350,21 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 }
 
 func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Pod, error) {
-	return c.Pods(newPod.ObjectMeta.Namespace).Update(newPod)
-	// // get current pod
-	// oldPod, err := c.Pods(newPod.ObjectMeta.Namespace).Get(newPod.ObjectMeta.Name, metav1.GetOptions{})
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// // validate
-	// if (newPod.ObjectMeta.Name != oldPod.ObjectMeta.Name) || (newPod.ObjectMeta.Namespace != oldPod.ObjectMeta.Namespace) {
-	// 	return nil, fmt.Errorf("new pod does not match old, new: %v, old: %v", newPod.ObjectMeta, oldPod.ObjectMeta)
-	// }
-	// // now perform update
-	// return PatchPodMetadata(c, newPod.ObjectMeta.Name, oldPod, newPod)
+	// full update does not work since nodename change in pod spec is rejected
+	// return c.Pods(newPod.ObjectMeta.Namespace).Update(newPod)
+	// get current pod
+	oldPod, err := c.Pods(newPod.ObjectMeta.Namespace).Get(newPod.ObjectMeta.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	// validate
+	if (newPod.ObjectMeta.Name != oldPod.ObjectMeta.Name) || (newPod.ObjectMeta.Namespace != oldPod.ObjectMeta.Namespace) {
+		return nil, fmt.Errorf("new pod does not match old, new: %v, old: %v", newPod.ObjectMeta, oldPod.ObjectMeta)
+	}
+	// create newPod which is clone of oldPod
+	modifiedPod := oldPod.DeepCopy()
+	modifiedPod.ObjectMeta.Annotations = newPod.ObjectMeta.Annotations // take new annotations
+	// now perform update - guarantee that only annotations will be modified
+	return PatchPodMetadata(c, modifiedPod.ObjectMeta.Name, oldPod, modifiedPod)
 }
 
