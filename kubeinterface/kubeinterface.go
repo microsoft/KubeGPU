@@ -350,16 +350,17 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 }
 
 func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Pod, error) {
-	// get current pod
-	oldPod, err := c.Pods(newPod.ObjectMeta.Namespace).Get(newPod.ObjectMeta.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	// validate
-	if (newPod.ObjectMeta.Name != oldPod.ObjectMeta.Name) || (newPod.ObjectMeta.Namespace != oldPod.ObjectMeta.Namespace) {
-		return nil, fmt.Errorf("new pod does not match old, new: %v, old: %v", newPod.ObjectMeta, oldPod.ObjectMeta)
-	}
-	// now perform update
-	return PatchPodMetadata(c, newPod.ObjectMeta.Name, oldPod, newPod)
+	return c.Pods(newPod.ObjectMeta.Namespace).Update(newPod)
+	// // get current pod
+	// oldPod, err := c.Pods(newPod.ObjectMeta.Namespace).Get(newPod.ObjectMeta.Name, metav1.GetOptions{})
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// // validate
+	// if (newPod.ObjectMeta.Name != oldPod.ObjectMeta.Name) || (newPod.ObjectMeta.Namespace != oldPod.ObjectMeta.Namespace) {
+	// 	return nil, fmt.Errorf("new pod does not match old, new: %v, old: %v", newPod.ObjectMeta, oldPod.ObjectMeta)
+	// }
+	// // now perform update
+	// return PatchPodMetadata(c, newPod.ObjectMeta.Name, oldPod, newPod)
 }
 
