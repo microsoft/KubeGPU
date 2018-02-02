@@ -118,17 +118,19 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 }
 
 func ClearPodInfoAnnotations(meta *metav1.ObjectMeta) {
-	newAnnotations := make(map[string]string)
-	re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
-	for k, v := range meta.Annotations {
-		if k != "PodInfo/ValidForNode" {
-			matches := re.FindStringSubmatch(k)
-			if len(matches) == 0 {
-				newAnnotations[k] = v
+	if meta.Annotations != nil {
+		newAnnotations := make(map[string]string)
+		re := regexp.MustCompile(`PodInfo/.*?/.*?/(AllocateFrom|DevRequests)`)
+		for k, v := range meta.Annotations {
+			if k != "PodInfo/ValidForNode" {
+				matches := re.FindStringSubmatch(k)
+				if len(matches) == 0 {
+					newAnnotations[k] = v
+				}
 			}
 		}
+		meta.Annotations = newAnnotations
 	}
-	meta.Annotations = newAnnotations
 }
 
 func addContainersToPodInfo(containers []types.ContainerInfo, conts []kubev1.Container) []types.ContainerInfo {
@@ -348,6 +350,8 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 }
 
 func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Pod, error) {
+	// full update does not work since nodename change in pod spec is rejected
+	// return c.Pods(newPod.ObjectMeta.Namespace).Update(newPod)
 	// get current pod
 	oldPod, err := c.Pods(newPod.ObjectMeta.Namespace).Get(newPod.ObjectMeta.Name, metav1.GetOptions{})
 	if err != nil {
@@ -357,7 +361,11 @@ func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Po
 	if (newPod.ObjectMeta.Name != oldPod.ObjectMeta.Name) || (newPod.ObjectMeta.Namespace != oldPod.ObjectMeta.Namespace) {
 		return nil, fmt.Errorf("new pod does not match old, new: %v, old: %v", newPod.ObjectMeta, oldPod.ObjectMeta)
 	}
-	// now perform update
-	return PatchPodMetadata(c, newPod.ObjectMeta.Name, oldPod, newPod)
+	// create newPod which is clone of oldPod
+	modifiedPod := oldPod.DeepCopy()
+	modifiedPod.ObjectMeta.Annotations = newPod.ObjectMeta.Annotations // take new annotations
+	// now perform update - guarantee that only annotations will be modified
+	//return PatchPodMetadata(c, modifiedPod.ObjectMeta.Name, oldPod, modifiedPod)
+	return c.Pods(modifiedPod.ObjectMeta.Namespace).Update(modifiedPod)
 }
 
