@@ -10,7 +10,7 @@ It consists of two parts.
 
 # Installing
 
-Clone this repo to $GOPATH/src/github.com/KubeGPU to get it to compile
+Clone this repo to $GOPATH/src/github.com/Microsoft/KubeGPU to get it to compile
 
 # Contributing
 
