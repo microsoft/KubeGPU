@@ -17,22 +17,46 @@ import (
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+func escapeStr(origStr string) string {
+	str1 := strings.Replace(origStr, ".", ".0", -1) // escape the escape character
+	str2 := strings.Replace(str1, "/", ".1", -1) // esacpe all "/" to ".1", continue escaping others if needed (can use ".2", ".3", etc.)
+	return str2
+}
+
+func unescapeStr(escapeStr string) string {
+	str1 := strings.Replace(escapeStr, ".0", ".", -1) // unescape the escape character
+	str2 := strings.Replace(str1, ".1", "/", -1) // unescape all ".1" to "/", continue unescaping others if needed
+	return str2
+}
+
 // Add values to annotation map
-func addResourceList64(keyPrefix string, a map[string]string, list map[types.ResourceName]int64) {
+func addResourceList64(keyPrefix string, escape bool, a map[string]string, list map[types.ResourceName]int64) {
 	for k, v := range list {
-		a[keyPrefix+"/"+string(k)] = strconv.FormatInt(v, 10)
+		key := keyPrefix+"/"+string(k)
+		if escape {
+			key = escapeStr(key)
+		}
+		a[key] = strconv.FormatInt(v, 10)
 	}
 }
 
-func addResourceList32(keyPrefix string, a map[string]string, list map[types.ResourceName]int32) {
+func addResourceList32(keyPrefix string, escape bool, a map[string]string, list map[types.ResourceName]int32) {
 	for k, v := range list {
-		a[keyPrefix+"/"+string(k)] = strconv.FormatInt(int64(v), 10)
+		key := keyPrefix+"/"+string(k)
+		if escape {
+			key = escapeStr(key)
+		}
+		a[key] = strconv.FormatInt(int64(v), 10)
 	}
 }
 
-func addResourceListName(keyPrefix string, a map[string]string, list map[types.ResourceName]types.ResourceName) {
+func addResourceListName(keyPrefix string, escape bool, a map[string]string, list map[types.ResourceName]types.ResourceName) {
 	for k, v := range list {
-		a[keyPrefix+"/"+string(k)] = string(v)
+		key := keyPrefix+"/"+string(k)
+		if escape {
+			key = escapeStr(key)
+		}
+		a[key] = string(v)
 	}
 }
 
@@ -80,11 +104,11 @@ func getToStringMap(keyPrefix string, key string, val string, list map[string]st
 // NodeInfoToAnnotation is used by device advertiser to convert node info to annotation
 func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 	a := meta.Annotations
-	a["NodeInfo/Name"] = nodeInfo.Name
-	addResourceList64("NodeInfo/Capacity", a, nodeInfo.Capacity)
-	addResourceList64("NodeInfo/Allocatable", a, nodeInfo.Allocatable)
-	addResourceList64("NodeInfo/Used", a, nodeInfo.Used)
-	addResourceList32("NodeInfo/Scorer", a, nodeInfo.Scorer)
+	a[escapeStr("NodeInfo/Name")] = nodeInfo.Name
+	addResourceList64("NodeInfo/Capacity", true, a, nodeInfo.Capacity)
+	addResourceList64("NodeInfo/Allocatable", true, a, nodeInfo.Allocatable)
+	addResourceList64("NodeInfo/Used", true, a, nodeInfo.Used)
+	addResourceList32("NodeInfo/Scorer", true, a, nodeInfo.Scorer)
 	glog.V(4).Infof("NodeInfo: %+v converted to Annotations: %v", nodeInfo, meta.Annotations)
 }
 
@@ -92,22 +116,23 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	nodeInfo := types.NewNodeInfo()
 	for k, v := range meta.Annotations {
-		if k == "NodeInfo/Name" {
+		unescapeKey := unescapeStr(k)
+		if unescapeKey == "NodeInfo/Name" {
 			nodeInfo.Name = v
 		} else {
-			err := getToResourceList64("NodeInfo/Capacity", k, v, nodeInfo.Capacity)
+			err := getToResourceList64("NodeInfo/Capacity", unescapeKey, v, nodeInfo.Capacity)
 			if err != nil {
 				return nil, err
 			}
-			err = getToResourceList64("NodeInfo/Allocatable", k, v, nodeInfo.Allocatable)
+			err = getToResourceList64("NodeInfo/Allocatable", unescapeKey, v, nodeInfo.Allocatable)
 			if err != nil {
 				return nil, err
 			}
-			err = getToResourceList64("NodeInfo/Used", k, v, nodeInfo.Used)
+			err = getToResourceList64("NodeInfo/Used", unescapeKey, v, nodeInfo.Used)
 			if err != nil {
 				return nil, err
 			}
-			err = getToResourceList32("NodeInfo/Scorer", k, v, nodeInfo.Scorer)
+			err = getToResourceList32("NodeInfo/Scorer", unescapeKey, v, nodeInfo.Scorer)
 			if err != nil {
 				return nil, err
 			}
@@ -281,23 +306,23 @@ func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations
 func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
 	for _, c := range podInfo.InitContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
-		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
+		addResourceListName(keyPrefix, false, meta.Annotations, c.AllocateFrom)
 		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Requests", c.Name)
-		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
+		addResourceList64(keyPrefix, false, meta.Annotations, c.Requests)
 		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/DevRequests", c.Name)
-		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
+		addResourceList64(keyPrefix, false, meta.Annotations, c.DevRequests)
 		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
-		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
+		addResourceList32(keyPrefix, false, meta.Annotations, c.Scorer)
 	}
 	for _, c := range podInfo.RunningContainers {
 		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
-		addResourceListName(keyPrefix, meta.Annotations, c.AllocateFrom)
+		addResourceListName(keyPrefix, false, meta.Annotations, c.AllocateFrom)
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Requests", c.Name)
-		addResourceList64(keyPrefix, meta.Annotations, c.Requests)
+		addResourceList64(keyPrefix, false, meta.Annotations, c.Requests)
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/DevRequests", c.Name)
-		addResourceList64(keyPrefix, meta.Annotations, c.DevRequests)
+		addResourceList64(keyPrefix, false, meta.Annotations, c.DevRequests)
 		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
-		addResourceList32(keyPrefix, meta.Annotations, c.Scorer)
+		addResourceList32(keyPrefix, false, meta.Annotations, c.Scorer)
 	}
 	meta.Annotations["PodInfo/ValidForNode"] = podInfo.NodeName
 	glog.V(4).Infof("PodInfo: %+v written to annotations: %v", podInfo, meta.Annotations)
