@@ -102,7 +102,7 @@ func getToStringMap(keyPrefix string, key string, val string, list map[string]st
 }
 
 // NodeInfoToAnnotation is used by device advertiser to convert node info to annotation
-func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
+func NodeInfoToAnnotationNoJSON(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 	a := meta.Annotations
 	a[escapeStr("NodeInfo/Name")] = nodeInfo.Name
 	addResourceList64("NodeInfo/Capacity", true, a, nodeInfo.Capacity)
@@ -112,8 +112,19 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) {
 	glog.V(4).Infof("NodeInfo: %+v converted to Annotations: %v", nodeInfo, meta.Annotations)
 }
 
+// NodeInfoToAnnotation is used by device advertiser to convert node info to annotation
+func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) error {
+	info, err := json.Marshal(nodeInfo)
+	if err != nil {
+		return err
+	}
+	meta.Annotations["node.alpha/DeviceInformation"] = string(info)
+	glog.V(4).Infof("NodeInfo: %+v converted to Annotations: %v", nodeInfo, meta.Annotations)
+	return nil
+}
+
 // AnnotationToNodeInfo is used by scheduler to convert annotation to node info
-func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
+func AnnotationToNodeInfoNoJSON(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	nodeInfo := types.NewNodeInfo()
 	for k, v := range meta.Annotations {
 		unescapeKey := unescapeStr(k)
@@ -133,6 +144,22 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 				return nil, err
 			}
 			err = getToResourceList32("NodeInfo/Scorer", unescapeKey, v, nodeInfo.Scorer)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	glog.V(4).Infof("Annotations: %v converted to NodeInfo: %+v", meta.Annotations, nodeInfo)
+	return nodeInfo, nil
+}
+
+// AnnotationToNodeInfo is used by scheduler to convert annotation to node info
+func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
+	nodeInfo := types.NewNodeInfo()
+	if (meta.Annotations != nil) {
+		nodeInfoStr, ok := meta.Annotations["node.alpha/DeviceInformation"]
+		if ok {
+			err := json.Unmarshal([]byte(nodeInfoStr), nodeInfo)
 			if err != nil {
 				return nil, err
 			}

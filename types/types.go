@@ -4,7 +4,7 @@ const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
 	// Namespace prefix for group resources.
-	DeviceGroupPrefix = "alpha/devresource"
+	DeviceGroupPrefix = "alpha/grpresource"
 )
 
 type ResourceName string
@@ -19,12 +19,12 @@ type ResourceList map[ResourceName]int64
 type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
-	Name         string
-	KubeRequests ResourceList // requests being handled by kubernetes core - only needed here for resource translation
-	Requests     ResourceList // requests specified in annotations in the pod spec
-	DevRequests  ResourceList // requests after translation - these are used by scheduler to schedule
-	AllocateFrom ResourceLocation // only valid for extended resources being advertised here
-	Scorer       ResourceScorer // scorer function specified in pod specificiation annotations
+	Name         string           `json:"containername,omitempty"`
+	KubeRequests ResourceList     `json:"-"`    // requests being handled by kubernetes core - only needed here for resource translation
+	Requests     ResourceList     `json:"requests,omitempty"` // requests specified in annotations in the pod spec
+	DevRequests  ResourceList     `json:"devrequests,omitempty"` // requests after translation - these are used by scheduler to schedule
+	AllocateFrom ResourceLocation `json:"allocatefrom,omitempty"` // only valid for extended resources being advertised here
+	Scorer       ResourceScorer   `json:"scorer,omitempty"` // scorer function specified in pod specificiation annotations
 }
 
 func NewContainerInfo() *ContainerInfo {
@@ -32,10 +32,10 @@ func NewContainerInfo() *ContainerInfo {
 }
 
 type PodInfo struct {
-	Name              string
-	NodeName          string // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
-	InitContainers    []ContainerInfo
-	RunningContainers []ContainerInfo
+	Name              string          `json:"podname,omitempty"`
+	NodeName          string          `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
+	InitContainers    []ContainerInfo `json:"initcontainer,omitempty"` 
+	RunningContainers []ContainerInfo `json:"runningcontainer,omitempty"`
 }
 
 func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
@@ -54,11 +54,11 @@ func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
 
 // NodeInfo only holds resources being advertised by the device advertisers through annotations
 type NodeInfo struct {
-	Name        string
-	Capacity    ResourceList
-	Allocatable ResourceList // capacity minus reserverd
-	Used        ResourceList // being used by pods, must be less than allocatable
-	Scorer      ResourceScorer
+	Name        string         `json:"name,omitempty"`
+	Capacity    ResourceList   `json:"capacity,omitempty"`
+	Allocatable ResourceList   `json:"allocatable,omitempty"` // capacity minus reserverd
+	Used        ResourceList   `json:"used,omitempty"`// being used by pods, must be less than allocatable
+	Scorer      ResourceScorer `json:"scorer,omitempty"`
 }
 
 func NewNodeInfo() *NodeInfo {
