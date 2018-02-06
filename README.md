@@ -8,7 +8,9 @@ It consists of two parts.
 1. Custom CRI to take care of GPU constraints
 2. Custom scheduler to allocate and schedule pods
 
-This project is undergoing active development and does not yet have any releases.
+This project is undergoing active development and does not yet have any releases. We hope to have a working version by middle to end of February 2018. This code has been open sourced at this point so that people can see the code and the direction that we are proposing.
+
+The project has been started and being worked on by the Cloud Computing and Storage (CCS) team at Microsoft Research Lab in Redmond, USA.
 
 # Installing
 
