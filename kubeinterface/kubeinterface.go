@@ -329,7 +329,7 @@ func PatchNodeMetadata(c v1core.CoreV1Interface, nodeName string, oldNode *kubev
 		return nil, err
 	}
 
-	updatedNode, err := c.Nodes().Patch(nodeName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
+	updatedNode, err := c.Nodes().Patch(nodeName, kubetypes.StrategicMergePatchType, patchBytes)
 	if err != nil {
 		errStr := fmt.Sprintf("failed to patch metadata %q for node %q: %v", patchBytes, nodeName, err)
 		glog.Errorf(errStr)
