@@ -331,7 +331,9 @@ func PatchNodeMetadata(c v1core.CoreV1Interface, nodeName string, oldNode *kubev
 
 	updatedNode, err := c.Nodes().Patch(nodeName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
 	if err != nil {
-		return nil, fmt.Errorf("failed to patch metadata %q for node %q: %v", patchBytes, nodeName, err)
+		errStr := fmt.Sprintf("failed to patch metadata %q for node %q: %v", patchBytes, nodeName, err)
+		glog.Errorf(errStr)
+		return nil, fmt.Errorf(errStr)
 	}
 	return updatedNode, nil
 }
@@ -344,7 +346,9 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 
 	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
 	if err != nil {
-		return nil, fmt.Errorf("failed topatch metadata %q for pod %q: %v", patchBytes, podName, err)
+		errStr := fmt.Sprintf("failed topatch metadata %q for pod %q: %v", patchBytes, podName, err)
+		glog.Errorf(errStr)
+		return nil, fmt.Errorf(errStr)
 	}
 	return updatedPod, nil
 }

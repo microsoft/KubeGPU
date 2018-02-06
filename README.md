@@ -8,9 +8,11 @@ It consists of two parts.
 1. Custom CRI to take care of GPU constraints
 2. Custom scheduler to allocate and schedule pods
 
+This project is undergoing active development and does not yet have any releases.
+
 # Installing
 
-Clone this repo to $GOPATH/src/github.com/KubeGPU to get it to compile
+Clone this repo to $GOPATH/src/github.com/Microsoft/KubeGPU to get it to compile
 
 # Contributing
 
