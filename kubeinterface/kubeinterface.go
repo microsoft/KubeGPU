@@ -151,7 +151,7 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 		return nil, err
 	}
 
-	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
+	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes)
 	if err != nil {
 		errStr := fmt.Sprintf("failed topatch metadata %q for pod %q: %v", patchBytes, podName, err)
 		glog.Errorf(errStr)
