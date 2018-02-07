@@ -2,7 +2,7 @@ package types
 
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
-	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
+	ResourceGPU ResourceName = "alpha/numgpu"
 	// Namespace prefix for group resources.
 	DeviceGroupPrefix = "alpha/grpresource"
 )

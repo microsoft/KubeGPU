@@ -107,6 +107,7 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 		return err
 	}	
 	meta.Annotations["pod.alpha/DeviceInformation"] = string(info)
+	glog.V(4).Infof("PodInfo: %+v converted to Annotations: %v", podInfo, meta.Annotations)
 	return nil
 }
 
