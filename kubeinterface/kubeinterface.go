@@ -185,16 +185,28 @@ func ClearPodInfoAnnotations(meta *metav1.ObjectMeta) {
 	}
 }
 
-func addContainersToPodInfo(containers []types.ContainerInfo, conts []kubev1.Container) []types.ContainerInfo {
+func addContainersToPodInfo(containers map[string]types.ContainerInfo, conts []kubev1.Container, invalidateExistingAnnotations bool) {
 	for _, c := range conts {
-		cont := types.NewContainerInfo()
-		cont.Name = c.Name
-		for kr, vr := range c.Resources.Requests {
-			cont.KubeRequests[types.ResourceName(kr)] = vr.Value()
+		cont, ok := containers[c.Name]
+		if !ok {
+			cont = *types.NewContainerInfo()
 		}
-		containers = append(containers, *cont)
+		contF := types.FillContainerInfo(&cont)
+		for kr, vr := range c.Resources.Requests {
+			contF.KubeRequests[types.ResourceName(kr)] = vr.Value()
+		}
+		containers[c.Name] = *contF
 	}
-	return containers
+	if invalidateExistingAnnotations {
+		for contName, cont := range containers {
+			cont.AllocateFrom = make(types.ResourceLocation) // overwrite allocatefrom
+			cont.DevRequests = make(types.ResourceList)
+			for reqKey, reqVal := range cont.Requests {
+				cont.DevRequests[reqKey] = reqVal
+			}
+			containers[contName] = cont
+		}
+	}
 }
 
 func getFromContainerInfo(info map[string]string, searchFor string) map[string](map[string]string) {
@@ -209,39 +221,32 @@ func getFromContainerInfo(info map[string]string, searchFor string) map[string](
 	return infoMap
 }
 
-func getContainer(containerName string, contMap map[string]int, conts *[]types.ContainerInfo) *types.ContainerInfo {
-	index, ok := contMap[containerName]
+func getContainer(containerName string, conts map[string]types.ContainerInfo) *types.ContainerInfo {
+	cont, ok := conts[containerName]
 	if !ok {
-		index = len(*conts)
-		contMap[containerName] = index
-		newContainer := types.NewContainerInfo()
-		newContainer.Name = containerName
-		*conts = append(*conts, *newContainer)
+		cont = *types.NewContainerInfo()
+		conts[containerName] = cont
 	}
-	return &(*conts)[index]
+	return &cont
 }
 
-func generateContainerInfo(info map[string]string, conts *[]types.ContainerInfo) error {
-	contMap := make(map[string]int) // container name to index map
-	// initialize
-	for index, cont := range *conts {
-		contMap[cont.Name] = index
-	}
+func generateContainerInfo(info map[string]string, conts map[string]types.ContainerInfo) error {
 	reqs := getFromContainerInfo(info, "Requests")
 	//fmt.Printf("Reqs:\n%v\n", reqs)
 	var err error
 	for cName, cont := range reqs {
-		container := getContainer(cName, contMap, conts)
+		container := getContainer(cName, conts)
 		for key, val := range cont {
 			container.Requests[types.ResourceName(key)], err = strconv.ParseInt(val, 10, 64)
 			if err != nil {
 				return err
 			}
 		}
+		conts[cName] = *container
 	}
 	reqs = getFromContainerInfo(info, "Scorer")
 	for cName, cont := range reqs {
-		container := getContainer(cName, contMap, conts)
+		container := getContainer(cName, conts)
 		for key, val := range cont {
 			int64Val, err := strconv.ParseInt(val, 10, 32)
 			if err != nil {
@@ -249,24 +254,27 @@ func generateContainerInfo(info map[string]string, conts *[]types.ContainerInfo)
 			}
 			container.Scorer[types.ResourceName(key)] = int32(int64Val)
 		}
+		conts[cName] = *container
 	}
 	// following will only exist if they have not been invalidated
 	reqs = getFromContainerInfo(info, "DevRequests")
 	for cName, cont := range reqs {
-		container := getContainer(cName, contMap, conts)
+		container := getContainer(cName, conts)
 		for key, val := range cont {
 			container.DevRequests[types.ResourceName(key)], err = strconv.ParseInt(val, 10, 64)
 			if err != nil {
 				return err
 			}
 		}
+		conts[cName] = *container
 	}	
 	reqs = getFromContainerInfo(info, "AllocateFrom")
 	for cName, cont := range reqs {
-		container := getContainer(cName, contMap, conts)
+		container := getContainer(cName, conts)
 		for key, val := range cont {
 			container.AllocateFrom[types.ResourceName(key)] = types.ResourceName(val)
 		}
+		conts[cName] = *container
 	}
 	return nil
 }
@@ -284,45 +292,55 @@ func annotationToPodInfo(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 	}
 	//fmt.Printf("Init:\n%v\n", init)
 	//fmt.Printf("Running:\n%v\n", running)
-	err := generateContainerInfo(init, &podInfo.InitContainers)
+	err := generateContainerInfo(init, podInfo.InitContainers)
 	if (err != nil) {
 		return err
 	}
-	err = generateContainerInfo(running, &podInfo.RunningContainers)
+	err = generateContainerInfo(running, podInfo.RunningContainers)
 	if (err != nil) {
 		return err
 	}
 	return nil
 }
 
-// KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
-func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
-	podInfo := &types.PodInfo{}
-	// if desired, clear existing pod annotations for DevRequests, AllocateFrom, NodeName
-	if invalidateExistingAnnotations {
-		ClearPodInfoAnnotations(&kubePodInfo.ObjectMeta)
-	}
-	// add default kuberenetes requests
-	podInfo.Name = kubePodInfo.ObjectMeta.Name
-	podInfo.InitContainers = addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers)
-	podInfo.RunningContainers = addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers)
+// KubePodInfoToPodInfoNoJSON converts kubernetes pod info to group scheduler's simpler struct
+func KubePodInfoToPodInfoNoJSON(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
+	podInfo := types.NewPodInfo()
 	// generate new requests from annotations
 	err := annotationToPodInfo(&kubePodInfo.ObjectMeta, podInfo)
 	if err != nil {
 		return nil, err
 	}
+	podInfo.Name = kubePodInfo.ObjectMeta.Name
+	// add default kuberenetes requests to "KubeRequests" field & clear if desired
+	addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers, invalidateExistingAnnotations)
+	addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers, invalidateExistingAnnotations)
 	if invalidateExistingAnnotations {
-		// now copy original requests to device requests
-		for index := range podInfo.InitContainers {
-			for name, req := range podInfo.InitContainers[index].Requests { // from annotation
-				podInfo.InitContainers[index].DevRequests[name] = req
+		podInfo.NodeName = ""
+	}
+	glog.V(4).Infof("Kubernetes pod: %+v converted to device scheduler podinfo: %v", kubePodInfo, podInfo)
+	return podInfo, nil
+}
+
+// KubePodInfoToPodInfo converts kubernetes pod info to group scheduler's simpler struct
+func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
+	podInfo := types.NewPodInfo()
+	// unmarshal from annotations
+	if (kubePodInfo.ObjectMeta.Annotations != nil) {
+		podInfoStr, ok := kubePodInfo.ObjectMeta.Annotations["pod.alpha/DeviceInformation"]
+		if ok {
+			err := json.Unmarshal([]byte(podInfoStr), podInfo)
+			if err != nil {
+				return nil, err
 			}
 		}
-		for index := range podInfo.RunningContainers {
-			for name, req := range podInfo.RunningContainers[index].Requests {
-				podInfo.RunningContainers[index].DevRequests[name] = req
-			}
-		}
+	}
+	podInfo.Name = kubePodInfo.ObjectMeta.Name
+	// add default kuberenetes requests to "KubeRequests" field & clear if desired
+	addContainersToPodInfo(podInfo.InitContainers, kubePodInfo.Spec.InitContainers, invalidateExistingAnnotations)
+	addContainersToPodInfo(podInfo.RunningContainers, kubePodInfo.Spec.Containers, invalidateExistingAnnotations)
+	if invalidateExistingAnnotations {
+		podInfo.NodeName = ""
 	}
 	glog.V(4).Infof("Kubernetes pod: %+v converted to device scheduler podinfo: %v", kubePodInfo, podInfo)
 	return podInfo, nil
@@ -330,29 +348,39 @@ func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations
 
 // PodInfoToAnnotation is used by scheduler to write allocate from field into annotations
 // only allocate from needs to be written, other info is already avialable in pod spec
-func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
-	for _, c := range podInfo.InitContainers {
-		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", c.Name)
+func PodInfoToAnnotationNoJSON(meta *metav1.ObjectMeta, podInfo *types.PodInfo) {
+	for contName, c := range podInfo.InitContainers {
+		keyPrefix := fmt.Sprintf("PodInfo/InitContainer/%s/AllocateFrom", contName)
 		addResourceListName(keyPrefix, false, meta.Annotations, c.AllocateFrom)
-		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Requests", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Requests", contName)
 		addResourceList64(keyPrefix, false, meta.Annotations, c.Requests)
-		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/DevRequests", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/DevRequests", contName)
 		addResourceList64(keyPrefix, false, meta.Annotations, c.DevRequests)
-		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/InitContainer/%s/Scorer", contName)
 		addResourceList32(keyPrefix, false, meta.Annotations, c.Scorer)
 	}
-	for _, c := range podInfo.RunningContainers {
-		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", c.Name)
+	for contName, c := range podInfo.RunningContainers {
+		keyPrefix := fmt.Sprintf("PodInfo/RunningContainer/%s/AllocateFrom", contName)
 		addResourceListName(keyPrefix, false, meta.Annotations, c.AllocateFrom)
-		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Requests", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Requests", contName)
 		addResourceList64(keyPrefix, false, meta.Annotations, c.Requests)
-		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/DevRequests", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/DevRequests", contName)
 		addResourceList64(keyPrefix, false, meta.Annotations, c.DevRequests)
-		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", c.Name)
+		keyPrefix = fmt.Sprintf("PodInfo/RunningContainer/%s/Scorer", contName)
 		addResourceList32(keyPrefix, false, meta.Annotations, c.Scorer)
 	}
 	meta.Annotations["PodInfo/ValidForNode"] = podInfo.NodeName
 	glog.V(4).Infof("PodInfo: %+v written to annotations: %v", podInfo, meta.Annotations)
+}
+
+func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error {
+	// marshal the whole structure
+	info, err := json.Marshal(podInfo)
+	if err != nil {
+		return err
+	}	
+	meta.Annotations["pod.alpha/DeviceInformation"] = string(info)
+	return nil
 }
 
 // ==================================

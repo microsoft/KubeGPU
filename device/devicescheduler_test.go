@@ -37,12 +37,12 @@ type PodEx struct {
 	rcont         []cont
 }
 
-func printContainerAllocation(cont *types.ContainerInfo) {
+func printContainerAllocation(contName string, cont *types.ContainerInfo) {
 	//glog.V(5).Infoln("Allocated", cont.Resources.Allocated)
 	sortedKeys := utils.SortedStringKeys(cont.DevRequests)
 	for _, resKey := range sortedKeys {
 		resVal := cont.DevRequests[types.ResourceName(resKey)]
-		fmt.Println("Resource", cont.Name+"/"+string(resKey),
+		fmt.Println("Resource", contName+"/"+string(resKey),
 			"TakenFrom", cont.AllocateFrom[types.ResourceName(resKey)],
 			"Amt", resVal)
 	}
@@ -50,13 +50,13 @@ func printContainerAllocation(cont *types.ContainerInfo) {
 
 func printPodAllocation(spec *types.PodInfo) {
 	fmt.Printf("\nRunningContainers\n\n")
-	for _, cont := range spec.RunningContainers {
-		printContainerAllocation(&cont)
+	for contName, cont := range spec.RunningContainers {
+		printContainerAllocation(contName, &cont)
 		fmt.Printf("\n")
 	}
 	fmt.Printf("\nInitContainers\n\n")
-	for _, cont := range spec.InitContainers {
-		printContainerAllocation(&cont)
+	for contName, cont := range spec.InitContainers {
+		printContainerAllocation(contName, &cont)
 		fmt.Printf("\n")
 	}
 }
@@ -70,10 +70,11 @@ func setGrpRes(res types.ResourceList, name string, amt int64) {
 	res[fullName] = amt
 }
 
-func addContainer(cont *[]types.ContainerInfo, name string) *types.ContainerInfo {
+func addContainer(cont map[string]types.ContainerInfo, name string) *types.ContainerInfo {
 	c := types.NewContainerInfo()
-	c.Name = name
-	*cont = append(*cont, *c)
+	//c.Name = name
+	//*cont = append(*cont, *c)
+	cont[name] = *c
 	return c
 }
 
@@ -160,27 +161,31 @@ func setExpectedResources(c *cont) {
 }
 
 func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*types.PodInfo, *PodEx) {
-	pod := types.PodInfo{Name: name}
+	pod := types.PodInfo{Name: name, InitContainers: make(map[string]types.ContainerInfo), RunningContainers: make(map[string]types.ContainerInfo)}
 
 	glog.V(2).Infof("Working on pod %s", pod.Name)
 
 	for index, icont := range iconts {
 		setExpectedResources(&iconts[index])
-		container := addContainer(&pod.InitContainers, icont.name)
+		//container := addContainer(&pod.InitContainers, icont.name)
+		addContainer(pod.InitContainers, icont.name)
+		container := pod.InitContainers[icont.name]
 		setResource(container.DevRequests, icont.res, icont.grpres)
 		setKubeResource(container.KubeRequests, icont.res)
 		//pod.InitContainers[index].DevRequests = pod.InitContainers[index].Requests
 		//fmt.Printf("Len: %d\n", len(pod.InitContainers))
 		//fmt.Printf("Req: %v\n", pod.InitContainers[index].Requests)
-		glog.V(7).Infoln(icont.name, pod.InitContainers[index].Requests)
+		glog.V(7).Infoln(icont.name, pod.InitContainers[icont.name].Requests)
 	}
 	for index, rcont := range rconts {
 		setExpectedResources(&rconts[index])
-		container := addContainer(&pod.RunningContainers, rcont.name)
+		//container := addContainer(&pod.RunningContainers, rcont.name)
+		addContainer(pod.RunningContainers, rcont.name)
+		container := pod.RunningContainers[rcont.name]
 		setResource(container.DevRequests, rcont.res, rcont.grpres)
 		setKubeResource(container.KubeRequests, rcont.res)
 		//pod.RunningContainers[index].DevRequests = pod.RunningContainers[index].Requests
-		glog.V(7).Infoln(rcont.name, pod.RunningContainers[index].Requests)
+		glog.V(7).Infoln(rcont.name, pod.RunningContainers[rcont.name].Requests)
 	}
 
 	podEx := PodEx{podOrig: nil, pod: &pod, icont: iconts, rcont: rconts, expectedScore: expScore}
@@ -229,21 +234,22 @@ func sampleTest(ds *DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo
 	}
 }
 
-func testContainerAllocs(t *testing.T, conts []cont, podConts []types.ContainerInfo, testCnt int) {
+func testContainerAllocs(t *testing.T, conts []cont, podConts map[string]types.ContainerInfo, testCnt int) {
 	if len(conts) != len(podConts) {
 		t.Errorf("Test %d Number of containers don't match - expected %v - have %v", testCnt, len(conts), len(podConts))
 		return
 	}
-	for ci, c := range conts {
-		if len(c.expectedGrpLoc) != len(podConts[ci].AllocateFrom) {
+	for _, c := range conts {
+		cn := c.name
+		if len(c.expectedGrpLoc) != len(podConts[cn].AllocateFrom) {
 			t.Errorf("Test %d Container %s Number of resources don't match - expected %v %v - have %v %v",
 				testCnt, c.name,
 				len(c.expectedGrpLoc), c.expectedGrpLoc,
-				len(podConts[ci].AllocateFrom), podConts[ci].AllocateFrom)
+				len(podConts[cn].AllocateFrom), podConts[cn].AllocateFrom)
 			return
 		}
 		for key, val := range c.expectedGrpLoc {
-			valP, available := podConts[ci].AllocateFrom[types.ResourceName(key)]
+			valP, available := podConts[cn].AllocateFrom[types.ResourceName(key)]
 			if !available {
 				t.Errorf("Test %d Container %s Expected key %v not available", testCnt, c.name, key)
 			} else if string(valP) != val {

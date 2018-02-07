@@ -43,10 +43,10 @@ type dockerGPUService struct {
 }
 
 func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types.ContainerInfo, config *runtimeapi.ContainerConfig) error {
+	numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
 	nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
 	var newDevices []*runtimeapi.Device
 	// first remove any existing nvidia devices
-	numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
 	numRequestedGPU := 0
 	for _, oldDevice := range config.Devices {
 		isNvidiaDevice := false

@@ -19,7 +19,6 @@ type ResourceList map[ResourceName]int64
 type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
-	Name         string           `json:"containername,omitempty"`
 	KubeRequests ResourceList     `json:"-"`    // requests being handled by kubernetes core - only needed here for resource translation
 	Requests     ResourceList     `json:"requests,omitempty"` // requests specified in annotations in the pod spec
 	DevRequests  ResourceList     `json:"devrequests,omitempty"` // requests after translation - these are used by scheduler to schedule
@@ -31,23 +30,45 @@ func NewContainerInfo() *ContainerInfo {
 	return &ContainerInfo{KubeRequests: make(ResourceList), Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer), DevRequests: make(ResourceList)}
 }
 
+func FillContainerInfo(fill *ContainerInfo) *ContainerInfo {
+	info := NewContainerInfo()
+	if fill.KubeRequests != nil {
+		info.KubeRequests = fill.KubeRequests
+	}
+	if fill.Requests != nil {
+		info.Requests = fill.Requests
+	}
+	if fill.DevRequests != nil {
+		info.DevRequests = fill.DevRequests
+	}
+	if fill.AllocateFrom != nil {
+		info.AllocateFrom = fill.AllocateFrom
+	}
+	if fill.Scorer != nil {
+		info.Scorer = fill.Scorer
+	}
+	return info
+}
+
 type PodInfo struct {
-	Name              string          `json:"podname,omitempty"`
-	NodeName          string          `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
-	InitContainers    []ContainerInfo `json:"initcontainer,omitempty"` 
-	RunningContainers []ContainerInfo `json:"runningcontainer,omitempty"`
+	Name              string                   `json:"podname,omitempty"`
+	NodeName          string                   `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
+	InitContainers    map[string]ContainerInfo `json:"initcontainer,omitempty"` 
+	RunningContainers map[string]ContainerInfo `json:"runningcontainer,omitempty"`
+}
+
+func NewPodInfo() *PodInfo {
+	return &PodInfo{InitContainers: make(map[string]ContainerInfo), RunningContainers: make(map[string]ContainerInfo)}
 }
 
 func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
-	for _, c := range p.InitContainers {
-		if c.Name == name {
-			return &c
-		}
+	cont, ok := p.InitContainers[name]
+	if ok {
+		return &cont
 	}
-	for _, c := range p.RunningContainers {
-		if c.Name == name {
-			return &c
-		}
+	cont, ok = p.RunningContainers[name]
+	if ok {
+		return &cont
 	}
 	return nil
 }
