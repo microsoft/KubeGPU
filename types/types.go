@@ -4,7 +4,7 @@ const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
 	// Namespace prefix for group resources.
-	DeviceGroupPrefix = "alpha/devresource"
+	DeviceGroupPrefix = "alpha/grpresource"
 )
 
 type ResourceName string
@@ -19,46 +19,67 @@ type ResourceList map[ResourceName]int64
 type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
-	Name         string
-	KubeRequests ResourceList // requests being handled by kubernetes core - only needed here for resource translation
-	Requests     ResourceList // requests specified in annotations in the pod spec
-	DevRequests  ResourceList // requests after translation - these are used by scheduler to schedule
-	AllocateFrom ResourceLocation // only valid for extended resources being advertised here
-	Scorer       ResourceScorer // scorer function specified in pod specificiation annotations
+	KubeRequests ResourceList     `json:"-"`    // requests being handled by kubernetes core - only needed here for resource translation
+	Requests     ResourceList     `json:"requests,omitempty"` // requests specified in annotations in the pod spec
+	DevRequests  ResourceList     `json:"devrequests,omitempty"` // requests after translation - these are used by scheduler to schedule
+	AllocateFrom ResourceLocation `json:"allocatefrom,omitempty"` // only valid for extended resources being advertised here
+	Scorer       ResourceScorer   `json:"scorer,omitempty"` // scorer function specified in pod specificiation annotations
 }
 
 func NewContainerInfo() *ContainerInfo {
 	return &ContainerInfo{KubeRequests: make(ResourceList), Requests: make(ResourceList), AllocateFrom: make(ResourceLocation), Scorer: make(ResourceScorer), DevRequests: make(ResourceList)}
 }
 
+func FillContainerInfo(fill *ContainerInfo) *ContainerInfo {
+	info := NewContainerInfo()
+	if fill.KubeRequests != nil {
+		info.KubeRequests = fill.KubeRequests
+	}
+	if fill.Requests != nil {
+		info.Requests = fill.Requests
+	}
+	if fill.DevRequests != nil {
+		info.DevRequests = fill.DevRequests
+	}
+	if fill.AllocateFrom != nil {
+		info.AllocateFrom = fill.AllocateFrom
+	}
+	if fill.Scorer != nil {
+		info.Scorer = fill.Scorer
+	}
+	return info
+}
+
 type PodInfo struct {
-	Name              string
-	NodeName          string // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
-	InitContainers    []ContainerInfo
-	RunningContainers []ContainerInfo
+	Name              string                   `json:"podname,omitempty"`
+	NodeName          string                   `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
+	InitContainers    map[string]ContainerInfo `json:"initcontainer,omitempty"` 
+	RunningContainers map[string]ContainerInfo `json:"runningcontainer,omitempty"`
+}
+
+func NewPodInfo() *PodInfo {
+	return &PodInfo{InitContainers: make(map[string]ContainerInfo), RunningContainers: make(map[string]ContainerInfo)}
 }
 
 func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
-	for _, c := range p.InitContainers {
-		if c.Name == name {
-			return &c
-		}
+	cont, ok := p.InitContainers[name]
+	if ok {
+		return &cont
 	}
-	for _, c := range p.RunningContainers {
-		if c.Name == name {
-			return &c
-		}
+	cont, ok = p.RunningContainers[name]
+	if ok {
+		return &cont
 	}
 	return nil
 }
 
 // NodeInfo only holds resources being advertised by the device advertisers through annotations
 type NodeInfo struct {
-	Name        string
-	Capacity    ResourceList
-	Allocatable ResourceList // capacity minus reserverd
-	Used        ResourceList // being used by pods, must be less than allocatable
-	Scorer      ResourceScorer
+	Name        string         `json:"name,omitempty"`
+	Capacity    ResourceList   `json:"capacity,omitempty"`
+	Allocatable ResourceList   `json:"allocatable,omitempty"` // capacity minus reserverd
+	Used        ResourceList   `json:"used,omitempty"`// being used by pods, must be less than allocatable
+	Scorer      ResourceScorer `json:"scorer,omitempty"`
 }
 
 func NewNodeInfo() *NodeInfo {
