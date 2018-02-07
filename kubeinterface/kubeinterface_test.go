@@ -230,7 +230,7 @@ func TestConvert(t *testing.T) {
 	podInfo.NodeName = "NodeNewD"
 
 	// clear existing annotations
-	ClearPodInfoAnnotations(&kubePod.ObjectMeta)
+	//ClearPodInfoAnnotations(&kubePod.ObjectMeta)
 	// convert to annotations
 	PodInfoToAnnotation(&kubePod.ObjectMeta, podInfo)
 
