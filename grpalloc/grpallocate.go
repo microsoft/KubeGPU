@@ -384,7 +384,7 @@ func (grp *GrpAllocator) allocateGroup() (bool, []types.PredicateFailureReason) 
 }
 
 // allocate the main group
-func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer bool,
+func containerFitsGroupConstraints(contName string, contReq *types.ContainerInfo, initContainer bool,
 	allocatable types.ResourceList, allocScorer map[string]scorer.ResourceScoreFunc,
 	podResource map[string]int64, nodeResource map[string]int64,
 	usedGroups map[string]bool, bPreferUsed bool, bSetAllocateFrom bool) (
@@ -399,7 +399,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	// Quantitites available on NodeInfo
 	allocName := make(map[string](map[string]string))
 	alloc := make(map[string]int64)
-	glog.V(5).Infoln("Allocating for container", contReq.Name)
+	glog.V(5).Infoln("Allocating for container", contName)
 	glog.V(7).Infoln("Requests", contReq.DevRequests)
 	glog.V(7).Infoln("AllocatableRes", allocatable)
 	for reqRes, reqVal := range contReq.DevRequests {
@@ -436,7 +436,7 @@ func containerFitsGroupConstraints(contReq *types.ContainerInfo, initContainer b
 	}
 	glog.V(7).Infoln("Allocatable", allocName, alloc)
 
-	grp.ContName = contReq.Name
+	grp.ContName = contName
 	grp.InitContainer = initContainer
 	grp.PreferUsed = bPreferUsed
 	grp.RequiredResource = req
@@ -495,11 +495,13 @@ func initNodeResource(n *types.NodeInfo) map[string]int64 {
 }
 
 func PodClearAllocateFrom(spec *types.PodInfo) {
-	for i := range spec.RunningContainers {
-		spec.RunningContainers[i].AllocateFrom = nil
+	for contName, contCopy := range spec.RunningContainers {
+		contCopy.AllocateFrom = nil
+		spec.RunningContainers[contName] = contCopy
 	}
-	for i := range spec.InitContainers {
-		spec.InitContainers[i].AllocateFrom = nil
+	for contName, contCopy := range spec.InitContainers {
+		contCopy.AllocateFrom = nil
+		spec.InitContainers[contName] = contCopy
 	}
 }
 
@@ -526,9 +528,10 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 	scorer := setScoreFunc(n)
 
 	// first go over running containers
-	for i := range spec.RunningContainers {
-		grp, fits, reasons, score := containerFitsGroupConstraints(&spec.RunningContainers[i], false, n.Allocatable,
+	for contName, contCopy := range spec.RunningContainers {
+		grp, fits, reasons, score := containerFitsGroupConstraints(contName, &contCopy, false, n.Allocatable,
 			scorer, podResource, nodeResource, usedGroups, true, allocating)
+		spec.RunningContainers[contName] = contCopy
 		if fits == false {
 			found = false
 			predicateFails = append(predicateFails, reasons...)
@@ -541,11 +544,12 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 	}
 
 	// now go over initialization containers, try to reutilize used groups
-	for i := range spec.InitContainers {
+	for contName, contCopy := range spec.InitContainers {
 		// container.Resources.DevRequests contains a map, alloctable contains type Resource
 		// prefer groups which are already used by running containers
-		grp, fits, reasons, _ := containerFitsGroupConstraints(&spec.InitContainers[i], true, n.Allocatable,
+		grp, fits, reasons, _ := containerFitsGroupConstraints(contName, &contCopy, true, n.Allocatable,
 			scorer, podResource, nodeResource, usedGroups, true, allocating)
+		spec.InitContainers[contName] = contCopy
 		if fits == false {
 			found = false
 			predicateFails = append(predicateFails, reasons...)

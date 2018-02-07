@@ -17,11 +17,13 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 }
 
 func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	for index := range podInfo.InitContainers {
-		podInfo.InitContainers[index].DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, podInfo.InitContainers[index])
+	for contName, contCopy := range podInfo.InitContainers {
+		contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+		podInfo.InitContainers[contName] = contCopy
 	}
-	for index := range podInfo.RunningContainers {
-		podInfo.RunningContainers[index].DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, podInfo.RunningContainers[index])
+	for contName, contCopy := range podInfo.RunningContainers {
+		contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+		podInfo.RunningContainers[contName] = contCopy
 	}
 }
 
