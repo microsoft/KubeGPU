@@ -2,7 +2,7 @@ package types
 
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
-	ResourceNvidiaGPU ResourceName = "alpha.kubernetes.io/nvidia-gpu"
+	ResourceGPU ResourceName = "alpha.gpu/numgpu"
 	// Namespace prefix for group resources.
 	DeviceGroupPrefix = "alpha/grpresource"
 )
@@ -19,11 +19,11 @@ type ResourceList map[ResourceName]int64
 type ResourceScorer map[ResourceName]int32
 
 type ContainerInfo struct {
-	KubeRequests ResourceList     `json:"-"`    // requests being handled by kubernetes core - only needed here for resource translation
-	Requests     ResourceList     `json:"requests,omitempty"` // requests specified in annotations in the pod spec
-	DevRequests  ResourceList     `json:"devrequests,omitempty"` // requests after translation - these are used by scheduler to schedule
+	KubeRequests ResourceList     `json:"-"`                      // requests being handled by kubernetes core - only needed here for resource translation
+	Requests     ResourceList     `json:"requests,omitempty"`     // requests specified in annotations in the pod spec
+	DevRequests  ResourceList     `json:"devrequests,omitempty"`  // requests after translation - these are used by scheduler to schedule
 	AllocateFrom ResourceLocation `json:"allocatefrom,omitempty"` // only valid for extended resources being advertised here
-	Scorer       ResourceScorer   `json:"scorer,omitempty"` // scorer function specified in pod specificiation annotations
+	Scorer       ResourceScorer   `json:"scorer,omitempty"`       // scorer function specified in pod specificiation annotations
 }
 
 func NewContainerInfo() *ContainerInfo {
@@ -53,7 +53,7 @@ func FillContainerInfo(fill *ContainerInfo) *ContainerInfo {
 type PodInfo struct {
 	Name              string                   `json:"podname,omitempty"`
 	NodeName          string                   `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
-	InitContainers    map[string]ContainerInfo `json:"initcontainer,omitempty"` 
+	InitContainers    map[string]ContainerInfo `json:"initcontainer,omitempty"`
 	RunningContainers map[string]ContainerInfo `json:"runningcontainer,omitempty"`
 }
 
@@ -78,7 +78,7 @@ type NodeInfo struct {
 	Name        string         `json:"name,omitempty"`
 	Capacity    ResourceList   `json:"capacity,omitempty"`
 	Allocatable ResourceList   `json:"allocatable,omitempty"` // capacity minus reserverd
-	Used        ResourceList   `json:"used,omitempty"`// being used by pods, must be less than allocatable
+	Used        ResourceList   `json:"used,omitempty"`        // being used by pods, must be less than allocatable
 	Scorer      ResourceScorer `json:"scorer,omitempty"`
 }
 
@@ -117,7 +117,7 @@ type Device interface {
 
 type PredicateFailureReason interface {
 	GetReason() string
-	GetInfo() 	(ResourceName, int64, int64, int64)
+	GetInfo() (ResourceName, int64, int64, int64)
 }
 
 // used by scheduler

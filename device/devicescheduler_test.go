@@ -170,6 +170,7 @@ func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*ty
 		//container := addContainer(&pod.InitContainers, icont.name)
 		addContainer(pod.InitContainers, icont.name)
 		container := pod.InitContainers[icont.name]
+		setResource(container.Requests, icont.res, icont.grpres)
 		setResource(container.DevRequests, icont.res, icont.grpres)
 		setKubeResource(container.KubeRequests, icont.res)
 		//pod.InitContainers[index].DevRequests = pod.InitContainers[index].Requests
@@ -182,6 +183,7 @@ func createPod(name string, expScore float64, iconts []cont, rconts []cont) (*ty
 		//container := addContainer(&pod.RunningContainers, rcont.name)
 		addContainer(pod.RunningContainers, rcont.name)
 		container := pod.RunningContainers[rcont.name]
+		setResource(container.Requests, rcont.res, rcont.grpres)
 		setResource(container.DevRequests, rcont.res, rcont.grpres)
 		setKubeResource(container.KubeRequests, rcont.res)
 		//pod.RunningContainers[index].DevRequests = pod.RunningContainers[index].Requests
@@ -414,17 +416,17 @@ func TestGrpAllocate1(t *testing.T) {
 	pod, podEx = createPod("pod2", 0.3,
 		[]cont{
 			{name: "Init0",
-				res:            map[string]int64{string(types.ResourceNvidiaGPU): 1},
+				res:            map[string]int64{string(types.ResourceGPU): 1},
 				expectedGrpLoc: map[string]string{"gpu/0": "gpu/dev4"}}},
 		[]cont{
 			{name: "Run0",
-				res: map[string]int64{string(types.ResourceNvidiaGPU): 2},
+				res: map[string]int64{string(types.ResourceGPU): 2},
 				expectedGrpLoc: map[string]string{
 					"gpu/0": "gpu/dev4",
 					"gpu/1": "gpu/dev3"},
 			},
 			{name: "Run1",
-				res:            map[string]int64{string(types.ResourceNvidiaGPU): 1},
+				res:            map[string]int64{string(types.ResourceGPU): 1},
 				expectedGrpLoc: map[string]string{"gpu/0": "gpu/dev2"},
 			},
 		},
