@@ -528,7 +528,9 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 	scorer := setScoreFunc(n)
 
 	// first go over running containers
-	for contName, contCopy := range spec.RunningContainers {
+	contKeys := utils.SortedStringKeys(spec.RunningContainers)
+	for _, contName := range contKeys {
+		contCopy := spec.RunningContainers[contName]
 		grp, fits, reasons, score := containerFitsGroupConstraints(contName, &contCopy, false, n.Allocatable,
 			scorer, podResource, nodeResource, usedGroups, true, allocating)
 		spec.RunningContainers[contName] = contCopy
@@ -544,7 +546,9 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 	}
 
 	// now go over initialization containers, try to reutilize used groups
-	for contName, contCopy := range spec.InitContainers {
+	contKeys = utils.SortedStringKeys(spec.InitContainers)
+	for _, contName := range contKeys {
+		contCopy := spec.InitContainers[contName]
 		// container.Resources.DevRequests contains a map, alloctable contains type Resource
 		// prefer groups which are already used by running containers
 		grp, fits, reasons, _ := containerFitsGroupConstraints(contName, &contCopy, true, n.Allocatable,
@@ -567,15 +571,18 @@ func PodFitsGroupConstraints(n *types.NodeInfo, spec *types.PodInfo, allocating 
 func updateGroupResourceForContainer(n *types.NodeInfo, cont *types.ContainerInfo, bInitContainer bool,
 	podResources types.ResourceList, updatedUsedByNode types.ResourceList) {
 
-	for resource, allocatedFrom := range cont.AllocateFrom {
-		val := cont.DevRequests[resource]
-		allocatableRes := n.Allocatable[allocatedFrom]
-		podRes := podResources[allocatedFrom]
-		nodeRes := updatedUsedByNode[allocatedFrom]
-		scorerFn := scorer.SetScorer(allocatedFrom, n.Scorer[allocatedFrom])
-		_, _, _, newPodUsed, newNodeUsed := scorerFn(allocatableRes, podRes, nodeRes, []int64{val}, bInitContainer)
-		podResources[allocatedFrom] = newPodUsed
-		updatedUsedByNode[allocatedFrom] = newNodeUsed
+	for reqRes, allocatedFrom := range cont.AllocateFrom {
+		// only update "group" device resources
+		if !resource.PrecheckedResource(reqRes) {
+			val := cont.DevRequests[reqRes]
+			allocatableRes := n.Allocatable[allocatedFrom]
+			podRes := podResources[allocatedFrom]
+			nodeRes := updatedUsedByNode[allocatedFrom]
+			scorerFn := scorer.SetScorer(allocatedFrom, n.Scorer[allocatedFrom])
+			_, _, _, newPodUsed, newNodeUsed := scorerFn(allocatableRes, podRes, nodeRes, []int64{val}, bInitContainer)
+			podResources[allocatedFrom] = newPodUsed
+			updatedUsedByNode[allocatedFrom] = newNodeUsed
+		}
 	}
 }
 

@@ -107,6 +107,7 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 		return err
 	}	
 	meta.Annotations["pod.alpha/DeviceInformation"] = string(info)
+	glog.V(4).Infof("PodInfo: %+v converted to Annotations: %v", podInfo, meta.Annotations)
 	return nil
 }
 
@@ -151,7 +152,7 @@ func PatchPodMetadata(c v1core.CoreV1Interface, podName string, oldPod *kubev1.P
 		return nil, err
 	}
 
-	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes, "metadata")
+	updatedPod, err := c.Pods(oldPod.ObjectMeta.Namespace).Patch(podName, kubetypes.StrategicMergePatchType, patchBytes)
 	if err != nil {
 		errStr := fmt.Sprintf("failed topatch metadata %q for pod %q: %v", patchBytes, podName, err)
 		glog.Errorf(errStr)
