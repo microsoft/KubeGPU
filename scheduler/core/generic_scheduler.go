@@ -25,6 +25,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Microsoft/KubeGPU/device"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
 	"k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,16 +39,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/errors"
 	utiltrace "k8s.io/apiserver/pkg/util/trace"
 	"k8s.io/client-go/util/workqueue"
-	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
-	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
-	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
-	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
-	"github.com/Microsoft/KubeGPU/scheduler/util"
-	"github.com/Microsoft/KubeGPU/device"
-	"github.com/Microsoft/KubeGPU/kubeinterface"
 
-	"github.com/golang/glog"
 	"github.com/Microsoft/KubeGPU/scheduler/volumebinder"
+	"github.com/golang/glog"
 )
 
 type FailedPredicateMap map[string][]algorithm.PredicateFailureReason
@@ -107,12 +107,15 @@ type genericScheduler struct {
 
 // allocate onto device - rerun scheduling to set allocatefrom
 func (g *genericScheduler) allocateDevices(pod *v1.Pod, node *schedulercache.NodeInfo) error {
+	glog.V(4).Infof("Allocating devices for pod %s", pod.ObjectMeta.Name)
 	podInfo, nodeInfo, err := schedulercache.GetPodAndNode(pod, node, true)
 	if err != nil {
+		glog.Errorf("GetPodAndNode encouters error %v", err)
 		return err
 	}
 	err = device.DeviceScheduler.PodAllocate(podInfo, nodeInfo) // fill allocatefrom field
 	if err != nil {
+		glog.Errorf("PodAllocation encounters error %v", err)
 		return err
 	}
 	// convert to pod annotations
@@ -160,7 +163,8 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 
 	// When only one node after predicate, just use it.
 	if len(filteredNodes) == 1 {
-		return filteredNodes[0].Name, nil
+		err := g.allocateDevices(pod, g.cachedNodeInfoMap[filteredNodes[0].Name])
+		return filteredNodes[0].Name, err
 	}
 
 	metaPrioritiesInterface := g.priorityMetaProducer(pod, g.cachedNodeInfoMap)
