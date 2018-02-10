@@ -16,8 +16,11 @@ func GetPodAndNode(pod *v1.Pod, node *NodeInfo, invalidatePodAnnotations bool) (
 	nodeInfo := node.nodeEx
 	if nodeInfo == nil {
 		//return nil, nil, fmt.Errorf("node not found")
-		nodeInfo = kubeinterface.AnnotationToNodeInfo(node.Node.ObjectMeta.Annotations)
+		nodeInfo, err = kubeinterface.AnnotationToNodeInfo(node.Node().ObjectMeta.Annotations)
 		glog.V(3).Infof("Node Info not present yet, use annotations to recompute")
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod, invalidatePodAnnotations)
 	if err != nil {
