@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/Microsoft/KubeGPU/types"
+	"github.com/golang/glog"
 	kubev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
@@ -31,6 +31,9 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) err
 	if err != nil {
 		return err
 	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
 	meta.Annotations["node.alpha/DeviceInformation"] = string(info)
 	glog.V(4).Infof("NodeInfo: %+v converted to Annotations: %v", nodeInfo, meta.Annotations)
 	return nil
@@ -39,7 +42,7 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) err
 // AnnotationToNodeInfo is used by scheduler to convert annotation to node info
 func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 	nodeInfo := types.NewNodeInfo()
-	if (meta.Annotations != nil) {
+	if meta.Annotations != nil {
 		nodeInfoStr, ok := meta.Annotations["node.alpha/DeviceInformation"]
 		if ok {
 			err := json.Unmarshal([]byte(nodeInfoStr), nodeInfo)
@@ -80,7 +83,7 @@ func addContainersToPodInfo(containers map[string]types.ContainerInfo, conts []k
 func KubePodInfoToPodInfo(kubePodInfo *kubev1.Pod, invalidateExistingAnnotations bool) (*types.PodInfo, error) {
 	podInfo := types.NewPodInfo()
 	// unmarshal from annotations
-	if (kubePodInfo.ObjectMeta.Annotations != nil) {
+	if kubePodInfo.ObjectMeta.Annotations != nil {
 		podInfoStr, ok := kubePodInfo.ObjectMeta.Annotations["pod.alpha/DeviceInformation"]
 		if ok {
 			err := json.Unmarshal([]byte(podInfoStr), podInfo)
@@ -105,7 +108,10 @@ func PodInfoToAnnotation(meta *metav1.ObjectMeta, podInfo *types.PodInfo) error 
 	info, err := json.Marshal(podInfo)
 	if err != nil {
 		return err
-	}	
+	}
+	if meta.Annotations == nil {
+		meta.Annotations = make(map[string]string)
+	}
 	meta.Annotations["pod.alpha/DeviceInformation"] = string(info)
 	glog.V(4).Infof("PodInfo: %+v converted to Annotations: %v", podInfo, meta.Annotations)
 	return nil
@@ -180,4 +186,3 @@ func UpdatePodMetadata(c v1core.CoreV1Interface, newPod *kubev1.Pod) (*kubev1.Po
 	//return PatchPodMetadata(c, modifiedPod.ObjectMeta.Name, oldPod, modifiedPod)
 	return c.Pods(modifiedPod.ObjectMeta.Namespace).Update(modifiedPod)
 }
-
