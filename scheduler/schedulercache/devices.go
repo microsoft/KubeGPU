@@ -3,10 +3,10 @@ package schedulercache
 import (
 	"fmt"
 
-	"github.com/golang/glog"
 	"github.com/Microsoft/KubeGPU/device"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 	extypes "github.com/Microsoft/KubeGPU/types"
+	"github.com/golang/glog"
 
 	"k8s.io/api/core/v1"
 )
@@ -15,7 +15,9 @@ func GetPodAndNode(pod *v1.Pod, node *NodeInfo, invalidatePodAnnotations bool) (
 	// grab node information
 	nodeInfo := node.nodeEx
 	if nodeInfo == nil {
-		return nil, nil, fmt.Errorf("node not found")
+		//return nil, nil, fmt.Errorf("node not found")
+		nodeInfo = kubeinterface.AnnotationToNodeInfo(node.Node.ObjectMeta.Annotations)
+		glog.V(3).Infof("Node Info not present yet, use annotations to recompute")
 	}
 	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod, invalidatePodAnnotations)
 	if err != nil {
@@ -49,5 +51,3 @@ func ReturnPodDeviceResources(pod *v1.Pod, node *NodeInfo) error {
 	}
 	return device.DeviceScheduler.ReturnPodResources(podInfo, nodeInfo)
 }
-
-

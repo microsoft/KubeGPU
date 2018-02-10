@@ -14,7 +14,7 @@ func PodFitsDevices(pod *v1.Pod, meta algorithm.PredicateMetadata, node *schedul
 		glog.Errorf("GetPodAndNode encounters error %v", err)
 		return false, nil, err
 	}
-	glog.V(4).Infof("Attempting to schedule pod %+v on node %+v", podInfo, nodeInfo)
+	glog.V(4).Infof("Attempting to schedule devices for pod %+v on node %+v", podInfo, nodeInfo)
 	fits, reasons, _ := device.DeviceScheduler.PodFitsResources(podInfo, nodeInfo, false) // no need to fill allocatefrom yey
 	var failureReasons []algorithm.PredicateFailureReason
 	for _, reason := range reasons {

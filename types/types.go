@@ -87,6 +87,24 @@ func NewNodeInfo() *NodeInfo {
 		Used: make(ResourceList), Scorer: make(ResourceScorer)}
 }
 
+func (ni *NodeInfo) Clone() *NodeInfo {
+	newNode := NewNodeInfo()
+	newNode.Name = ni.Name
+	for key, val := range ni.Capacity {
+		newNode.Capacity[key] = val
+	}
+	for key, val := range ni.Allocatable {
+		newNode.Allocatable[key] = val
+	}
+	for key, val := range ni.Used {
+		newNode.Used[key] = val
+	}
+	for key, val := range ni.Scorer {
+		newNode.Scorer[key] = val
+	}
+	return newNode
+}
+
 func NewNodeInfoWithName(name string) *NodeInfo {
 	node := &NodeInfo{Capacity: make(ResourceList), Allocatable: make(ResourceList),
 		Used: make(ResourceList), Scorer: make(ResourceScorer)}

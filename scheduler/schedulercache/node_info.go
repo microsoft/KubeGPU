@@ -19,16 +19,16 @@ package schedulercache
 import (
 	"fmt"
 
-	"github.com/golang/glog"
-	extypes "github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
+	extypes "github.com/Microsoft/KubeGPU/types"
+	"github.com/golang/glog"
 
+	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	clientcache "k8s.io/client-go/tools/cache"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	priorityutil "github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities/util"
-	"github.com/Microsoft/KubeGPU/scheduler/util"
 )
 
 var emptyResource = Resource{}
@@ -36,7 +36,7 @@ var emptyResource = Resource{}
 // NodeInfo is node level aggregated information.
 type NodeInfo struct {
 	// Overall node information.
-	node *v1.Node
+	node   *v1.Node
 	nodeEx *extypes.NodeInfo
 
 	pods             []*v1.Pod
@@ -267,6 +267,7 @@ func (n *NodeInfo) SetAllocatableResource(allocatableResource *Resource) {
 func (n *NodeInfo) Clone() *NodeInfo {
 	clone := &NodeInfo{
 		node:                    n.node,
+		nodeEx:                  n.nodeEx.Clone(),
 		requestedResource:       n.requestedResource.Clone(),
 		nonzeroRequest:          n.nonzeroRequest.Clone(),
 		allocatableResource:     n.allocatableResource.Clone(),
