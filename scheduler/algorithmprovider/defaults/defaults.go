@@ -20,13 +20,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"k8s.io/kubernetes/pkg/features"
+	"github.com/Microsoft/KubeGPU/device"
 	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
 	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
-	"github.com/Microsoft/KubeGPU/device"
 	"github.com/Microsoft/KubeGPU/scheduler/algorithm/priorities"
 	"github.com/Microsoft/KubeGPU/scheduler/core"
 	"github.com/Microsoft/KubeGPU/scheduler/factory"
+	"k8s.io/kubernetes/pkg/features"
 
 	"github.com/golang/glog"
 )
@@ -83,6 +83,7 @@ func init() {
 	// Register device predicates
 	device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
 	factory.RegisterFitPredicate("PodFitsDevices", predicates.PodFitsDevices)
+	factory.InsertPredicateKeyToAlgorithmProviderMap("PodFitsDevices")
 
 	// Use equivalence class to speed up heavy predicates phase.
 	factory.RegisterGetEquivalencePodFunction(

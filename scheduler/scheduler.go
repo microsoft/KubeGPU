@@ -20,6 +20,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
+	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
+	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
+	"github.com/Microsoft/KubeGPU/scheduler/core"
+	"github.com/Microsoft/KubeGPU/scheduler/metrics"
+	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
+	"github.com/Microsoft/KubeGPU/scheduler/util"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -29,17 +37,9 @@ import (
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/features"
-	"github.com/Microsoft/KubeGPU/scheduler/algorithm"
-	"github.com/Microsoft/KubeGPU/scheduler/algorithm/predicates"
-	schedulerapi "github.com/Microsoft/KubeGPU/scheduler/api"
-	"github.com/Microsoft/KubeGPU/scheduler/core"
-	"github.com/Microsoft/KubeGPU/scheduler/metrics"
-	"github.com/Microsoft/KubeGPU/scheduler/schedulercache"
-	"github.com/Microsoft/KubeGPU/scheduler/util"
-	"github.com/Microsoft/KubeGPU/kubeinterface"
 
-	"github.com/golang/glog"
 	"github.com/Microsoft/KubeGPU/scheduler/volumebinder"
+	"github.com/golang/glog"
 )
 
 // Binder knows how to write a binding.
@@ -118,7 +118,7 @@ type Config struct {
 
 	// Kubeclient
 	Client clientset.Interface
-	
+
 	// NextPod should be a function that blocks until the next pod
 	// is available. We don't use a channel for this, because scheduling
 	// a pod may take some amount of time and we don't want pods to get
@@ -192,7 +192,7 @@ func (sched *Scheduler) Config() *Config {
 func (sched *Scheduler) schedule(pod *v1.Pod) (string, error) {
 	host, err := sched.config.Algorithm.Schedule(pod, sched.config.NodeLister)
 	if err != nil {
-		glog.V(1).Infof("Failed to schedule pod: %v/%v", pod.Namespace, pod.Name)
+		glog.V(1).Infof("Failed to schedule pod: %v/%v, error: %v", pod.Namespace, pod.Name, err)
 		pod = pod.DeepCopy()
 		sched.config.Error(pod, err)
 		sched.config.Recorder.Eventf(pod, v1.EventTypeWarning, "FailedScheduling", "%v", err)

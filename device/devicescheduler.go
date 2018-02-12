@@ -5,6 +5,7 @@ import (
 
 	"github.com/Microsoft/KubeGPU/gpu/nvidia"
 	"github.com/Microsoft/KubeGPU/types"
+	"github.com/golang/glog"
 )
 
 var DeviceSchedulerRegistry = map[string]reflect.Type{
@@ -24,6 +25,7 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	t := o.Interface().(types.DeviceScheduler)
 	ds.Devices = append(ds.Devices, t)
 	usingGroupScheduler := t.UsingGroupScheduler()
+	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
 	if usingGroupScheduler {
 		for i := range ds.RunGroupScheduler {
 			ds.RunGroupScheduler[i] = false
