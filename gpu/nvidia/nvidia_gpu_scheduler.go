@@ -4,8 +4,9 @@ import (
 	"fmt"
 
 	"github.com/Microsoft/KubeGPU/gpu"
-	"github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/grpalloc"
+	"github.com/Microsoft/KubeGPU/types"
+	"github.com/golang/glog"
 )
 
 type NvidiaGPUScheduler struct {
@@ -30,6 +31,7 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
 func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []types.PredicateFailureReason, float64) {
 	TranslateGPUResorces(nodeInfo, podInfo)
 	if runGrpScheduler {
+		glog.V(5).Infof("Running group scheduler on device requests %+v", podInfo)
 		return grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, fillAllocateFrom)
 	}
 	return true, nil, 0.0
@@ -67,4 +69,3 @@ func (ns *NvidiaGPUScheduler) GetName() string {
 func (ns *NvidiaGPUScheduler) UsingGroupScheduler() bool {
 	return true
 }
-
