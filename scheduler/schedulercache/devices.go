@@ -14,20 +14,20 @@ import (
 func GetPodAndNode(pod *v1.Pod, node *NodeInfo, invalidatePodAnnotations bool) (*extypes.PodInfo, *extypes.NodeInfo, error) {
 	// grab node information
 	nodeInfo := node.nodeEx
-	if nodeInfo == nil {
-		if node.Node() != nil {
-			//return nil, nil, fmt.Errorf("node not found")
-			nodeInfoGet, err := kubeinterface.AnnotationToNodeInfo(&node.Node().ObjectMeta)
-			glog.V(2).Infof("Node Info not present yet, use annotations to recompute")
-			if err != nil {
-				return nil, nil, err
-			}
-			nodeInfo = nodeInfoGet
-		} else {
-			nodeInfo = extypes.NewNodeInfo()
-			glog.V(2).Infof("Node Info not present yet, set to new struct")
-		}
-	}
+	// if nodeInfo == nil {
+	// 	if node.Node() != nil {
+	// 		//return nil, nil, fmt.Errorf("node not found")
+	// 		nodeInfoGet, err := kubeinterface.AnnotationToNodeInfo(&node.Node().ObjectMeta)
+	// 		glog.V(2).Infof("Node Info not present yet, use annotations to recompute")
+	// 		if err != nil {
+	// 			return nil, nil, err
+	// 		}
+	// 		nodeInfo = nodeInfoGet
+	// 	} else {
+	// 		nodeInfo = extypes.NewNodeInfo()
+	// 		glog.V(2).Infof("Node Info not present yet, set to new struct")
+	// 	}
+	// }
 	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod, invalidatePodAnnotations)
 	if err != nil {
 		return nil, nil, err

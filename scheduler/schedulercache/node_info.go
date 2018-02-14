@@ -455,7 +455,7 @@ func (n *NodeInfo) updateUsedPorts(pod *v1.Pod, used bool) {
 func (n *NodeInfo) SetNode(node *v1.Node) error {
 	n.node = node
 	// extract annotations from node info
-	exNodeInfo, err := kubeinterface.AnnotationToNodeInfo(&node.ObjectMeta)
+	exNodeInfo, err := kubeinterface.AnnotationToNodeInfo(&node.ObjectMeta, n.nodeEx)
 	if err != nil {
 		return err
 	}
