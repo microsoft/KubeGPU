@@ -337,6 +337,7 @@ func (n *NodeInfo) AddPod(pod *v1.Pod) {
 	if err != nil {
 		panic(fmt.Sprintf("Pod Info annotations are not correct and cannot be parsed %+v", pod))
 	}
+	glog.V(5).Infof("NodeInfo Exteded status = %v", n.nodeEx)
 
 	n.generation++
 }
