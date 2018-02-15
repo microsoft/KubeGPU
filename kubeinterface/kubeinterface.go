@@ -40,7 +40,7 @@ func NodeInfoToAnnotation(meta *metav1.ObjectMeta, nodeInfo *types.NodeInfo) err
 }
 
 // AnnotationToNodeInfo is used by scheduler to convert annotation to node info
-func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
+func AnnotationToNodeInfo(meta *metav1.ObjectMeta, existingNodeInfo *types.NodeInfo) (*types.NodeInfo, error) {
 	nodeInfo := types.NewNodeInfo()
 	if meta.Annotations != nil {
 		nodeInfoStr, ok := meta.Annotations["node.alpha/DeviceInformation"]
@@ -49,6 +49,11 @@ func AnnotationToNodeInfo(meta *metav1.ObjectMeta) (*types.NodeInfo, error) {
 			if err != nil {
 				return nil, err
 			}
+		}
+	}
+	if existingNodeInfo != nil && existingNodeInfo.Used != nil {
+		for usedKey, usedVal := range existingNodeInfo.Used {
+			nodeInfo.Used[usedKey] = usedVal
 		}
 	}
 	glog.V(4).Infof("Annotations: %v converted to NodeInfo: %+v", meta.Annotations, nodeInfo)
