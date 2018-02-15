@@ -487,6 +487,7 @@ func containerFitsGroupConstraints(contName string, contReq *types.ContainerInfo
 }
 
 func initNodeResource(n *types.NodeInfo) map[string]int64 {
+	glog.V(5).Infof("Used resource %v", n.Used)
 	nodeResource := make(map[string]int64)
 	for resKey, resVal := range n.Used {
 		nodeResource[string(resKey)] = resVal
@@ -614,6 +615,8 @@ func ComputePodGroupResources(n *types.NodeInfo, spec *types.PodInfo, bRemovePod
 			updatedUsedByNode[allocatedFrom] = newNodeUsed
 		}
 	}
+
+	glog.V(5).Infof("PodGroupResourcesComputes: podResources: %v updateUsedByNode: %v removePod: %v", podResources, updatedUsedByNode, bRemovePod)
 
 	return podResources, updatedUsedByNode
 }
