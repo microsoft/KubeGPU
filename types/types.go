@@ -159,3 +159,8 @@ const (
 	LeftOverScorer
 	EnumLeftOverScorer
 )
+
+type SortedTreeNode struct {
+	Val   int
+	Child []*SortedTreeNode
+}
