@@ -41,6 +41,7 @@ func TestTree(t *testing.T) {
 	AddResourcesToNodeTreeCache("A", nodeRes1)
 	AddResourcesToNodeTreeCache("B", nodeRes2)
 	AddResourcesToNodeTreeCache("C", nodeRes3)
+	AddResourcesToNodeTreeCache("D", types.ResourceList{"ABCD": 4})
 	for key, val := range nodeCacheMap {
 		fmt.Printf("Key\n")
 		types.PrintTreeNode(key)

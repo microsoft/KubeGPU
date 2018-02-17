@@ -127,6 +127,9 @@ func computeTreeScore(node *types.SortedTreeNode) float64 {
 }
 
 func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceList) {
+	if nodeResources == nil || len(nodeResources) == 0 {
+		return
+	}
 	// get tree representation of node gpu resources
 	node := addToNode(nil, nodeResources, "gpugrp", "cards", 1) // gpugrp1 and gpugrp0
 	// see if resource has changed
