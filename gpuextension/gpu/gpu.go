@@ -6,6 +6,7 @@ import (
 
 	"github.com/Microsoft/KubeGPU/gpuextension/grpalloc/resource"
 	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
 )
 
@@ -66,25 +67,32 @@ func addToNode(node *types.SortedTreeNode, nodeResources types.ResourceList, par
 	childMap := make(map[string]types.ResourceList)
 	re := regexp.MustCompile(`.*/` + partitionPrefix + strconv.Itoa(partitionLevel) + `/(.*?)/.*/` + suffix)
 	totalLen := 0
-	for resourceKey, resourceVal := range nodeResources {
+	sortedKeys := utils.SortedStringKeys(nodeResources)
+	for _, resourceKey := range sortedKeys {
+		resourceVal := nodeResources[types.ResourceName(resourceKey)]
 		matches := re.FindStringSubmatch(string(resourceKey))
 		if len(matches) >= 2 {
 			subGrpKey := matches[1]
 			if childMap[subGrpKey] == nil {
 				childMap[subGrpKey] = make(types.ResourceList)
 			}
-			childMap[subGrpKey][resourceKey] = resourceVal
+			childMap[subGrpKey][types.ResourceName(resourceKey)] = resourceVal
 			totalLen++
 		}
 	}
 	if node == nil {
 		node = &types.SortedTreeNode{Val: totalLen, Child: nil}
 	}
-	for _, subMaps := range childMap {
-		childNode := types.AddToSortedTreeNode(node, len(subMaps))
+	sortedKeys = utils.SortedStringKeys(childMap)
+	for _, subMapKey := range sortedKeys {
+		subMaps := childMap[subMapKey]
+		childNode := &types.SortedTreeNode{Val: len(subMaps), Child: nil}
 		if partitionLevel > 0 {
 			addToNode(childNode, subMaps, partitionPrefix, suffix, partitionLevel-1)
+			childNode.Score = computeTreeScore(childNode)
+			//fmt.Printf("Child score = %f\n", childNode.Score)
 		}
+		types.AddNodeToSortedTreeNode(node, childNode)
 	}
 	return node
 }
@@ -107,7 +115,7 @@ func removeNodeFromCache(nodeName string, nodeLocation *types.SortedTreeNode) {
 }
 
 func computeTreeScoreAtLevel(node *types.SortedTreeNode, level int, numChild int) float64 {
-	score := float64(node.Val * level * numChild)
+	score := float64(node.Val*level) / float64(numChild)
 	for _, child := range node.Child {
 		score += computeTreeScoreAtLevel(child, level+1, len(node.Child))
 	}
@@ -141,7 +149,7 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 	// if not found add new to cache
 	if !found {
 		treeScore := computeTreeScore(node)
-		treeInfo := treeInfo{ListOfNodes: make(map[string]bool), TreeScore: treeScore}
+		treeInfo := treeInfo{ListOfNodes: map[string]bool{nodeName: true}, TreeScore: treeScore}
 		nodeLocation = node
 		nodeCacheMap[node] = treeInfo
 	}
@@ -165,6 +173,7 @@ func findBestTreeInCache(num int) *types.SortedTreeNode {
 			}
 		}
 	}
+	//fmt.Printf("Choose best tree with score %f\n", bestScore)
 	return bestTree
 }
 
@@ -181,7 +190,10 @@ func assignGPUs(node *types.SortedTreeNode, prefix string, resourceGrp string, r
 		*numLeft = *numLeft - toTake
 	} else {
 		for i, child := range node.Child {
-			newPrefix := prefix + strconv.Itoa(level-1) + "/" + strconv.Itoa(i) + "/" + resourceGrp
+			newPrefix := prefix + strconv.Itoa(level-1) + "/" + strconv.Itoa(i)
+			if level-1 != 0 {
+				newPrefix += "/" + resourceGrp
+			}
 			resListChild := assignGPUs(child, newPrefix, resourceGrp, resource, suffix, level-1, numLeft)
 			for resKey, resVal := range resListChild {
 				resList[resKey] = resVal
@@ -204,7 +216,10 @@ func translateToTree(node *types.SortedTreeNode, cont *types.ContainerInfo) {
 	cont.DevRequests = newRequests
 	// append requests
 	numGPUs := int(cont.Requests[types.ResourceGPU])
-	assignGPUs(node, types.DeviceGroupPrefix+"/gpugrp", "gpugrp", "gpu", "cards", 2, &numGPUs)
+	resList := assignGPUs(node, types.DeviceGroupPrefix+"/gpugrp", "gpugrp", "gpu", "cards", 2, &numGPUs)
+	for resKey, resVal := range resList {
+		cont.DevRequests[resKey] = resVal
+	}
 }
 
 // find total GPUs needed
@@ -219,11 +234,19 @@ func ConvertToBestGPURequests(podInfo *types.PodInfo) {
 		}
 	}
 	bestTree := findBestTreeInCache(int(numGPUs))
+	//fmt.Printf("Best tree\n")
+	//types.PrintTreeNode(bestTree)
 	// now translate requests to best tree
-	for _, cont := range podInfo.RunningContainers {
-		translateToTree(bestTree, &cont)
+	contKeys := utils.SortedStringKeys(podInfo.RunningContainers)
+	for _, contKey := range contKeys {
+		contCopy := podInfo.RunningContainers[contKey]
+		translateToTree(bestTree, &contCopy)
+		podInfo.RunningContainers[contKey] = contCopy
 	}
-	for _, cont := range podInfo.InitContainers {
-		translateToTree(bestTree, &cont)
+	contKeys = utils.SortedStringKeys(podInfo.InitContainers)
+	for _, contKey := range contKeys {
+		contCopy := podInfo.InitContainers[contKey]
+		translateToTree(bestTree, &contCopy)
+		podInfo.InitContainers[contKey] = contCopy
 	}
 }

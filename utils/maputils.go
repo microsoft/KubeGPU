@@ -96,12 +96,12 @@ func GetMap(x interface{}, keys interface{}) interface{} {
 // 	keyx := mx.Keys()
 // 	keyy := my.Keys()
 // 	for _, key := range keyx {
-// 		vx := 
+// 		vx :=
 // 	}
 // }
 
 func CompareMapStringString(x map[string]string, y map[string]string) {
-	if (len(x) != len(y)) {
+	if len(x) != len(y) {
 		fmt.Printf("Lengths don't match %d %d\n", len(x), len(y))
 	}
 	for keyx, valx := range x {
@@ -117,5 +117,5 @@ func CompareMapStringString(x map[string]string, y map[string]string) {
 		if !ok {
 			fmt.Printf("Key %s does not exist in first second: %s\n", keyy, valy)
 		}
-	}	
+	}
 }

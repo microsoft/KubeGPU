@@ -162,5 +162,6 @@ const (
 
 type SortedTreeNode struct {
 	Val   int
+	Score float64 // used for tie breaker
 	Child []*SortedTreeNode
 }

@@ -2,12 +2,10 @@ package types
 
 import "fmt"
 
-// AddToSortedTreeNode adds value as child of node
-// values are in descending order
-func AddToSortedTreeNode(node *SortedTreeNode, valToAdd int) *SortedTreeNode {
+func findNodeInsertionPoint(node *SortedTreeNode, valToAdd int, score float64) int {
 	insertionPoint := len(node.Child) // if nothing found, insert at end
 	for index, childNode := range node.Child {
-		if childNode.Val < valToAdd {
+		if childNode.Val < valToAdd || ((childNode.Val == valToAdd) && (childNode.Score < score)) {
 			insertionPoint = index
 			break
 		}
@@ -16,8 +14,24 @@ func AddToSortedTreeNode(node *SortedTreeNode, valToAdd int) *SortedTreeNode {
 	for i := len(node.Child) - 1; i > insertionPoint; i-- {
 		node.Child[i] = node.Child[i-1]
 	}
-	node.Child[insertionPoint] = &SortedTreeNode{Val: valToAdd, Child: nil}
+	return insertionPoint
+}
+
+// AddToSortedTreeNode adds value as child of node
+// values are in descending order
+func AddToSortedTreeNodeWithScore(node *SortedTreeNode, valToAdd int, score float64) *SortedTreeNode {
+	insertionPoint := findNodeInsertionPoint(node, valToAdd, score)
+	node.Child[insertionPoint] = &SortedTreeNode{Val: valToAdd, Score: score, Child: nil}
 	return node.Child[insertionPoint]
+}
+
+func AddNodeToSortedTreeNode(node *SortedTreeNode, nodeToAdd *SortedTreeNode) {
+	insertionPoint := findNodeInsertionPoint(node, nodeToAdd.Val, nodeToAdd.Score)
+	node.Child[insertionPoint] = nodeToAdd
+}
+
+func AddToSortedTreeNode(node *SortedTreeNode, valToAdd int) *SortedTreeNode {
+	return AddToSortedTreeNodeWithScore(node, valToAdd, 0.0)
 }
 
 func printTreeNode(node *SortedTreeNode, level int) {
