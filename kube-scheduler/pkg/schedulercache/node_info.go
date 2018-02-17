@@ -19,6 +19,7 @@ package schedulercache
 import (
 	"fmt"
 
+	"github.com/Microsoft/KubeGPU/gpuextension/gpu"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 	extypes "github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
@@ -460,6 +461,7 @@ func (n *NodeInfo) SetNode(node *v1.Node) error {
 		return err
 	}
 	n.nodeEx = exNodeInfo
+	gpu.AddResourcesToNodeTreeCache(node.ObjectMeta.Name, exNodeInfo.Allocatable)
 
 	n.allocatableResource = NewResource(node.Status.Allocatable)
 
@@ -485,6 +487,7 @@ func (n *NodeInfo) RemoveNode(node *v1.Node) error {
 	// this is because notifications about pods are delivered in a different watch,
 	// and thus can potentially be observed later, even though they happened before
 	// node removal. This is handled correctly in cache.go file.
+	gpu.RemoveNodeFromNodeTreeCache(node.ObjectMeta.Name)
 	n.node = nil
 	n.nodeEx = nil
 	n.allocatableResource = &Resource{}

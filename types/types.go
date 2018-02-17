@@ -3,6 +3,8 @@ package types
 const (
 	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
 	ResourceGPU ResourceName = "alpha.gpu/numgpu"
+	// auto topology generation "0" means default (everything in its own group)
+	GPUTopologyGeneration ResourceName = "alpha.gpu/gpu-generate-topology"
 	// Namespace prefix for group resources.
 	DeviceGroupPrefix = "alpha/grpresource"
 )
@@ -159,3 +161,9 @@ const (
 	LeftOverScorer
 	EnumLeftOverScorer
 )
+
+type SortedTreeNode struct {
+	Val   int
+	Score float64 // used for tie breaker
+	Child []*SortedTreeNode
+}

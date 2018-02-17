@@ -18,13 +18,29 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 }
 
 func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
+	autoGenerateTopology := 0 // zero implies no topology desired, or it is explictly given
 	for contName, contCopy := range podInfo.InitContainers {
+		if contCopy.Requests[types.GPUTopologyGeneration] != int64(0) {
+			autoGenerateTopology = int(contCopy.Requests[types.GPUTopologyGeneration])
+			break
+		}
 		contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 		podInfo.InitContainers[contName] = contCopy
 	}
-	for contName, contCopy := range podInfo.RunningContainers {
-		contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
-		podInfo.RunningContainers[contName] = contCopy
+	if autoGenerateTopology == 0 {
+		for contName, contCopy := range podInfo.RunningContainers {
+			if contCopy.Requests[types.GPUTopologyGeneration] != int64(0) {
+				autoGenerateTopology = int(contCopy.Requests[types.GPUTopologyGeneration])
+				break
+			}
+			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+			podInfo.RunningContainers[contName] = contCopy
+		}
+	}
+	if autoGenerateTopology == 0 {
+		// nothing
+	} else if autoGenerateTopology == 1 {
+		gpu.ConvertToBestGPURequests(podInfo)
 	}
 }
 
