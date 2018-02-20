@@ -55,12 +55,13 @@ func FillContainerInfo(fill *ContainerInfo) *ContainerInfo {
 type PodInfo struct {
 	Name              string                   `json:"podname,omitempty"`
 	NodeName          string                   `json:"nodename,omitempty"` // the node for which DevRequests and AllocateFrom on ContainerInfo are valid, the node for which PodInfo has been customized
+	Requests          ResourceList             `json:"requests,omitempty"` // pod level requests
 	InitContainers    map[string]ContainerInfo `json:"initcontainer,omitempty"`
 	RunningContainers map[string]ContainerInfo `json:"runningcontainer,omitempty"`
 }
 
 func NewPodInfo() *PodInfo {
-	return &PodInfo{InitContainers: make(map[string]ContainerInfo), RunningContainers: make(map[string]ContainerInfo)}
+	return &PodInfo{Requests: make(ResourceList), InitContainers: make(map[string]ContainerInfo), RunningContainers: make(map[string]ContainerInfo)}
 }
 
 func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {

@@ -17,35 +17,30 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 	return gpu.TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 
-func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) {
-	autoGenerateTopology := 0 // zero implies no topology desired, or it is explictly given
-	for contName, contCopy := range podInfo.InitContainers {
-		if contCopy.Requests[types.GPUTopologyGeneration] != int64(0) {
-			autoGenerateTopology = int(contCopy.Requests[types.GPUTopologyGeneration])
-			break
+func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
+	if podInfo.Requests[types.GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
+		for contName, contCopy := range podInfo.InitContainers {
+			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+			podInfo.InitContainers[contName] = contCopy
 		}
-		contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
-		podInfo.InitContainers[contName] = contCopy
-	}
-	if autoGenerateTopology == 0 {
 		for contName, contCopy := range podInfo.RunningContainers {
-			if contCopy.Requests[types.GPUTopologyGeneration] != int64(0) {
-				autoGenerateTopology = int(contCopy.Requests[types.GPUTopologyGeneration])
-				break
-			}
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.RunningContainers[contName] = contCopy
 		}
-	}
-	if autoGenerateTopology == 0 {
-		// nothing
-	} else if autoGenerateTopology == 1 {
+		return nil
+	} else if podInfo.Requests[types.GPUTopologyGeneration] == int64(1) {
 		gpu.ConvertToBestGPURequests(podInfo)
+		return nil
+	} else {
+		return fmt.Errorf("Invalid topology generation request")
 	}
 }
 
 func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []types.PredicateFailureReason, float64) {
-	TranslateGPUResorces(nodeInfo, podInfo)
+	err := TranslateGPUResorces(nodeInfo, podInfo)
+	if err != nil {
+		panic("Unexpected error")
+	}
 	if runGrpScheduler {
 		glog.V(5).Infof("Running group scheduler on device requests %+v", podInfo)
 		return grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, fillAllocateFrom)
@@ -54,7 +49,10 @@ func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *t
 }
 
 func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
-	TranslateGPUResorces(nodeInfo, podInfo)
+	err := TranslateGPUResorces(nodeInfo, podInfo)
+	if err != nil {
+		return err
+	}
 	if runGrpScheduler {
 		fits, reasons, _ := grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, true)
 		if !fits {
