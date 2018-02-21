@@ -18,6 +18,9 @@ type DevicesManager struct {
 	Devices     []types.Device
 }
 
+// essentially a static variable
+var DeviceManager = &DevicesManager{}
+
 // AddDevice adds a device to the manager
 func (d *DevicesManager) AddDevice(device types.Device) {
 	d.Devices = append(d.Devices, device)

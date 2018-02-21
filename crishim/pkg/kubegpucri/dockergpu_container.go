@@ -138,24 +138,16 @@ func GetHostName(f *options.KubeletFlags) (string, string, error) {
 }
 
 func StartDeviceManager(s *options.KubeletServer, done chan bool) (*kubeadvertise.DeviceAdvertiser, error) {
-	// create a device manager using nvidiagpu as the only device
-	dm := &device.DevicesManager{}
-	if err := dm.CreateAndAddDevice("nvidiagpu"); err != nil {
-		return nil, err
-	}
-	// start the device manager
-	dm.Start()
-
 	_, nodeName, err := GetHostName(&s.KubeletFlags) // nodeName is name of machine
 	if err != nil {
 		return nil, err
 	}
-	da, err := kubeadvertise.NewDeviceAdvertiser(s, dm, nodeName)
+	da, err := kubeadvertise.NewDeviceAdvertiser(s, device.DeviceManager, nodeName)
 	if err != nil {
 		return nil, err
 	}
 	// start the advertisement loop
-	go da.AdvertiseLoop(20000, 1000, done)
+	go da.AdvertiseLoop(20000, 5000, done)
 
 	return da, nil
 }
