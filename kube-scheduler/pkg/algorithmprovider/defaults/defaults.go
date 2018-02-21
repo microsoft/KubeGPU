@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
@@ -81,7 +80,6 @@ func init() {
 	// Fit is determined by node selector query.
 	factory.RegisterFitPredicate("MatchNodeSelector", predicates.PodMatchNodeSelector)
 	// Register device predicates
-	device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
 	factory.RegisterFitPredicate("PodFitsDevices", predicates.PodFitsDevices)
 	factory.InsertPredicateKeyToAlgorithmProviderMap("PodFitsDevices")
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/pflag"
 
+	"github.com/Microsoft/KubeGPU/gpuextension/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
@@ -30,6 +31,9 @@ import (
 )
 
 func main() {
+	// add the devices
+	device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
+
 	command := app.NewSchedulerCommand()
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling

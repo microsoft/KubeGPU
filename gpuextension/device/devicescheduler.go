@@ -20,11 +20,8 @@ type DevicesScheduler struct {
 // essentially a static variable
 var DeviceScheduler = &DevicesScheduler{}
 
-func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
-	o := reflect.New(DeviceSchedulerRegistry[device])
-	t := o.Interface().(types.DeviceScheduler)
-	ds.Devices = append(ds.Devices, t)
-	usingGroupScheduler := t.UsingGroupScheduler()
+func (ds *DevicesScheduler) AddDevice(device types.DeviceScheduler) {
+	usingGroupScheduler := device.UsingGroupScheduler()
 	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
 	if usingGroupScheduler {
 		for i := range ds.RunGroupScheduler {
@@ -34,6 +31,13 @@ func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
 	} else {
 		ds.RunGroupScheduler = append(ds.RunGroupScheduler, false)
 	}
+}
+
+func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
+	o := reflect.New(DeviceSchedulerRegistry[device])
+	t := o.Interface().(types.DeviceScheduler)
+	ds.Devices = append(ds.Devices, t)
+	ds.AddDevice(t)
 	return nil
 }
 
