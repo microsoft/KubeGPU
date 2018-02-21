@@ -40,13 +40,13 @@ using shells scripts and Kubernetes pods.
 
 The following additional setup is needed in order to utilize the custom GPU scheduler in a DLWorkspace deployment. Please launch these
 steps prior to running the rest of DLWorkspace deployment.
-1. **Modify the configuration file**:  The following lines need to be added to the configuration file prior to launching (config.yaml):  
+1. **Modify the configuration file**:  The following lines need to be added to the configuration file (config.yaml) prior to launching setup:  
 \# For building Kubernetes docker - specifies the code to use  
 k8s-gitrepo : "kubernetes/kubernetes"  
 k8s-gitbranch : "v1.9.1"  
 k8scri-gitrepo : "Microsoft/KubeGPU"  
 k8scri-gitbranch : "master"  
-  
+  \
 \# For deploying custom Kubernetes  
 kube\_custom\_cri : True  
 kube\_custom\_scheduler: True  
