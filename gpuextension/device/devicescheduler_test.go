@@ -323,8 +323,8 @@ func testPodAllocs(t *testing.T, ds *DevicesScheduler, pod *types.PodInfo, podEx
 
 func TestGrpAllocate1(t *testing.T) {
 	// create a translator & translate
-	ds := &DevicesScheduler{}
-	ds.CreateAndAddDeviceScheduler("nvidiagpu")
+	DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
+	ds := DeviceScheduler
 	//gpusched := &nvidia.NvidiaGPUScheduler{}
 	//ds.Devices = append(ds.Devices, gpusched)
 
