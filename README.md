@@ -51,8 +51,8 @@ k8scri-gitbranch : "master"
 kube\_custom\_cri : True  
 kube\_custom\_scheduler: True  
   
-2. **Build the custom Kubernetes components**: Prior to launching rest of DLWorkspace deployment, build custom kubernetes components using:  
-.\deploy.py build_kube
+2. **Build the custom Kubernetes components**: Prior to launching rest of DLWorkspace deployment, build custom kubernetes components using the following:  
+./deploy.py build_kube
 
 Please note the cluster status and number of GPUs being used by a job will show up as zero for now with the custom scheduler.  This is being fixed soon.
 
