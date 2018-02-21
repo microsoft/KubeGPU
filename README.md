@@ -28,7 +28,7 @@ on the chosen node. Finally, the chosen devices are written as pod annotations t
 Clone this repo to $GOPATH/src/github.com/Microsoft/KubeGPU to get it to compile. The easiest way to compile the binaries is to use
 the provided Makefile. The binaries will be available in the _output folder. 
 The scheduler can be be used directly in place of the default scheduler and supports all the same options.
-The CRI shim requires the way in which the kubelet is launched. First the CRI shim should be launched, followed by launching of the kubelet.
+The CRI shim changes the way in which the kubelet is launched. First the CRI shim should be launched, followed by launching of the kubelet.
 The argument "--container-runtime=remote" should be used in place of the default "--container-runtime=docker".
 The rest of the arguments should be identical to those being used before.
 
@@ -41,12 +41,6 @@ using shells scripts and Kubernetes pods.
 The following additional setup is needed in order to utilize the custom GPU scheduler in a DLWorkspace deployment. Please launch these
 steps prior to running the rest of DLWorkspace deployment.
 1. **Modify the configuration file**:  The following lines need to be added to the configuration file (config.yaml) prior to launching setup:  
-\# For building Kubernetes docker - specifies the code to use  
-k8s-gitrepo : "kubernetes/kubernetes"  
-k8s-gitbranch : "v1.9.1"  
-k8scri-gitrepo : "Microsoft/KubeGPU"  
-k8scri-gitbranch : "master"  
-  \
 \# For deploying custom Kubernetes  
 kube\_custom\_cri : True  
 kube\_custom\_scheduler: True  
@@ -54,7 +48,16 @@ kube\_custom\_scheduler: True
 2. **Build the custom Kubernetes components**: Prior to launching rest of DLWorkspace deployment, build custom kubernetes components using the following:  
 ./deploy.py build_kube
 
-Please note the cluster status and number of GPUs being used by a job will show up as zero for now with the custom scheduler.  This is being fixed soon.
+# Adding other devices
+
+Adding support for other devices is fairly easy. This project can be vendorized into your own go project. Then you can build your own binaries similar to
+crishim/cmd/crishim.go and kube-scheduler/cmd/scheduler.go.
+Your device needs to to support the Device and DeviceScheduler interface in types/types.go. After creation, you can use "device.DeviceScheduler.AddDevice" prior
+to starting the scheduler and "device.DeviceManager.AddDevice" prior to starting the crishim.
+
+# Design
+
+More information about the current design and reasons for doing it in this way is provided [here](docs/KubeGPU.md)
 
 # Contributing
 
