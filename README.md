@@ -57,7 +57,7 @@ to starting the scheduler and "device.DeviceManager.AddDevice" prior to starting
 
 # Design
 
-More information about the current design and reasons for doing it in this way is provided [here](docs/KubeGPU.md)
+More information about the current design and reasons for doing it in this way is provided [here.](docs/kubegpu.md)
 
 # Contributing
 
