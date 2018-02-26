@@ -231,7 +231,7 @@ func ConvertToBestGPURequests(podInfo *types.PodInfo) {
 	for _, cont := range podInfo.RunningContainers {
 		numGPUs += cont.Requests[types.ResourceGPU]
 	}
-	for _, cont := range podInfo.RunningContainers {
+	for _, cont := range podInfo.InitContainers {
 		if cont.Requests[types.ResourceGPU] > numGPUs {
 			numGPUs = cont.Requests[types.ResourceGPU]
 		}
