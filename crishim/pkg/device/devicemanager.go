@@ -23,9 +23,7 @@ func (d *DevicesManager) AddDevice(device types.Device) {
 	d.Operational = append(d.Operational, false)
 }
 
-func (d *DevicesManager) CreateAndAddDevice(device string) error {
-	o := reflect.New(DeviceRegistry[device])
-	t := o.Interface().(types.Device)
+func (d *DevicesManager) CreateAddDevice(t types.Device) error {
 	err := t.New()
 	if err != nil {
 		return err
@@ -33,6 +31,16 @@ func (d *DevicesManager) CreateAndAddDevice(device string) error {
 	d.AddDevice(t)
 	return nil
 }
+
+func (d *DevicesManager) CreateAndAddDeviceType(devType Type) error {
+	o := reflect.New(devType)
+	t := o.Interface().(types.Device)
+	return d.CreateAddDevice(t)
+}
+
+// func (d *DevicesManager) CreateAndAddDevice(deviceName string) error {
+// 	return d.CreateAndAddDeviceType(DeviceRegistry[device])
+// }
 
 func (d *DevicesManager) AddDevicesFromPlugins(pluginNames string[]) {
 	for _, pluginName := range plugins {
