@@ -1,10 +1,10 @@
-package nvidia
+package gpuschedulerplugin
 
 import (
 	"fmt"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/gpu"
-	"github.com/Microsoft/KubeGPU/gpuextension/grpalloc"
+	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc"
+	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 )
@@ -14,11 +14,11 @@ type NvidiaGPUScheduler struct {
 
 func TranslateGPUContainerResources(alloc types.ResourceList, cont types.ContainerInfo) types.ResourceList {
 	numGPUs := cont.Requests[types.ResourceGPU] // get from annotation, don't use default KubeRequests as this must be set to zero
-	return gpu.TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
+	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 
 func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
-	if podInfo.Requests[types.GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
+	if podInfo.Requests[sctypes.GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
 		for contName, contCopy := range podInfo.InitContainers {
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.InitContainers[contName] = contCopy
@@ -28,15 +28,15 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) erro
 			podInfo.RunningContainers[contName] = contCopy
 		}
 		return nil
-	} else if podInfo.Requests[types.GPUTopologyGeneration] == int64(1) {
-		gpu.ConvertToBestGPURequests(podInfo)
+	} else if podInfo.Requests[sctypes.GPUTopologyGeneration] == int64(1) {
+		ConvertToBestGPURequests(podInfo)
 		return nil
 	} else {
 		return fmt.Errorf("Invalid topology generation request")
 	}
 }
 
-func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []types.PredicateFailureReason, float64) {
+func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []sctypes.PredicateFailureReason, float64) {
 	err := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
 		panic("Unexpected error")

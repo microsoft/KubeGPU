@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/grpalloc/resource"
+	devtypes "github.com/Microsoft/KubeGPU/crishim/pkg/types"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 
@@ -63,7 +63,7 @@ type NvidiaGPUManager struct {
 
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
 // TODO: Migrate to use pod level cgroups and make it generic to all runtimes.
-func NewNvidiaGPUManager() (types.Device, error) {
+func NewNvidiaGPUManager() (devtypes.Device, error) {
 	ngm := &NvidiaGPUManager{}
 	return ngm, ngm.New()
 }
@@ -208,17 +208,17 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	nodeInfo.Allocatable[types.ResourceGPU] = int64(len(ngm.gpus))
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
-			resource.AddGroupResource(nodeInfo.Capacity, val.Name+"/memory", val.Memory.Global)
-			resource.AddGroupResource(nodeInfo.Allocatable, val.Name+"/memory", val.Memory.Global)
-			resource.AddGroupResource(nodeInfo.Capacity, val.Name+"/cards", int64(1))
-			resource.AddGroupResource(nodeInfo.Allocatable, val.Name+"/cards", int64(1))
+			types.AddGroupResource(nodeInfo.Capacity, val.Name+"/memory", val.Memory.Global)
+			types.AddGroupResource(nodeInfo.Allocatable, val.Name+"/memory", val.Memory.Global)
+			types.AddGroupResource(nodeInfo.Capacity, val.Name+"/cards", int64(1))
+			types.AddGroupResource(nodeInfo.Allocatable, val.Name+"/cards", int64(1))
 		}
 	}
 	return nil
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]types.Volume, []string, error) {
+func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Volume, []string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""
@@ -250,7 +250,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 	body, err := np.GetGPUCommandLine(devices)
 	glog.V(3).Infof("PodName: %v Command line from plugin: %v", pod.Name, string(body))
 	if err != nil {
-		return []types.Volume{}, nil, err
+		return []devtypes.Volume{}, nil, err
 	}
 
 	re = regexp.MustCompile(`(.*?)=(.*)`)
@@ -276,5 +276,5 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 		}
 	}
 
-	return []types.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil
+	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil
 }

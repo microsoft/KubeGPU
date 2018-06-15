@@ -1,26 +1,25 @@
 package device
 
 import (
-	"reflect"
-
-	"github.com/Microsoft/KubeGPU/gpuextension/gpu/nvidia"
+	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 )
 
-var DeviceSchedulerRegistry = map[string]reflect.Type{
-	(&nvidia.NvidiaGPUScheduler{}).GetName(): reflect.TypeOf(nvidia.NvidiaGPUScheduler{}),
-}
+// var DeviceSchedulerRegistry = map[string]reflect.Type{
+// 	(&nvidia.NvidiaGPUScheduler{}).GetName(): reflect.TypeOf(nvidia.NvidiaGPUScheduler{}),
+// }
 
 type DevicesScheduler struct {
-	Devices           []types.DeviceScheduler
+	Devices           []sctypes.DeviceScheduler
 	RunGroupScheduler []bool
 }
 
 // essentially a static variable
 var DeviceScheduler = &DevicesScheduler{}
 
-func (ds *DevicesScheduler) AddDevice(device types.DeviceScheduler) {
+func (ds *DevicesScheduler) AddDevice(device sctypes.DeviceScheduler) {
+	ds.Devices = append(ds.Devices, device)
 	usingGroupScheduler := device.UsingGroupScheduler()
 	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
 	if usingGroupScheduler {
@@ -33,19 +32,18 @@ func (ds *DevicesScheduler) AddDevice(device types.DeviceScheduler) {
 	}
 }
 
-func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
-	o := reflect.New(DeviceSchedulerRegistry[device])
-	t := o.Interface().(types.DeviceScheduler)
-	ds.Devices = append(ds.Devices, t)
-	ds.AddDevice(t)
-	return nil
-}
+// func (ds *DevicesScheduler) CreateAndAddDeviceScheduler(device string) error {
+// 	o := reflect.New(DeviceSchedulerRegistry[device])
+// 	t := o.Interface().(types.DeviceScheduler)
+// 	ds.AddDevice(t)
+// 	return nil
+// }
 
 // predicate
-func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo, fillAllocateFrom bool) (bool, []types.PredicateFailureReason, float64) {
+func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *types.NodeInfo, fillAllocateFrom bool) (bool, []sctypes.PredicateFailureReason, float64) {
 	totalScore := 0.0
 	totalFit := true
-	var totalReasons []types.PredicateFailureReason
+	var totalReasons []sctypes.PredicateFailureReason
 	for index, d := range ds.Devices {
 		fit, reasons, score := d.PodFitsDevice(nodeInfo, podInfo, fillAllocateFrom, ds.RunGroupScheduler[index])
 		// early terminate? - but score will not be correct then

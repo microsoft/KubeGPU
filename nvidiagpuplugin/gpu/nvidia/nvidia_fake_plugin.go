@@ -3,7 +3,7 @@ package nvidia
 import (
 	"encoding/json"
 
-	"github.com/Microsoft/KubeGPU/types"
+	"github.com/Microsoft/KubeGPU/crishim/pkg/types"
 )
 
 type NvidiaFakePlugin struct {

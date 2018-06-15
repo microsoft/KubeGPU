@@ -2,15 +2,11 @@ package device
 
 import (
 	"reflect"
+	"plugin"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/gpu/nvidia"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 )
-
-var DeviceRegistry = map[string]reflect.Type{
-	(&nvidia.NvidiaGPUManager{}).GetName(): reflect.TypeOf(nvidia.NvidiaGPUManager{}),
-}
 
 // DeviceManager manages multiple devices
 type DevicesManager struct {
@@ -36,6 +32,32 @@ func (d *DevicesManager) CreateAndAddDevice(device string) error {
 	}
 	d.AddDevice(t)
 	return nil
+}
+
+func (d *DevicesManager) AddDevicesFromPlugins(pluginNames string[]) {
+	for _, pluginName := range plugins {
+		var device types.Device
+		device = nil
+		p, err := plugin.Open(pluginName)
+		if err == nil {
+			f, err := p.Lookup("CreateDevicePlugin")
+			if err == nil {
+				err, d := f.(func() (error, types.device))()
+				if err == nil {
+					device = d
+					err = device.New()
+					if err != nil {
+						device = nil
+					}
+				}
+			}
+		}
+		if device == nil {
+			glog.Errorf("Unable to add plugin %s", pluginName)
+		} else {
+			d.AddDevice(device)
+		}
+	}
 }
 
 // Start starts all devices in manager
