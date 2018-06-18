@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	devtypes "github.com/Microsoft/KubeGPU/crishim/pkg/types"
 	"github.com/Microsoft/KubeGPU/types"
 
 	"strconv"
@@ -69,7 +70,7 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 	}
 }
 
-func testAlloc(t *testing.T, ngm types.Device, info *gpusInfo, alloc map[int]int) {
+func testAlloc(t *testing.T, ngm devtypes.Device, info *gpusInfo, alloc map[int]int) {
 	container := types.ContainerInfo{}
 	container.AllocateFrom = make(types.ResourceLocation)
 	for from, to := range alloc {
