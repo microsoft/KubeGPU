@@ -1,7 +1,7 @@
 package predicates
 
 import (
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
 	"github.com/golang/glog"

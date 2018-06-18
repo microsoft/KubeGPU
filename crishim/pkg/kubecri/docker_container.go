@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 
 	"github.com/Microsoft/KubeGPU/crishim/pkg/kubeadvertise"

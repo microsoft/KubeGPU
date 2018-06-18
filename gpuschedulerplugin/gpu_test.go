@@ -1,10 +1,11 @@
-package gpu
+package gpuschedulerplugin
 
 import (
 	"fmt"
 	"reflect"
 	"testing"
 
+	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
 	"github.com/Microsoft/KubeGPU/types"
 )
 
@@ -32,11 +33,11 @@ func TestTree(t *testing.T) {
 	nodeRes3 := nodeRes1
 	node := addToNode(nil, nodeRes1, "gpugrp", "cards", 1)
 	nodeScore := computeTreeScore(node)
-	types.PrintTreeNode(node)
+	sctypes.PrintTreeNode(node)
 	fmt.Printf("TreeScore: %v\n", nodeScore)
 	node = addToNode(nil, nodeRes2, "gpugrp", "cards", 1)
 	nodeScore = computeTreeScore(node)
-	types.PrintTreeNode(node)
+	sctypes.PrintTreeNode(node)
 	fmt.Printf("TreeScore: %v\n", nodeScore)
 	AddResourcesToNodeTreeCache("A", nodeRes1)
 	AddResourcesToNodeTreeCache("B", nodeRes2)
@@ -44,14 +45,14 @@ func TestTree(t *testing.T) {
 	AddResourcesToNodeTreeCache("D", types.ResourceList{"ABCD": 4})
 	for key, val := range nodeCacheMap {
 		fmt.Printf("Key\n")
-		types.PrintTreeNode(key)
+		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
 	}
 	RemoveNodeFromNodeTreeCache("A")
 	fmt.Printf("After removal\n")
 	for key, val := range nodeCacheMap {
 		fmt.Printf("Key\n")
-		types.PrintTreeNode(key)
+		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
 	}
 	//fmt.Printf("Add back\n")
@@ -88,7 +89,7 @@ func TestTree(t *testing.T) {
 	fmt.Printf("Now should have only one\n")
 	for key, val := range nodeCacheMap {
 		fmt.Printf("Key\n")
-		types.PrintTreeNode(key)
+		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
 	}
 	fmt.Printf("LocationMap :%v\n", nodeLocationMap)

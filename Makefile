@@ -1,7 +1,7 @@
 BUILD_DIR ?= _output
 
 .PHONY: all
-all: clean kube-scheduler crishim
+all: clean kube-scheduler crishim nvidiagpuplugin gpuschedulerplugin
 
 .PHONY: kube-scheduler
 kube-scheduler:
@@ -11,6 +11,13 @@ kube-scheduler:
 crishim:
 	go build -o ${BUILD_DIR}/crishim ./crishim/cmd/crishim.go
 
+.PHONY: nvidiagpuplugin
+nvidiagpuplugin:
+	go build --buildmode=plugin -o ${BUILD_DIR}/nvidiagpuplugin ./nvidiagpuplugin/plugin/nvidiagpu.go
+
+.PHONY: gpuschedulerplugin
+gpuschedulerplugin:
+	go build --buildmode=plugin -o ${BUILD_DIR}/gpuschedulerplugin ./gpuschedulerplugin/plugin/gpuscheduler.go
 
 .PHONY: clean
 clean:

@@ -3,7 +3,7 @@ package schedulercache
 import (
 	"fmt"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 	extypes "github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
