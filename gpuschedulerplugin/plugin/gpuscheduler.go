@@ -5,7 +5,7 @@ import (
 	"github.com/Microsoft/KubeGPU/gpuschedulerplugin"
 )
 
-func CreateDeviceScheduler() (error, types.DeviceScheduler) {
+func CreateDeviceSchedulerPlugin() (error, types.DeviceScheduler) {
 	gpuScheduler := &gpuschedulerplugin.NvidiaGPUScheduler{}
 	return nil, gpuScheduler
 }

@@ -70,12 +70,12 @@ func RunApp() {
 
 	done := make(chan bool)
 	// start the device manager
-	da, err := kubegpucri.StartDeviceManager(kubeletServer, done)
+	da, err := kubecri.StartDeviceManager(kubeletServer, done)
 	if err != nil {
 		Die(err)
 	}
 	// run the gpushim
-	if err := kubegpucri.DockerGPUInit(kubeletFlags, kubeletConfig, da.KubeClient, da.DevMgr); err != nil {
+	if err := kubecri.DockerGPUInit(kubeletFlags, kubeletConfig, da.KubeClient, da.DevMgr); err != nil {
 		Die(err)
 	}
 	<-done // wait forever
