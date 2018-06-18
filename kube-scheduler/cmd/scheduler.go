@@ -22,7 +22,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
 	utilflag "k8s.io/apiserver/pkg/util/flag"
 	"k8s.io/apiserver/pkg/util/logs"
@@ -32,7 +32,9 @@ import (
 
 func main() {
 	// add the devices
-	device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
+	deviceSchedulerPlugins := []string{"gpuschedulerplugin.so"}
+	//device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
+	device.DeviceScheduler.AddDevicesSchedulerFromPlugins(deviceSchedulerPlugins)
 
 	command := app.NewSchedulerCommand()
 

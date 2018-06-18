@@ -1,6 +1,8 @@
 package device
 
 import (
+	"plugin"
+
 	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
@@ -29,6 +31,48 @@ func (ds *DevicesScheduler) AddDevice(device sctypes.DeviceScheduler) {
 		ds.RunGroupScheduler = append(ds.RunGroupScheduler, true)
 	} else {
 		ds.RunGroupScheduler = append(ds.RunGroupScheduler, false)
+	}
+}
+
+func (ds *DevicesScheduler) AddDevicesSchedulerFromPlugins(pluginNames []string) {
+	for _, pluginName := range pluginNames {
+		var device sctypes.DeviceScheduler
+		device = nil
+		p, err := plugin.Open(pluginName)
+		if err == nil {
+			f, err := p.Lookup("CreateDeviceSchedulerPlugin")
+			if err == nil {
+				err, d := f.(func() (error, sctypes.DeviceScheduler))()
+				if err == nil {
+					device = d
+				} else {
+					glog.Errorf("Schduler Plugin %s creation fails with error %v", pluginName, err)
+				}
+			} else {
+				glog.Errorf("Scheudler Plugin %s function lookup fails with error %v", pluginName, err)
+			}
+		} else {
+			glog.Errorf("Scheduler plugin %s open fails with error %v", pluginName, err)
+		}
+		if device == nil {
+			glog.Errorf("Unable to add scheduler plugin %s", pluginName)
+		} else {
+			ds.AddDevice(device)
+		}
+	}
+}
+
+// AddNode adds node reources to devices scheduler
+func (ds *DevicesScheduler) AddNode(nodeName string, nodeInfo *types.NodeInfo) {
+	for _, d := range ds.Devices {
+		d.AddNode(nodeName, nodeInfo)
+	}
+}
+
+// RemoveNode removes node resources
+func (ds *DevicesScheduler) RemoveNode(nodeName string) {
+	for _, d := range ds.Devices {
+		d.RemoveNode(nodeName)
 	}
 }
 

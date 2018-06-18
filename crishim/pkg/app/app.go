@@ -13,7 +13,7 @@ import (
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/version/verflag"
 
-	"github.com/Microsoft/KubeGPU/crishim/pkg/kubegpucri"
+	"github.com/Microsoft/KubeGPU/crishim/pkg/kubecri"
 )
 
 // ====================

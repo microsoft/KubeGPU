@@ -16,6 +16,10 @@ type PredicateFailureReason interface {
 
 // used by scheduler
 type DeviceScheduler interface {
+	// add node and resources
+	AddNode(nodeName string, nodeInfo *types.NodeInfo)
+	// remove node
+	RemoveNode(nodeName string)
 	// see if pod fits on node & return device score
 	PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []PredicateFailureReason, float64)
 	// allocate resources

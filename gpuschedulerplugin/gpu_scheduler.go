@@ -36,6 +36,14 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) erro
 	}
 }
 
+func (ns *NvidiaGPUScheduler) AddNode(nodeName string, nodeInfo *types.NodeInfo) {
+	AddResourcesToNodeTreeCache(nodeName, nodeInfo.Allocatable)
+}
+
+func (ns *NvidiaGPUScheduler) RemoveNode(nodeName string) {
+	RemoveNodeFromNodeTreeCache(nodeName)
+}
+
 func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []sctypes.PredicateFailureReason, float64) {
 	err := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
