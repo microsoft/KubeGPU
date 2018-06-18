@@ -13,11 +13,11 @@ crishim:
 
 .PHONY: nvidiagpuplugin
 nvidiagpuplugin:
-	go build --buildmode=plugin -o ${BUILD_DIR}/nvidiagpuplugin ./nvidiagpuplugin/plugin/nvidiagpu.go
+	go build --buildmode=plugin -o ${BUILD_DIR}/nvidiagpuplugin.so ./nvidiagpuplugin/plugin/nvidiagpu.go
 
 .PHONY: gpuschedulerplugin
 gpuschedulerplugin:
-	go build --buildmode=plugin -o ${BUILD_DIR}/gpuschedulerplugin ./gpuschedulerplugin/plugin/gpuscheduler.go
+	go build --buildmode=plugin -o ${BUILD_DIR}/gpuschedulerplugin.so ./gpuschedulerplugin/plugin/gpuscheduler.go
 
 .PHONY: clean
 clean:
