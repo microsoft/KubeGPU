@@ -14,7 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/grpalloc"
+	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc"
+	gpuscheduler "github.com/Microsoft/KubeGPU/gpuschedulerplugin"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -323,7 +324,9 @@ func testPodAllocs(t *testing.T, ds *DevicesScheduler, pod *types.PodInfo, podEx
 
 func TestGrpAllocate1(t *testing.T) {
 	// create a translator & translate
-	DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
+	device := &gpuscheduler.NvidiaGPUScheduler{}
+	DeviceScheduler.AddDevice(device)
+	//DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
 	ds := DeviceScheduler
 	//gpusched := &nvidia.NvidiaGPUScheduler{}
 	//ds.Devices = append(ds.Devices, gpusched)
