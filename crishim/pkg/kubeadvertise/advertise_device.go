@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/device"
+	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
 	"github.com/Microsoft/KubeGPU/kubeinterface"
 	"github.com/Microsoft/KubeGPU/types"
 

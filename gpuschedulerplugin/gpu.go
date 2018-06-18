@@ -1,10 +1,11 @@
-package gpu
+package gpuschedulerplugin
 
 import (
 	"regexp"
 	"strconv"
 
-	"github.com/Microsoft/KubeGPU/gpuextension/grpalloc/resource"
+	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc/resource"
+	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -63,7 +64,7 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 	return containerRequests
 }
 
-func addToNode(node *types.SortedTreeNode, nodeResources types.ResourceList, partitionPrefix string, suffix string, partitionLevel int) *types.SortedTreeNode {
+func addToNode(node *sctypes.SortedTreeNode, nodeResources types.ResourceList, partitionPrefix string, suffix string, partitionLevel int) *sctypes.SortedTreeNode {
 	childMap := make(map[string]types.ResourceList)
 	re := regexp.MustCompile(`.*/` + partitionPrefix + strconv.Itoa(partitionLevel) + `/(.*?)/.*/` + suffix)
 	totalLen := 0
@@ -81,18 +82,18 @@ func addToNode(node *types.SortedTreeNode, nodeResources types.ResourceList, par
 		}
 	}
 	if node == nil {
-		node = &types.SortedTreeNode{Val: totalLen, Child: nil}
+		node = &sctypes.SortedTreeNode{Val: totalLen, Child: nil}
 	}
 	sortedKeys = utils.SortedStringKeys(childMap)
 	for _, subMapKey := range sortedKeys {
 		subMaps := childMap[subMapKey]
-		childNode := &types.SortedTreeNode{Val: len(subMaps), Child: nil}
+		childNode := &sctypes.SortedTreeNode{Val: len(subMaps), Child: nil}
 		if partitionLevel > 0 {
 			addToNode(childNode, subMaps, partitionPrefix, suffix, partitionLevel-1)
 			childNode.Score = computeTreeScore(childNode)
 			//fmt.Printf("Child score = %f\n", childNode.Score)
 		}
-		types.AddNodeToSortedTreeNode(node, childNode)
+		sctypes.AddNodeToSortedTreeNode(node, childNode)
 	}
 	return node
 }
@@ -102,10 +103,10 @@ type treeInfo struct {
 	TreeScore   float64
 }
 
-var nodeCacheMap = make(map[*types.SortedTreeNode]treeInfo)
-var nodeLocationMap = make(map[string]*types.SortedTreeNode)
+var nodeCacheMap = make(map[*sctypes.SortedTreeNode]treeInfo)
+var nodeLocationMap = make(map[string]*sctypes.SortedTreeNode)
 
-func removeNodeFromCache(nodeName string, nodeLocation *types.SortedTreeNode) {
+func removeNodeFromCache(nodeName string, nodeLocation *sctypes.SortedTreeNode) {
 	if nodeLocation != nil {
 		delete(nodeCacheMap[nodeLocation].ListOfNodes, nodeName)
 		if len(nodeCacheMap[nodeLocation].ListOfNodes) == 0 {
@@ -114,7 +115,7 @@ func removeNodeFromCache(nodeName string, nodeLocation *types.SortedTreeNode) {
 	}
 }
 
-func computeTreeScoreAtLevel(node *types.SortedTreeNode, level int, numChild int) float64 {
+func computeTreeScoreAtLevel(node *sctypes.SortedTreeNode, level int, numChild int) float64 {
 	score := float64(node.Val*level) / float64(numChild)
 	for _, child := range node.Child {
 		score += computeTreeScoreAtLevel(child, level+1, len(node.Child))
@@ -122,7 +123,7 @@ func computeTreeScoreAtLevel(node *types.SortedTreeNode, level int, numChild int
 	return score
 }
 
-func computeTreeScore(node *types.SortedTreeNode) float64 {
+func computeTreeScore(node *sctypes.SortedTreeNode) float64 {
 	return computeTreeScoreAtLevel(node, 0, len(node.Child))
 }
 
@@ -134,7 +135,7 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 	node := addToNode(nil, nodeResources, "gpugrp", "cards", 1) // gpugrp1 and gpugrp0
 	// see if resource has changed
 	nodeLocation := nodeLocationMap[nodeName]
-	if types.CompareTreeNode(node, nodeLocation) {
+	if sctypes.CompareTreeNode(node, nodeLocation) {
 		return
 	}
 	// remove node from current location
@@ -142,7 +143,7 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 	// check if matches to some other node in cache
 	found := false
 	for cacheKey := range nodeCacheMap {
-		if types.CompareTreeNode(node, cacheKey) {
+		if sctypes.CompareTreeNode(node, cacheKey) {
 			nodeCacheMap[cacheKey].ListOfNodes[nodeName] = true
 			nodeLocation = cacheKey
 			found = true
@@ -165,8 +166,8 @@ func RemoveNodeFromNodeTreeCache(nodeName string) {
 	delete(nodeLocationMap, nodeName)
 }
 
-func findBestTreeInCache(num int) *types.SortedTreeNode {
-	var bestTree *types.SortedTreeNode
+func findBestTreeInCache(num int) *sctypes.SortedTreeNode {
+	var bestTree *sctypes.SortedTreeNode
 	bestScore := 0.0
 	for tree, treeInfo := range nodeCacheMap {
 		if tree.Val >= num {
@@ -180,7 +181,7 @@ func findBestTreeInCache(num int) *types.SortedTreeNode {
 	return bestTree
 }
 
-func assignGPUs(node *types.SortedTreeNode, prefix string, resourceGrp string, resource string, suffix string, level int, numLeft *int) types.ResourceList {
+func assignGPUs(node *sctypes.SortedTreeNode, prefix string, resourceGrp string, resource string, suffix string, level int, numLeft *int) types.ResourceList {
 	resList := make(types.ResourceList)
 	if level == 0 {
 		toTake := node.Val
@@ -206,7 +207,7 @@ func assignGPUs(node *types.SortedTreeNode, prefix string, resourceGrp string, r
 	return resList
 }
 
-func translateToTree(node *types.SortedTreeNode, cont *types.ContainerInfo) {
+func translateToTree(node *sctypes.SortedTreeNode, cont *types.ContainerInfo) {
 	// remove all GPU topology requests
 	re := regexp.MustCompile(`.*/gpu/.*`)
 	newRequests := make(types.ResourceList)
