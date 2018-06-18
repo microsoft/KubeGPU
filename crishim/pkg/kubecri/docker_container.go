@@ -1,4 +1,4 @@
-package kubegpucri
+package kubecri
 
 import (
 	"fmt"
