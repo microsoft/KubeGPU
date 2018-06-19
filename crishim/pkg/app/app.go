@@ -1,6 +1,9 @@
 package app
 
 import (
+	"github.com/golang/glog"
+	"io/ioutil"
+	"path"
 	"fmt"
 	"os"
 
@@ -13,7 +16,9 @@ import (
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/version/verflag"
 
+	"github.com/Microsoft/KubeGPU/crishim/pkg/kubeadvertise"
 	"github.com/Microsoft/KubeGPU/crishim/pkg/kubecri"
+	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
 )
 
 // ====================
@@ -21,6 +26,14 @@ import (
 func Die(err error) {
 	fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	os.Exit(1)
+}
+
+type CriShimConfig struct {
+	DevicePath string
+}
+
+func (cfg *CriShimConfig) New() {
+	cfg.DevicePath = "/usr/local/KubeGPU/devices"
 }
 
 func RunApp() {
@@ -34,6 +47,10 @@ func RunApp() {
 		Die(err)
 	}
 	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
+
+	criShimCfg := CriShimConfig{}
+	criShimCfg.New()
+	pflag.CommandLine.StringVar(&criShimCfg.DevicePath, "cridevices", criShimCfg.DevicePath, "The path where device plugins are located")
 
 	// parse the command line flags into the respective objects
 	flag.InitFlags()
@@ -68,9 +85,21 @@ func RunApp() {
 		KubeletConfiguration: *kubeletConfig,
 	}
 
+	// add device plugins and start device manager
+	var devicePlugins []string
+	devicePluginFiles, err := ioutil.ReadDir(criShimCfg.DevicePath)
+	if err != nil {
+		glog.Errorf("Unable to list devices, skipping adding of devices - error %v", err)
+	}
+	for _, f := range devicePluginFiles {
+		devicePlugins = append(devicePlugins, path.Join(criShimCfg.DevicePath, f.Name()))
+	}
+	device.DeviceManager.AddDevicesFromPlugins(devicePlugins)
+	device.DeviceManager.Start()		
+
 	done := make(chan bool)
-	// start the device manager
-	da, err := kubecri.StartDeviceManager(kubeletServer, done)
+	// start the device advertiser
+	da, err := kubeadvertise.StartDeviceAdvertiser(kubeletServer, done)
 	if err != nil {
 		Die(err)
 	}

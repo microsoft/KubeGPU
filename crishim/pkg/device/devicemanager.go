@@ -21,7 +21,7 @@ var DeviceManager = &DevicesManager{}
 // AddDevice adds a device to the manager
 func (d *DevicesManager) AddDevice(device devtypes.Device) {
 	d.Devices = append(d.Devices, device)
-	d.Operational = append(d.Operational, false)
+	d.Operational = append(d.Operational, false) // set to true once start is successful
 }
 
 func (d *DevicesManager) NewAndAddDevice(t devtypes.Device) error {
