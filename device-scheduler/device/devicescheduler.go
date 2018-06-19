@@ -25,6 +25,7 @@ func (ds *DevicesScheduler) AddDevice(device sctypes.DeviceScheduler) {
 	usingGroupScheduler := device.UsingGroupScheduler()
 	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
 	if usingGroupScheduler {
+		// last device using group scheduler runs the group scheduler
 		for i := range ds.RunGroupScheduler {
 			ds.RunGroupScheduler[i] = false
 		}

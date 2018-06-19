@@ -18,7 +18,11 @@ package main
 
 import (
 	goflag "flag"
+	"io/ioutil"
 	"os"
+	"path"
+
+	"github.com/golang/glog"
 
 	"github.com/spf13/pflag"
 
@@ -31,11 +35,6 @@ import (
 )
 
 func main() {
-	// add the devices
-	deviceSchedulerPlugins := []string{"gpuschedulerplugin.so"}
-	//device.DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
-	device.DeviceScheduler.AddDevicesSchedulerFromPlugins(deviceSchedulerPlugins)
-
 	command := app.NewSchedulerCommand()
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
@@ -46,6 +45,18 @@ func main() {
 	// utilflag.InitFlags()
 	logs.InitLogs()
 	defer logs.FlushLogs()
+
+	// add the device schedulers
+	var deviceSchedulerPlugins []string
+	pluginPath := "/schedulerplugins"
+	devPlugins, err := ioutil.ReadDir(pluginPath)
+	if err != nil {
+		glog.Errorf("Cannot read plugins - skipping")
+	}
+	for _, pluginFile := range devPlugins {
+		deviceSchedulerPlugins = append(deviceSchedulerPlugins, path.Join(pluginPath, pluginFile.Name()))
+	}
+	device.DeviceScheduler.AddDevicesSchedulerFromPlugins(deviceSchedulerPlugins)
 
 	if err := command.Execute(); err != nil {
 		os.Exit(1)
