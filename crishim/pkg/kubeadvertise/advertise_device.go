@@ -2,6 +2,7 @@ package kubeadvertise
 
 import (
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
@@ -9,11 +10,11 @@ import (
 	"github.com/Microsoft/KubeGPU/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	//kubetypes "k8s.io/apimachinery/pkg/types"
-	//nodeutil "k8s.io/kubernetes/pkg/util/node"
+	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
 type DeviceAdvertiser struct {
@@ -91,4 +92,42 @@ func (da *DeviceAdvertiser) AdvertiseLoop(intervalMs int, tryAgainIntervalMs int
 			return
 		}
 	}
+}
+
+func GetHostName(f *options.KubeletFlags) (string, string, error) {
+	// 1) Use nodeIP if set
+	// 2) If the user has specified an IP to HostnameOverride, use it
+	// 3) Lookup the IP from node name by DNS and use the first non-loopback ipv4 address
+	// 4) Try to get the IP from the network interface used as default gateway
+	ipName := ""
+	nodeName := nodeutil.GetHostname(f.HostnameOverride)
+	if f.NodeIP != "" {
+		ipName = f.NodeIP
+	} else {
+		var addr net.IP
+		if addr = net.ParseIP(nodeName); addr == nil {
+			var err error
+			addr, err = utilnet.ChooseHostInterface()
+			if err != nil {
+				return "", nodeName, err
+			}
+		}
+		ipName = addr.String()
+	}
+	return ipName, nodeName, nil
+}
+
+func StartDeviceAdvertiser(s *options.KubeletServer, done chan bool) (*DeviceAdvertiser, error) {
+	_, nodeName, err := GetHostName(&s.KubeletFlags) // nodeName is name of machine
+	if err != nil {
+		return nil, err
+	}
+	da, err := NewDeviceAdvertiser(s, device.DeviceManager, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	// start the advertisement loop
+	go da.AdvertiseLoop(20000, 5000, done)
+
+	return da, nil
 }
