@@ -1,4 +1,4 @@
-package device
+package gpuschedulerplugin
 
 // to test: run
 // go test --args -log_dir=/home/sanjeevm/logs -v=10
@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc"
-	gpuscheduler "github.com/Microsoft/KubeGPU/gpuschedulerplugin"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -211,7 +211,7 @@ func translatePod(node *types.NodeInfo, podEx *PodEx) {
 	}
 }
 
-func sampleTest(ds *DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+func sampleTest(ds *device.DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	//fmt.Printf("Node: %v\n", nodeInfo)
 	//fmt.Printf("Pod: %v\n", pod)
 	// now perform allocation
@@ -292,7 +292,7 @@ func testPodResourceUsage(t *testing.T, pod *types.PodInfo, nodeInfo *types.Node
 	}
 }
 
-func testPodAllocs(t *testing.T, ds *DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
+func testPodAllocs(t *testing.T, ds *device.DevicesScheduler, pod *types.PodInfo, podEx *PodEx, nodeInfo *types.NodeInfo, testCnt int) {
 	//fmt.Printf("=====TESTING CNT %d======", testCnt)
 	//fmt.Printf("Node: %v\n", nodeInfo)
 	//fmt.Printf("Pod: %v\n", pod)
@@ -324,10 +324,10 @@ func testPodAllocs(t *testing.T, ds *DevicesScheduler, pod *types.PodInfo, podEx
 
 func TestGrpAllocate1(t *testing.T) {
 	// create a translator & translate
-	device := &gpuscheduler.NvidiaGPUScheduler{}
-	DeviceScheduler.AddDevice(device)
+	dev := &NvidiaGPUScheduler{}
+	device.DeviceScheduler.AddDevice(dev)
 	//DeviceScheduler.CreateAndAddDeviceScheduler("nvidiagpu")
-	ds := DeviceScheduler
+	ds := device.DeviceScheduler
 	//gpusched := &nvidia.NvidiaGPUScheduler{}
 	//ds.Devices = append(ds.Devices, gpusched)
 
@@ -549,6 +549,8 @@ func TestGrpAllocate1(t *testing.T) {
 	testCnt++
 	//sampleTest(pod, podEx, nodeInfo, testCnt)
 	testPodAllocs(t, ds, pod, podEx, nodeInfo, testCnt)
+
+	fmt.Printf("======\nGroup allocate test complete\n========\n")
 
 	glog.Flush()
 }
