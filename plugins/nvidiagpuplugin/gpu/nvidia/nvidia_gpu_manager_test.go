@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	devtypes "github.com/Microsoft/KubeGPU/crishim/pkg/types"
+	gputypes "github.com/Microsoft/KubeGPU/plugins/gpuplugintypes"
 	"github.com/Microsoft/KubeGPU/types"
 
 	"strconv"
@@ -114,7 +115,7 @@ func TestAlloc(t *testing.T) {
 
 	// test capacity returned
 	capExpected := make(map[string]int64)
-	capExpected[string(types.ResourceGPU)] = int64(len(info.Gpus))
+	capExpected[string(gputypes.ResourceGPU)] = int64(len(info.Gpus))
 	for i := 0; i < len(info.Gpus); i++ {
 		grp1 := i / 4
 		//grp0 := (i / 2) % 2
@@ -134,7 +135,7 @@ func TestAlloc(t *testing.T) {
 	ngm.UpdateNodeInfo(nodeInfo)
 	cap = nodeInfo.Capacity
 	capExpected = make(map[string]int64)
-	capExpected[string(types.ResourceGPU)] = int64(len(info.Gpus))
+	capExpected[string(gputypes.ResourceGPU)] = int64(len(info.Gpus))
 	for i := 0; i < len(info.Gpus); i++ {
 		prefix := "/gpugrp1/" + strconv.Itoa(i) + "/gpugrp0/" + strconv.Itoa(i)
 		capExpected[string(types.DeviceGroupPrefix)+prefix+"/gpu/"+info.Gpus[i].ID+"/cards"] = 1

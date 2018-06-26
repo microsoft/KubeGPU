@@ -5,20 +5,26 @@ import (
 
 	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc"
 	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
+	gputypes "github.com/Microsoft/KubeGPU/plugins/gpuplugintypes"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
+)
+
+const (
+	// auto topology generation "0" means default (everything in its own group)
+	GPUTopologyGeneration types.ResourceName = "alpha.gpu/gpu-generate-topology"
 )
 
 type NvidiaGPUScheduler struct {
 }
 
 func TranslateGPUContainerResources(alloc types.ResourceList, cont types.ContainerInfo) types.ResourceList {
-	numGPUs := cont.Requests[types.ResourceGPU] // get from annotation, don't use default KubeRequests as this must be set to zero
+	numGPUs := cont.Requests[gputypes.ResourceGPU] // get from annotation, don't use default KubeRequests as this must be set to zero
 	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 
 func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
-	if podInfo.Requests[sctypes.GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
+	if podInfo.Requests[GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
 		for contName, contCopy := range podInfo.InitContainers {
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.InitContainers[contName] = contCopy
@@ -28,7 +34,7 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) erro
 			podInfo.RunningContainers[contName] = contCopy
 		}
 		return nil
-	} else if podInfo.Requests[sctypes.GPUTopologyGeneration] == int64(1) {
+	} else if podInfo.Requests[GPUTopologyGeneration] == int64(1) {
 		ConvertToBestGPURequests(podInfo)
 		return nil
 	} else {
