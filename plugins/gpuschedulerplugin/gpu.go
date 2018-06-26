@@ -6,6 +6,7 @@ import (
 
 	"github.com/Microsoft/KubeGPU/device-scheduler/grpalloc/resource"
 	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
+	gputypes "github.com/Microsoft/KubeGPU/plugins/gpuplugintypes"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/Microsoft/KubeGPU/utils"
 	"github.com/golang/glog"
@@ -219,7 +220,7 @@ func translateToTree(node *sctypes.SortedTreeNode, cont *types.ContainerInfo) {
 	}
 	cont.DevRequests = newRequests
 	// append requests
-	numGPUs := int(cont.Requests[types.ResourceGPU])
+	numGPUs := int(cont.Requests[gputypes.ResourceGPU])
 	resList := assignGPUs(node, types.DeviceGroupPrefix+"/gpugrp", "gpugrp", "gpu", "cards", 2, &numGPUs)
 	for resKey, resVal := range resList {
 		cont.DevRequests[resKey] = resVal
@@ -230,11 +231,11 @@ func translateToTree(node *sctypes.SortedTreeNode, cont *types.ContainerInfo) {
 func ConvertToBestGPURequests(podInfo *types.PodInfo) {
 	numGPUs := int64(0)
 	for _, cont := range podInfo.RunningContainers {
-		numGPUs += cont.Requests[types.ResourceGPU]
+		numGPUs += cont.Requests[gputypes.ResourceGPU]
 	}
 	for _, cont := range podInfo.InitContainers {
-		if cont.Requests[types.ResourceGPU] > numGPUs {
-			numGPUs = cont.Requests[types.ResourceGPU]
+		if cont.Requests[gputypes.ResourceGPU] > numGPUs {
+			numGPUs = cont.Requests[gputypes.ResourceGPU]
 		}
 	}
 	bestTree := findBestTreeInCache(int(numGPUs))

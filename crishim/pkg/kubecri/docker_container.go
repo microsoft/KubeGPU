@@ -28,13 +28,13 @@ import (
 )
 
 // implementation of runtime service -- have to implement entire docker service
-type dockerGPUService struct {
+type dockerExtService struct {
 	dockershim.DockerService
 	kubeclient *clientset.Clientset
 	devmgr     *device.DevicesManager
 }
 
-func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types.ContainerInfo, config *runtimeapi.ContainerConfig) error {
+func (d *dockerExtService) modifyContainerConfig(pod *types.PodInfo, cont *types.ContainerInfo, config *runtimeapi.ContainerConfig) error {
 	numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
 	nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
 	var newDevices []*runtimeapi.Device
@@ -74,7 +74,7 @@ func (d *dockerGPUService) modifyContainerConfig(pod *types.PodInfo, cont *types
 }
 
 // DockerService => RuntimeService => ContainerManager
-func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
+func (d *dockerExtService) CreateContainer(podSandboxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
 	// overwrite config.Devices here & then call CreateContainer ...
 	podName := config.Labels[kubelettypes.KubernetesPodNameLabel]
 	podNameSpace := config.Labels[kubelettypes.KubernetesPodNamespaceLabel]
@@ -99,12 +99,12 @@ func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimea
 	return d.DockerService.CreateContainer(podSandboxID, config, sandboxConfig)
 }
 
-// func (d *dockerGPUService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
+// func (d *dockerExtService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
 // 	glog.V(5).Infof("Exec sync called %v Cmd %v", containerID, cmd)
 // 	return d.DockerService.ExecSync(containerID, cmd, timeout)
 // }
 
-// func (d *dockerGPUService) Exec(request *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
+// func (d *dockerExtService) Exec(request *runtimeapi.ExecRequest) (*runtimeapi.ExecResponse, error) {
 // 	response, err := d.DockerService.Exec(request)
 // 	glog.V(5).Infof("Exec called %v\n Response %v", request, response)
 // 	return response, err
@@ -112,7 +112,7 @@ func (d *dockerGPUService) CreateContainer(podSandboxID string, config *runtimea
 
 // =====================
 // Start the shim
-func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguration, client *clientset.Clientset, dev *device.DevicesManager) error {
+func DockerExtInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguration, client *clientset.Clientset, dev *device.DevicesManager) error {
 	r := &f.ContainerRuntimeOptions
 
 	// Initialize docker client configuration.
@@ -163,14 +163,14 @@ func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 		return err
 	}
 
-	dsGPU := &dockerGPUService{DockerService: ds, kubeclient: client, devmgr: dev}
+	dsExt := &dockerExtService{DockerService: ds, kubeclient: client, devmgr: dev}
 
-	if err := dsGPU.Start(); err != nil {
+	if err := dsExt.Start(); err != nil {
 		return err
 	}
 
 	glog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
-	server := dockerremote.NewDockerServer(f.RemoteRuntimeEndpoint, dsGPU)
+	server := dockerremote.NewDockerServer(f.RemoteRuntimeEndpoint, dsExt)
 	if err := server.Start(); err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func DockerGPUInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 	// Start the streaming server
 	s := &http.Server{
 		Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
-		Handler:        dsGPU,
+		Handler:        dsExt,
 		TLSConfig:      tlsOptions.Config,
 		MaxHeaderBytes: 1 << 20,
 	}

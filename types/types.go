@@ -3,8 +3,6 @@ package types
 type ResourceName string
 
 const (
-	// NVIDIA GPU, in devices. Alpha, might change: although fractional and allowing values >1, only one whole device per node is assigned.
-	ResourceGPU ResourceName = "alpha.gpu/numgpu"
 	// Namespace prefix for group resources.
 	DeviceGroupPrefix = "alpha/grpresource"
 )
