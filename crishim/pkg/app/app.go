@@ -1,11 +1,12 @@
 package app
 
 import (
-	"github.com/golang/glog"
-	"io/ioutil"
-	"path"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
+
+	"github.com/golang/glog"
 
 	"github.com/spf13/pflag"
 
@@ -16,9 +17,9 @@ import (
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/version/verflag"
 
+	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
 	"github.com/Microsoft/KubeGPU/crishim/pkg/kubeadvertise"
 	"github.com/Microsoft/KubeGPU/crishim/pkg/kubecri"
-	"github.com/Microsoft/KubeGPU/crishim/pkg/device"
 )
 
 // ====================
@@ -33,7 +34,7 @@ type CriShimConfig struct {
 }
 
 func (cfg *CriShimConfig) New() {
-	cfg.DevicePath = "/usr/local/KubeGPU/devices"
+	cfg.DevicePath = "/usr/local/KubeExt/devices"
 }
 
 func RunApp() {
@@ -95,7 +96,7 @@ func RunApp() {
 		devicePlugins = append(devicePlugins, path.Join(criShimCfg.DevicePath, f.Name()))
 	}
 	device.DeviceManager.AddDevicesFromPlugins(devicePlugins)
-	device.DeviceManager.Start()		
+	device.DeviceManager.Start()
 
 	done := make(chan bool)
 	// start the device advertiser
@@ -104,7 +105,7 @@ func RunApp() {
 		Die(err)
 	}
 	// run the gpushim
-	if err := kubecri.DockerGPUInit(kubeletFlags, kubeletConfig, da.KubeClient, da.DevMgr); err != nil {
+	if err := kubecri.DockerExtInit(kubeletFlags, kubeletConfig, da.KubeClient, da.DevMgr); err != nil {
 		Die(err)
 	}
 	<-done // wait forever

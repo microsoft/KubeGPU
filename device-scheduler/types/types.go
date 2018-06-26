@@ -4,11 +4,6 @@ import (
 	"github.com/Microsoft/KubeGPU/types"
 )
 
-const (
-	// auto topology generation "0" means default (everything in its own group)
-	GPUTopologyGeneration types.ResourceName = "alpha.gpu/gpu-generate-topology"
-)
-
 type PredicateFailureReason interface {
 	GetReason() string
 	GetInfo() (types.ResourceName, int64, int64, int64)

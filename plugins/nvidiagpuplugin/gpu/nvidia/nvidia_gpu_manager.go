@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	devtypes "github.com/Microsoft/KubeGPU/crishim/pkg/types"
+	gputypes "github.com/Microsoft/KubeGPU/plugins/gpuplugintypes"
 	"github.com/Microsoft/KubeGPU/types"
 	"github.com/golang/glog"
 
@@ -204,8 +205,8 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 		ngm.numGpus = 0
 		return err
 	}
-	nodeInfo.Capacity[types.ResourceGPU] = int64(len(ngm.gpus))
-	nodeInfo.Allocatable[types.ResourceGPU] = int64(len(ngm.gpus))
+	nodeInfo.Capacity[gputypes.ResourceGPU] = int64(len(ngm.gpus))
+	nodeInfo.Allocatable[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
 			types.AddGroupResource(nodeInfo.Capacity, val.Name+"/memory", val.Memory.Global)

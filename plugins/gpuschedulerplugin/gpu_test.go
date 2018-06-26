@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	sctypes "github.com/Microsoft/KubeGPU/device-scheduler/types"
+	gputypes "github.com/Microsoft/KubeGPU/plugins/gpuplugintypes"
 	"github.com/Microsoft/KubeGPU/types"
 )
 
@@ -60,7 +61,7 @@ func TestTree(t *testing.T) {
 	podInfo := &types.PodInfo{
 		RunningContainers: map[string]types.ContainerInfo{
 			"A": {
-				Requests: types.ResourceList{types.ResourceGPU: 3},
+				Requests: types.ResourceList{gputypes.ResourceGPU: 3},
 				DevRequests: types.ResourceList{
 					"alpha/grpresource/gpugrp1/B/gpugrp0/3/gpu/6/cards": 1,
 					"alpha/grpresource/gpugrp1/B/gpugrp0/3/gpu/7/cards": 1,
@@ -73,7 +74,7 @@ func TestTree(t *testing.T) {
 	expectedPodInfo := &types.PodInfo{
 		RunningContainers: map[string]types.ContainerInfo{
 			"A": {
-				Requests: types.ResourceList{types.ResourceGPU: 3},
+				Requests: types.ResourceList{gputypes.ResourceGPU: 3},
 				DevRequests: types.ResourceList{
 					"alpha/grpresource/gpugrp1/0/gpugrp0/0/gpu/0/cards": 1,
 					"alpha/grpresource/gpugrp1/0/gpugrp0/0/gpu/1/cards": 1,
@@ -97,7 +98,7 @@ func TestTree(t *testing.T) {
 	expectedPodInfo = &types.PodInfo{
 		RunningContainers: map[string]types.ContainerInfo{
 			"A": {
-				Requests: types.ResourceList{types.ResourceGPU: 3},
+				Requests: types.ResourceList{gputypes.ResourceGPU: 3},
 				DevRequests: types.ResourceList{
 					"alpha/grpresource/gpugrp1/0/gpugrp0/0/gpu/0/cards": 1,
 					"alpha/grpresource/gpugrp1/0/gpugrp0/0/gpu/1/cards": 1,
