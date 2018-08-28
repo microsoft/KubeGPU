@@ -202,6 +202,7 @@ func (ngm *NvidiaGPUManager) Start() error {
 func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
 	if err != nil {
+		glog.Infof("UpdateGPUInfo encounters error %+v, setting GPUs to zero", err)
 		ngm.numGpus = 0
 		return err
 	}
