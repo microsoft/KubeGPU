@@ -208,7 +208,7 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 		ngm.numGpus = 0
 		return err
 	}
-	glog.V(4).("NumGPUs found = %d", ngm.numGpus)
+	glog.V(4).Infof("NumGPUs found = %d", ngm.numGpus)
 	nodeInfo.Capacity[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	nodeInfo.Allocatable[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	for _, val := range ngm.gpus {
