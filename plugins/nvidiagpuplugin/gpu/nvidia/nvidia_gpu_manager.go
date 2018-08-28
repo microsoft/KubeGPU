@@ -130,10 +130,12 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 	if err != nil {
 		return err
 	}
+	glog.V(5).Infof("GetGPUInfo returns %s", string(body))
 	var gpus gpusInfo
 	if err := json.Unmarshal(body, &gpus); err != nil {
 		return err
 	}
+	glog.V(5).Infof("GPUInfo: %+v", gpus)
 	// convert certain resources to correct units, such as memory and Bandwidth
 	for i := range gpus.Gpus {
 		gpus.Gpus[i].Memory.Global *= int64(1024) * int64(1024) // in units of MiB
@@ -202,9 +204,11 @@ func (ngm *NvidiaGPUManager) Start() error {
 func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
 	if err != nil {
+		glog.Infof("UpdateGPUInfo encounters error %+v, setting GPUs to zero", err)
 		ngm.numGpus = 0
 		return err
 	}
+	glog.V(4).Infof("NumGPUs found = %d", ngm.numGpus)
 	nodeInfo.Capacity[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	nodeInfo.Allocatable[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	for _, val := range ngm.gpus {

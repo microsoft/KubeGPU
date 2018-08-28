@@ -228,7 +228,7 @@ func translateToTree(node *sctypes.SortedTreeNode, cont *types.ContainerInfo) {
 }
 
 // find total GPUs needed
-func ConvertToBestGPURequests(podInfo *types.PodInfo) {
+func ConvertToBestGPURequests(podInfo *types.PodInfo) bool {
 	numGPUs := int64(0)
 	for _, cont := range podInfo.RunningContainers {
 		numGPUs += cont.Requests[gputypes.ResourceGPU]
@@ -239,19 +239,23 @@ func ConvertToBestGPURequests(podInfo *types.PodInfo) {
 		}
 	}
 	bestTree := findBestTreeInCache(int(numGPUs))
-	//fmt.Printf("Best tree\n")
-	//types.PrintTreeNode(bestTree)
-	// now translate requests to best tree
-	contKeys := utils.SortedStringKeys(podInfo.RunningContainers)
-	for _, contKey := range contKeys {
-		contCopy := podInfo.RunningContainers[contKey]
-		translateToTree(bestTree, &contCopy)
-		podInfo.RunningContainers[contKey] = contCopy
+	if bestTree != nil {
+		//fmt.Printf("Best tree\n")
+		//types.PrintTreeNode(bestTree)
+		// now translate requests to best tree
+		contKeys := utils.SortedStringKeys(podInfo.RunningContainers)
+		for _, contKey := range contKeys {
+			contCopy := podInfo.RunningContainers[contKey]
+			translateToTree(bestTree, &contCopy)
+			podInfo.RunningContainers[contKey] = contCopy
+		}
+		contKeys = utils.SortedStringKeys(podInfo.InitContainers)
+		for _, contKey := range contKeys {
+			contCopy := podInfo.InitContainers[contKey]
+			translateToTree(bestTree, &contCopy)
+			podInfo.InitContainers[contKey] = contCopy
+		}
+		return true
 	}
-	contKeys = utils.SortedStringKeys(podInfo.InitContainers)
-	for _, contKey := range contKeys {
-		contCopy := podInfo.InitContainers[contKey]
-		translateToTree(bestTree, &contCopy)
-		podInfo.InitContainers[contKey] = contCopy
-	}
+	return false
 }
