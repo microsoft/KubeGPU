@@ -23,7 +23,7 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 
-func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
+func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
 	if podInfo.Requests[GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
 		for contName, contCopy := range podInfo.InitContainers {
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
@@ -33,12 +33,13 @@ func TranslateGPUResorces(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) erro
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.RunningContainers[contName] = contCopy
 		}
-		return nil
+		return nil, true
 	} else if podInfo.Requests[GPUTopologyGeneration] == int64(1) {
-		ConvertToBestGPURequests(podInfo)
-		return nil
+		found := ConvertToBestGPURequests(podInfo) // found a tree
+		return nil, found
 	} else {
-		return fmt.Errorf("Invalid topology generation request")
+		glog.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
+		return fmt.Errorf("Invalid topology generation request"), false
 	}
 }
 
@@ -51,9 +52,13 @@ func (ns *NvidiaGPUScheduler) RemoveNode(nodeName string) {
 }
 
 func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []sctypes.PredicateFailureReason, float64) {
-	err := TranslateGPUResorces(nodeInfo, podInfo)
+	err, found := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
-		panic("Unexpected error")
+		//panic("Unexpected error")
+		return false, nil, 0.0
+	}
+	if !found {
+		return false, nil, 0.0
 	}
 	if runGrpScheduler {
 		glog.V(5).Infof("Running group scheduler on device requests %+v", podInfo)
@@ -63,9 +68,12 @@ func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *t
 }
 
 func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
-	err := TranslateGPUResorces(nodeInfo, podInfo)
+	err, found := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
 		return err
+	}
+	if !found {
+		return fmt.Errorf("TranslateGPUResorces fails as no translation is found")
 	}
 	if runGrpScheduler {
 		fits, reasons, _ := grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, true)
