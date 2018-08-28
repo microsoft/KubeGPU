@@ -135,7 +135,7 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 	if err := json.Unmarshal(body, &gpus); err != nil {
 		return err
 	}
-	glog.V(5).Infof("GPUInfo: %+v", gpusInfo)
+	glog.V(5).Infof("GPUInfo: %+v", gpus)
 	// convert certain resources to correct units, such as memory and Bandwidth
 	for i := range gpus.Gpus {
 		gpus.Gpus[i].Memory.Global *= int64(1024) * int64(1024) // in units of MiB
