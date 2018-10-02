@@ -19,11 +19,8 @@ func LocalIPsWithoutLoopback() ([]net.IP, error) {
 			return nil, fmt.Errorf("could not list the addresses for network interface %v: %v\n", i, err)
 		}
 		for _, address := range addresses {
-			switch v := address.(type) {
-			case *net.IPNet:
-				if !v.IP.IsLoopback() {
-					ips = append(ips, v.IP)
-				}
+			if v, ok := address.(*net.IPNet); ok && !v.IP.IsLoopback() {
+				ips = append(ips, v.IP)
 			}
 		}
 	}
