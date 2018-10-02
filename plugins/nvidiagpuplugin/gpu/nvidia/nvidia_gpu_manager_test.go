@@ -52,10 +52,10 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 	a1Map := make(map[string]int)
 	a2Map := make(map[string]int)
 	for _, val := range a1 {
-		a1Map[val] = a1Map[val] + 1
+		a1Map[val]++
 	}
 	for _, val := range a2 {
-		a2Map[val] = a2Map[val] + 1
+		a2Map[val]++
 	}
 	if len(a1Map) != len(a2Map) {
 		t.Errorf("Not same number of unique elements %v vs %v", len(a1Map), len(a2Map))

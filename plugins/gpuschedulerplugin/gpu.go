@@ -192,7 +192,7 @@ func assignGPUs(node *sctypes.SortedTreeNode, prefix string, resourceGrp string,
 		for i := 0; i < toTake; i++ {
 			resList[types.ResourceName(prefix+"/"+resource+"/"+strconv.Itoa(i)+"/"+suffix)] = 1
 		}
-		*numLeft = *numLeft - toTake
+		*numLeft -= toTake
 	} else {
 		for i, child := range node.Child {
 			newPrefix := prefix + strconv.Itoa(level-1) + "/" + strconv.Itoa(i)
