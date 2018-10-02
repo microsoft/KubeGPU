@@ -80,7 +80,6 @@ func (da *DeviceAdvertiser) AdvertiseLoop(intervalMs int, tryAgainIntervalMs int
 						}
 						if err == nil {
 							tickChanOnErr.Stop()
-							//close(tickChanOnErr.C)
 							break // back to original timer
 						}
 					}
