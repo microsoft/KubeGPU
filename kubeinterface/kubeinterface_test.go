@@ -47,7 +47,7 @@ func compareContainers(conts0 map[string]types.ContainerInfo, conts1 map[string]
 			compareContainer(&cont0, &cont1)
 		}
 	}
-	for contName1, _ := range conts1 {
+	for contName1 := range conts1 {
 		_, ok := conts0[contName1]
 		if !ok {
 			fmt.Printf("0 does not have container %s\n", contName1)
@@ -124,7 +124,7 @@ func TestConvert(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "Pod0",
 			Annotations: map[string]string{
-				"ABCD": "EFGH",
+				"ABCD":                        "EFGH",
 				"pod.alpha/DeviceInformation": string(jsonStr),
 				// "PodInfo/InitContainer/Init0/Requests/alpha/grpresource/gpu/0/cards": "1",
 				// "PodInfo/InitContainer/Init0/Requests/alpha/grpresource/gpu/0/memory": "100000",
@@ -234,7 +234,7 @@ func TestConvert(t *testing.T) {
 
 	jsonStr, _ = json.Marshal(podInfo)
 	expectedAnnotations := map[string]string{
-		"ABCD": "EFGH", // existing
+		"ABCD":                        "EFGH", // existing
 		"pod.alpha/DeviceInformation": string(jsonStr),
 		// "PodInfo/InitContainer/Init0/Requests/alpha/grpresource/gpu/0/cards": "1",
 		// "PodInfo/InitContainer/Init0/Requests/alpha/grpresource/gpu/0/memory": "100000",

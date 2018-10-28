@@ -16,14 +16,14 @@ func TestSortedTreeNode(t *testing.T) {
 	//fmt.Printf("Tree: %v", root)
 	//PrintTreeNode(root)
 	expectedTree := &SortedTreeNode{Val: 10, Child: []*SortedTreeNode{
-		&SortedTreeNode{Val: 8, Child: []*SortedTreeNode{
-			&SortedTreeNode{Val: 4, Child: nil},
-			&SortedTreeNode{Val: 3, Child: nil},
-			&SortedTreeNode{Val: 1, Child: nil},
+		{Val: 8, Child: []*SortedTreeNode{
+			{Val: 4, Child: nil},
+			{Val: 3, Child: nil},
+			{Val: 1, Child: nil},
 		}},
-		&SortedTreeNode{Val: 4, Child: []*SortedTreeNode{
-			&SortedTreeNode{Val: 3, Child: nil},
-			&SortedTreeNode{Val: 1, Child: nil},
+		{Val: 4, Child: []*SortedTreeNode{
+			{Val: 3, Child: nil},
+			{Val: 1, Child: nil},
 		}},
 	}}
 	if !CompareTreeNode(root, expectedTree) {
