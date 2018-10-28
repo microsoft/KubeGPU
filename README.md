@@ -14,7 +14,7 @@ The project has been started and being worked on by the Cloud Computing and Stor
 
     b. *Custom scheduler*: The purpose of the custom scheduler is to schedule a pod on a node using arbitrary constraints that are specified by the pod using the device scheduler plugins. The scheduler allows for finding the node for the pod to run on as well as *schedule devices to use on the node*. The second part is why a custom scheduler is needed. Arbitrary constraints can already be specified to a certain extent in default Kubernetes by using scheduler extender or additional remote predicates. However, the devices to use are not scheduled in a default Kubernetes scheduler. In our custom scheduler, nodes are first evaluated for fit by using an additional device predicate. Then, the devices needed to meet the pod constraints are allocated on the chosen node. Finally, the chosen devices are written as pod annotations to be consumed by the custom CRI shim.
 
-    Code for the custom scheduling is inside the `device-scheduler` directory. A fork of the default Kuberenetes scheduler with minor modifications to connect with our code is in the `kube-scheduler` directory.
+    Code for the custom scheduling is inside the `device-scheduler` directory. A fork of the default Kubernetes scheduler with minor modifications to connect with our code is in the `kube-scheduler` directory.
 
 2. **Plugins**: Plugins are device-specific code to be used by the CRI shim/device advertiser and the custom device scheduler. They are compiled using `--buildmode=plugin` as shown in the `Makefile`. All device-specific code resides inside the plugins as opposed to the core extensions.
 
@@ -64,7 +64,7 @@ To add device scheduling capability, you need to create a structure which implem
 
 # Installing
 
-Clone this repo to $GOPATH/src/github.com/Microsoft/KubeGPU to get it to compile. Alternatively, you can use `go get github.com/Microsoft/KubeGPU`. The easiest way to compile the binaries is to use the provided Makefile. The binaries will be available in the `_output` folder. 
+Clone this repo to `$GOPATH/src/github.com/Microsoft/KubeGPU` to get it to compile. Alternatively, you can use `go get github.com/Microsoft/KubeGPU`. The easiest way to compile the binaries is to use the provided Makefile. The binaries will be available in the `_output` folder. 
 
 The scheduler can be be used directly in place of the default scheduler and supports all the same options.
 The CRI shim changes the way in which the kubelet is launched. First the CRI shim should be launched, followed by launching of the kubelet.
@@ -79,14 +79,16 @@ using shells scripts and Kubernetes pods.
 
 The following additional setup is needed in order to utilize the custom GPU scheduler in a DLWorkspace deployment. Please launch these
 steps prior to running the rest of DLWorkspace deployment.
-1. **Modify the configuration file**:  The following lines need to be added to the configuration file (config.yaml) prior to launching setup:  
+1. **Modify the configuration file**:  The following lines need to be added to the configuration file (`config.yaml`) prior to launching setup:  
+```
 \# For deploying custom Kubernetes  
 kube\_custom\_cri : True  
 kube\_custom\_scheduler: True  
-  
+```  
 2. **Build the custom Kubernetes components**: Prior to launching rest of DLWorkspace deployment, build custom kubernetes components using the following:  
+```
 ./deploy.py build_kube
-
+```
 # Design
 
 More information about the current design and reasons for doing it in this way is provided [here.](docs/kubegpu.md)
