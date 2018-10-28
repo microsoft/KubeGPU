@@ -410,6 +410,9 @@ func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 		// If binding succeeded then PodScheduled condition will be updated in apiserver so that
 		// it's atomic with setting host.
 		err = sched.config.Binder.Bind(b)
+		if err != nil {
+			glog.Errorf("Bind failed: %v", err)
+		}
 		err = sched.config.SchedulerCache.FinishBinding(assumed)
 		if err != nil {
 			glog.Errorf("scheduler cache FinishBinding failed: %v", err)
