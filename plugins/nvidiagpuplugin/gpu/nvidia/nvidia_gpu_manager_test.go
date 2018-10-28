@@ -129,9 +129,9 @@ func TestAlloc(t *testing.T) {
 	assertMapEqual(t, cap, capExpected)
 
 	info = gpusInfo{}
-	err = json.Unmarshal([]byte(jsonString2), &info)
+	json.Unmarshal([]byte(jsonString2), &info)
 	nodeInfo = types.NewNodeInfo()
-	ngm, err = NewFakeNvidiaGPUManager(&info, volumeName, volumeDriver)
+	ngm, _ = NewFakeNvidiaGPUManager(&info, volumeName, volumeDriver)
 	ngm.UpdateNodeInfo(nodeInfo)
 	cap = nodeInfo.Capacity
 	capExpected = make(map[string]int64)
