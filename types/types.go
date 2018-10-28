@@ -76,7 +76,7 @@ func (p *PodInfo) GetContainerInPod(name string) *ContainerInfo {
 type NodeInfo struct {
 	Name        string         `json:"name,omitempty"`
 	Capacity    ResourceList   `json:"capacity,omitempty"`
-	Allocatable ResourceList   `json:"allocatable,omitempty"` // capacity minus reserverd
+	Allocatable ResourceList   `json:"allocatable,omitempty"` // capacity minus reserved
 	Used        ResourceList   `json:"used,omitempty"`        // being used by pods, must be less than allocatable
 	Scorer      ResourceScorer `json:"scorer,omitempty"`
 }

@@ -397,9 +397,9 @@ func containerFitsGroupConstraints(contName string, contReq *types.ContainerInfo
 	reqName := make(map[string]string)
 	req := make(map[string]int64)
 	reqScorer := make(map[string]scorer.ResourceScoreFunc)
-	// Quantitites available on NodeInfo
 	allocName := make(map[string](map[string]string))
 	alloc := make(map[string]int64)
+	// Quantities available on NodeInfo
 	glog.V(5).Infoln("Allocating for container", contName)
 	glog.V(7).Infoln("Requests", contReq.DevRequests)
 	glog.V(7).Infoln("AllocatableRes", allocatable)

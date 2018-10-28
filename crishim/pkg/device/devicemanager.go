@@ -88,7 +88,7 @@ func (d *DevicesManager) Start() {
 	}
 }
 
-// UpdateNodeInfo updates a node info strucutre with resources available on device
+// UpdateNodeInfo updates a node info structure with resources available on device
 func (d *DevicesManager) UpdateNodeInfo(info *types.NodeInfo) {
 	for i, device := range d.Devices {
 		if d.Operational[i] {
