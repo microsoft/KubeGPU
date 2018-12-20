@@ -113,6 +113,7 @@ func init() {
 	factory.RegisterPriorityFunction2("ImageLocalityPriority", priorities.ImageLocalityPriorityMap, nil, 1)
 	// Optional, cluster-autoscaler friendly priority function - give used nodes higher priority.
 	factory.RegisterPriorityFunction2("MostRequestedPriority", priorities.MostRequestedPriorityMap, nil, 1)
+	factory.RegisterPriorityFunction2("DevicePriority", priorities.PodDevicePriority, nil, 10)
 	// Prioritizes nodes that satisfy pod's resource limits
 	if utilfeature.DefaultFeatureGate.Enabled(features.ResourceLimitsPriorityFunction) {
 		factory.RegisterPriorityFunction2("ResourceLimitsPriority", priorities.ResourceLimitsPriorityMap, nil, 1)
