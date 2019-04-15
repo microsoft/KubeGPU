@@ -1,6 +1,7 @@
 package kubecri
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -18,9 +19,8 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
-	"k8s.io/kubernetes/pkg/kubelet"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
+	runtimeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/kubelet/dockershim"
 	dockerremote "k8s.io/kubernetes/pkg/kubelet/dockershim/remote"
 	"k8s.io/kubernetes/pkg/kubelet/server/streaming"
@@ -74,14 +74,15 @@ func (d *dockerExtService) modifyContainerConfig(pod *types.PodInfo, cont *types
 }
 
 // DockerService => RuntimeService => ContainerManager
-func (d *dockerExtService) CreateContainer(podSandboxID string, config *runtimeapi.ContainerConfig, sandboxConfig *runtimeapi.PodSandboxConfig) (string, error) {
+func (d *dockerExtService) CreateContainer(ctx context.Context, r *runtimeapi.CreateContainerRequest) (*runtimeapi.CreateContainerResponse, error) {
 	// overwrite config.Devices here & then call CreateContainer ...
+	config := r.Config
 	podName := config.Labels[kubelettypes.KubernetesPodNameLabel]
 	podNameSpace := config.Labels[kubelettypes.KubernetesPodNamespaceLabel]
 	containerName := config.Labels[kubelettypes.KubernetesContainerNameLabel]
 	glog.V(3).Infof("Creating container for pod %v container %v", podName, containerName)
 	opts := metav1.GetOptions{}
-	pod, err := d.kubeclient.Core().Pods(podNameSpace).Get(podName, opts)
+	pod, err := d.kubeclient.CoreV1().Pods(podNameSpace).Get(podName, opts)
 	if err != nil {
 		glog.Errorf("Retrieving pod %v gives error %v", podName, err)
 	}
@@ -89,14 +90,14 @@ func (d *dockerExtService) CreateContainer(podSandboxID string, config *runtimea
 	// convert to local podInfo structure using annotations available
 	podInfo, err := kubeinterface.KubePodInfoToPodInfo(pod, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// modify the container config
 	err = d.modifyContainerConfig(podInfo, podInfo.GetContainerInPod(containerName), config)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return d.DockerService.CreateContainer(podSandboxID, config, sandboxConfig)
+	return d.DockerService.CreateContainer(ctx, r)
 }
 
 // func (d *dockerExtService) ExecSync(containerID string, cmd []string, timeout time.Duration) (stdout []byte, stderr []byte, err error) {
@@ -123,15 +124,13 @@ func DockerExtInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 	}
 
 	// Initialize network plugin settings.
-	nh := &kubelet.NoOpLegacyHost{}
 	pluginSettings := dockershim.NetworkPluginSettings{
-		HairpinMode:       kubeletconfig.HairpinMode(c.HairpinMode),
-		NonMasqueradeCIDR: f.NonMasqueradeCIDR,
-		PluginName:        r.NetworkPluginName,
-		PluginConfDir:     r.CNIConfDir,
-		PluginBinDir:      r.CNIBinDir,
-		MTU:               int(r.NetworkPluginMTU),
-		LegacyRuntimeHost: nh,
+		HairpinMode:        kubeletconfig.HairpinMode(c.HairpinMode),
+		NonMasqueradeCIDR:  f.NonMasqueradeCIDR,
+		PluginName:         r.NetworkPluginName,
+		PluginConfDir:      r.CNIConfDir,
+		PluginBinDirString: r.CNIBinDir,
+		MTU:                int(r.NetworkPluginMTU),
 	}
 
 	// Initialize streaming configuration.
@@ -156,8 +155,15 @@ func DockerExtInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 		streamingConfig.TLSConfig = tlsOptions.Config
 	}
 
+	// if !r.RedirectContainerStreaming, then proxy commands to docker service
+	//      client->APIServer->kubelet->crishim_shim->crishim(dockerservice)
+	// client->APIServer->kubelet is already TLS (i.e. secure), but overhead (traversing many components)
+	// else if r.ReirectContainerStreaming, then upon connection,
+	//      client->APIServer->kublet->crishim_shim->crishim(dockerservice) gives redirect
+	// client->crishim(dockerservice) - go directly to streaming server, streaming server should use TLS, then it is secure
+	// client->APIServer is with TLS, APIServer->kubelet is TLS, kubelet->crishim_shim is localhost REST, crishim_shim->crishim is linux socket
 	ds, err := dockershim.NewDockerService(dockerClientConfig, r.PodSandboxImage, streamingConfig, &pluginSettings,
-		f.RuntimeCgroups, c.CgroupDriver, r.DockershimRootDirectory, r.DockerDisableSharedPID)
+		f.RuntimeCgroups, c.CgroupDriver, r.DockershimRootDirectory, !r.RedirectContainerStreaming)
 
 	if err != nil {
 		return err
@@ -176,16 +182,68 @@ func DockerExtInit(f *options.KubeletFlags, c *kubeletconfig.KubeletConfiguratio
 	}
 
 	// Start the streaming server
-	s := &http.Server{
-		Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
-		Handler:        dsExt,
-		TLSConfig:      tlsOptions.Config,
-		MaxHeaderBytes: 1 << 20,
-	}
-	if tlsOptions != nil {
-		// this will listen forever
-		return s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
+	if r.RedirectContainerStreaming {
+		s := &http.Server{
+			Addr:           net.JoinHostPort(c.Address, strconv.Itoa(int(c.Port))),
+			Handler:        dsExt,
+			TLSConfig:      tlsOptions.Config,
+			MaxHeaderBytes: 1 << 20,
+		}
+		if tlsOptions != nil {
+			// this will listen forever
+			return s.ListenAndServeTLS(tlsOptions.CertFile, tlsOptions.KeyFile)
+		} else {
+			return s.ListenAndServe()
+		}
 	} else {
-		return s.ListenAndServe()
+		var stop = make(chan struct{})
+		<-stop // wait forever
+		close(stop)
+		return nil
 	}
 }
+
+// func RunDockershim(f *options.KubeletFlags, c *kubeletconfiginternal.KubeletConfiguration, stopCh <-chan struct{}) error {
+// 	r := &f.ContainerRuntimeOptions
+
+// 	// Initialize docker client configuration.
+// 	dockerClientConfig := &dockershim.ClientConfig{
+// 		DockerEndpoint:            r.DockerEndpoint,
+// 		RuntimeRequestTimeout:     c.RuntimeRequestTimeout.Duration,
+// 		ImagePullProgressDeadline: r.ImagePullProgressDeadline.Duration,
+// 	}
+
+// 	// Initialize network plugin settings.
+// 	pluginSettings := dockershim.NetworkPluginSettings{
+// 		HairpinMode:        kubeletconfiginternal.HairpinMode(c.HairpinMode),
+// 		NonMasqueradeCIDR:  f.NonMasqueradeCIDR,
+// 		PluginName:         r.NetworkPluginName,
+// 		PluginConfDir:      r.CNIConfDir,
+// 		PluginBinDirString: r.CNIBinDir,
+// 		MTU:                int(r.NetworkPluginMTU),
+// 	}
+
+// 	// Initialize streaming configuration. (Not using TLS now)
+// 	streamingConfig := &streaming.Config{
+// 		// Use a relative redirect (no scheme or host).
+// 		BaseURL:                         &url.URL{Path: "/cri/"},
+// 		StreamIdleTimeout:               c.StreamingConnectionIdleTimeout.Duration,
+// 		StreamCreationTimeout:           streaming.DefaultConfig.StreamCreationTimeout,
+// 		SupportedRemoteCommandProtocols: streaming.DefaultConfig.SupportedRemoteCommandProtocols,
+// 		SupportedPortForwardProtocols:   streaming.DefaultConfig.SupportedPortForwardProtocols,
+// 	}
+
+// 	// Standalone dockershim will always start the local streaming server.
+// 	ds, err := dockershim.NewDockerService(dockerClientConfig, r.PodSandboxImage, streamingConfig, &pluginSettings,
+// 		f.RuntimeCgroups, c.CgroupDriver, r.DockershimRootDirectory, true /*startLocalStreamingServer*/)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	klog.V(2).Infof("Starting the GRPC server for the docker CRI shim.")
+// 	server := dockerremote.NewDockerServer(f.RemoteRuntimeEndpoint, ds)
+// 	if err := server.Start(); err != nil {
+// 		return err
+// 	}
+// 	<-stopCh
+// 	return nil
+// }
