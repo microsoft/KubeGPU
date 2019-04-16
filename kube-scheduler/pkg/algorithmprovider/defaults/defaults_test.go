@@ -19,6 +19,10 @@ package defaults
 import (
 	"os"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
 )
 
 func TestGetMaxVols(t *testing.T) {
@@ -47,13 +51,39 @@ func TestGetMaxVols(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		os.Setenv(KubeMaxPDVols, test.rawMaxVols)
-		result := getMaxVols(defaultValue)
-		if result != test.expected {
-			t.Errorf("%s: expected %v got %v", test.test, test.expected, result)
-		}
+func TestDefaultPriorities(t *testing.T) {
+	result := sets.NewString(
+		priorities.SelectorSpreadPriority,
+		priorities.InterPodAffinityPriority,
+		priorities.LeastRequestedPriority,
+		priorities.BalancedResourceAllocation,
+		priorities.NodePreferAvoidPodsPriority,
+		priorities.NodeAffinityPriority,
+		priorities.TaintTolerationPriority,
+		priorities.ImageLocalityPriority,
+	)
+	if expected := defaultPriorities(); !result.Equal(expected) {
+		t.Errorf("expected %v got %v", expected, result)
 	}
+}
+
+func TestDefaultPredicates(t *testing.T) {
+	result := sets.NewString(
+		predicates.NoVolumeZoneConflictPred,
+		predicates.MaxEBSVolumeCountPred,
+		predicates.MaxGCEPDVolumeCountPred,
+		predicates.MaxAzureDiskVolumeCountPred,
+		predicates.MaxCSIVolumeCountPred,
+		predicates.MatchInterPodAffinityPred,
+		predicates.NoDiskConflictPred,
+		predicates.GeneralPred,
+		predicates.CheckNodeMemoryPressurePred,
+		predicates.CheckNodeDiskPressurePred,
+		predicates.CheckNodePIDPressurePred,
+		predicates.CheckNodeConditionPred,
+		predicates.PodToleratesNodeTaintsPred,
+		predicates.CheckVolumeBindingPred,
+	)
 
 	os.Unsetenv(KubeMaxPDVols)
 	if previousValue != "" {

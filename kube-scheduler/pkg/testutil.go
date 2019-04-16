@@ -27,30 +27,27 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
+	internalqueue "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
+	plugins "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 )
 
 // FakeConfigurator is an implementation for test.
 type FakeConfigurator struct {
-	Config *Config
-}
-
-// GetPriorityFunctionConfigs is not implemented yet.
-func (fc *FakeConfigurator) GetPriorityFunctionConfigs(priorityKeys sets.String) ([]algorithm.PriorityConfig, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-// GetPriorityMetadataProducer is not implemented yet.
-func (fc *FakeConfigurator) GetPriorityMetadataProducer() (algorithm.MetadataProducer, error) {
-	return nil, fmt.Errorf("not implemented")
+	Config *factory.Config
 }
 
 // GetPredicateMetadataProducer is not implemented yet.
-func (fc *FakeConfigurator) GetPredicateMetadataProducer() (algorithm.PredicateMetadataProducer, error) {
+func (fc *FakeConfigurator) GetPredicateMetadataProducer() (predicates.PredicateMetadataProducer, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
 // GetPredicates is not implemented yet.
-func (fc *FakeConfigurator) GetPredicates(predicateKeys sets.String) (map[string]algorithm.FitPredicate, error) {
+func (fc *FakeConfigurator) GetPredicates(predicateKeys sets.String) (map[string]predicates.FitPredicate, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -59,19 +56,9 @@ func (fc *FakeConfigurator) GetHardPodAffinitySymmetricWeight() int32 {
 	panic("not implemented")
 }
 
-// GetSchedulerName is not implemented yet.
-func (fc *FakeConfigurator) GetSchedulerName() string {
-	panic("not implemented")
-}
-
 // MakeDefaultErrorFunc is not implemented yet.
-func (fc *FakeConfigurator) MakeDefaultErrorFunc(backoff *util.PodBackoff, podQueue core.SchedulingQueue) func(pod *v1.Pod, err error) {
+func (fc *FakeConfigurator) MakeDefaultErrorFunc(backoff *util.PodBackoff, podQueue internalqueue.SchedulingQueue) func(pod *v1.Pod, err error) {
 	return nil
-}
-
-// ResponsibleForPod is not implemented yet.
-func (fc *FakeConfigurator) ResponsibleForPod(pod *v1.Pod) bool {
-	panic("not implemented")
 }
 
 // GetNodeLister is not implemented yet.
@@ -89,27 +76,45 @@ func (fc *FakeConfigurator) GetScheduledPodLister() corelisters.PodLister {
 	return nil
 }
 
-// Run is not implemented yet.
-func (fc *FakeConfigurator) Run() {
-	panic("not implemented")
-}
-
 // Create returns FakeConfigurator.Config
-func (fc *FakeConfigurator) Create() (*Config, error) {
+func (fc *FakeConfigurator) Create() (*factory.Config, error) {
 	return fc.Config, nil
 }
 
 // CreateFromProvider returns FakeConfigurator.Config
-func (fc *FakeConfigurator) CreateFromProvider(providerName string) (*Config, error) {
+func (fc *FakeConfigurator) CreateFromProvider(providerName string) (*factory.Config, error) {
 	return fc.Config, nil
 }
 
 // CreateFromConfig returns FakeConfigurator.Config
-func (fc *FakeConfigurator) CreateFromConfig(policy schedulerapi.Policy) (*Config, error) {
+func (fc *FakeConfigurator) CreateFromConfig(policy schedulerapi.Policy) (*factory.Config, error) {
 	return fc.Config, nil
 }
 
 // CreateFromKeys returns FakeConfigurator.Config
-func (fc *FakeConfigurator) CreateFromKeys(predicateKeys, priorityKeys sets.String, extenders []algorithm.SchedulerExtender) (*Config, error) {
+func (fc *FakeConfigurator) CreateFromKeys(predicateKeys, priorityKeys sets.String, extenders []algorithm.SchedulerExtender) (*factory.Config, error) {
 	return fc.Config, nil
+}
+
+// EmptyPluginSet is the default plugin registrar used by the default scheduler.
+type EmptyPluginSet struct{}
+
+var _ = plugins.PluginSet(EmptyPluginSet{})
+
+// ReservePlugins returns a slice of default reserve plugins.
+func (r EmptyPluginSet) ReservePlugins() []plugins.ReservePlugin {
+	return []plugins.ReservePlugin{}
+}
+
+// PrebindPlugins returns a slice of default prebind plugins.
+func (r EmptyPluginSet) PrebindPlugins() []plugins.PrebindPlugin {
+	return []plugins.PrebindPlugin{}
+}
+
+// Data returns a pointer to PluginData.
+func (r EmptyPluginSet) Data() *plugins.PluginData {
+	return &plugins.PluginData{
+		Ctx:            nil,
+		SchedulerCache: nil,
+	}
 }

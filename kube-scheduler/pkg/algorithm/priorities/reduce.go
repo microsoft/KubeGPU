@@ -17,20 +17,20 @@ limitations under the License.
 package priorities
 
 import (
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
 	"k8s.io/api/core/v1"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 // NormalizeReduce generates a PriorityReduceFunction that can normalize the result
 // scores to [0, maxPriority]. If reverse is set to true, it reverses the scores by
 // subtracting it from maxPriority.
-func NormalizeReduce(maxPriority int, reverse bool) algorithm.PriorityReduceFunction {
+func NormalizeReduce(maxPriority int, reverse bool) PriorityReduceFunction {
 	return func(
 		_ *v1.Pod,
 		_ interface{},
-		_ map[string]*schedulercache.NodeInfo,
+		_ map[string]*schedulernodeinfo.NodeInfo,
 		result schedulerapi.HostPriorityList) error {
 
 		var maxCount int

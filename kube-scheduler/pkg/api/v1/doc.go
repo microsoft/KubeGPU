@@ -16,5 +16,5 @@ limitations under the License.
 
 // +k8s:deepcopy-gen=package
 
-// Package v1 contains scheduler plugin API objects.
+// Package v1 contains scheduler API objects.
 package v1 // import "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/v1"

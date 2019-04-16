@@ -17,31 +17,29 @@ limitations under the License.
 package main
 
 import (
-	goflag "flag"
-	"io/ioutil"
+	"fmt"
+	"math/rand"
 	"os"
-	"path"
-
-	"github.com/golang/glog"
+	"time"
 
 	"github.com/spf13/pflag"
 
-	"github.com/Microsoft/KubeGPU/device-scheduler/device"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
-	utilflag "k8s.io/component-base/cli/flag"
+	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
-	_ "k8s.io/kubernetes/pkg/client/metrics/prometheus" // for client metric registration
-	_ "k8s.io/kubernetes/pkg/version/prometheus"        // for version metric registration
+	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
+	_ "k8s.io/kubernetes/pkg/util/prometheusclientgo" // load all the prometheus client-go plugins
+	_ "k8s.io/kubernetes/pkg/version/prometheus"      // for version metric registration
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	command := app.NewSchedulerCommand()
 
 	// TODO: once we switch everything over to Cobra commands, we can go back to calling
 	// utilflag.InitFlags() (by removing its pflag.Parse() call). For now, we have to set the
 	// normalize func and add the go flag set by hand.
-	pflag.CommandLine.SetNormalizeFunc(utilflag.WordSepNormalizeFunc)
-	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	pflag.CommandLine.SetNormalizeFunc(cliflag.WordSepNormalizeFunc)
 	// utilflag.InitFlags()
 	logs.InitLogs()
 	defer logs.FlushLogs()
@@ -59,6 +57,7 @@ func main() {
 	device.DeviceScheduler.AddDevicesSchedulerFromPlugins(deviceSchedulerPlugins)
 
 	if err := command.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
