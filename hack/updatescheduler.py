@@ -2,3 +2,4 @@ extcopy.py -e ".go" -s e:\code\go\src\github.com\Microsoft\KubeGPU\kube-schedule
 
 
 extcopy.py -e ".go" -s KubeGPU\kube-scheduler\pkg -d KubeGPU-scheduler\pkg\scheduler
+
