@@ -33,6 +33,7 @@ import (
 	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/metrics"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,7 +56,8 @@ const (
 // Scheduler watches for new unscheduled pods. It attempts to find
 // nodes that they fit on and writes bindings back to the api server.
 type Scheduler struct {
-	config *factory.Config
+	configurator factory.Configurator
+	config       *factory.Config
 }
 
 // Cache returns the cache in scheduler for test to check the data in scheduler.
@@ -194,7 +196,7 @@ func New(client clientset.Interface,
 	config.StopEverything = stopCh
 
 	// Create the scheduler.
-	sched := NewFromConfig(config)
+	sched := NewFromConfig(config, configurator)
 
 	AddAllEventHandlers(sched, options.schedulerName, nodeInformer, podInformer, pvInformer, pvcInformer, replicationControllerInformer, replicaSetInformer, statefulSetInformer, serviceInformer, pdbInformer, storageClassInformer)
 	return sched, nil
@@ -237,10 +239,11 @@ func initPolicyFromConfigMap(client clientset.Interface, policyRef *kubeschedule
 }
 
 // NewFromConfig returns a new scheduler using the provided Config.
-func NewFromConfig(config *factory.Config) *Scheduler {
+func NewFromConfig(config *factory.Config, configurator factory.Configurator) *Scheduler {
 	metrics.Register()
 	return &Scheduler{
-		config: config,
+		config:       config,
+		configurator: configurator,
 	}
 }
 
@@ -409,8 +412,8 @@ func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	bindingStart := time.Now()
 	// prior to binding update the pod annotations with information on device requests being used and allocation information
-	//_, err := kubeinterface.UpdatePodMetadata(sched.config.Client.Core().V1(), assumed)
-	var err error
+	corev1 := sched.configurator.GetClient().CoreV1()
+	_, err := kubeinterface.UpdatePodMetadata(corev1, assumed)
 	if err == nil {
 		// If binding succeeded then PodScheduled condition will be updated in apiserver so that
 		// it's atomic with setting host.
