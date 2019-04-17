@@ -9,7 +9,7 @@ load(
 go_library(
     name = "go_default_library",
     srcs = ["plugins.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/algorithmprovider",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithmprovider",
     deps = ["//pkg/scheduler/algorithmprovider/defaults:go_default_library"],
 )
 

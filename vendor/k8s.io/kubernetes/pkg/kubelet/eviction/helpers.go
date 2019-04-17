@@ -31,7 +31,7 @@ import (
 	statsapi "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 	evictionapi "k8s.io/kubernetes/pkg/kubelet/eviction/api"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
-	schedulerutils "k8s.io/kubernetes/pkg/scheduler/util"
+	schedulerutils "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 )
 
 const (

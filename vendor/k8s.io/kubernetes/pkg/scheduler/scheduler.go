@@ -35,14 +35,14 @@ import (
 	storageinformers "k8s.io/client-go/informers/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	latestschedulerapi "k8s.io/kubernetes/pkg/scheduler/api/latest"
-	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
-	"k8s.io/kubernetes/pkg/scheduler/core"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
-	schedulerinternalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
-	"k8s.io/kubernetes/pkg/scheduler/metrics"
-	"k8s.io/kubernetes/pkg/scheduler/util"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
+	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/metrics"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 )
 
 const (

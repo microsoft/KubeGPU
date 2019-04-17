@@ -28,9 +28,9 @@ import (
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	restclient "k8s.io/client-go/rest"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 const (

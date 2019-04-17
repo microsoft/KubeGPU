@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["validation.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/apis/config/validation",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config/validation",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/scheduler/apis/config:go_default_library",

@@ -21,8 +21,8 @@ import (
 
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/kubernetes/pkg/features"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 var (

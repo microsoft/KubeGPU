@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/pflag"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 // DeprecatedOptions contains deprecated options and their flags.

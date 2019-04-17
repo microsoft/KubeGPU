@@ -28,13 +28,7 @@ import (
 
 	"k8s.io/klog"
 
-	"k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/errors"
-	corelisters "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/util/workqueue"
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
@@ -46,6 +40,14 @@ import (
 	pluginsv1alpha1 "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/volumebinder"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	"k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/errors"
+	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/util/workqueue"
 	utiltrace "k8s.io/utils/trace"
 )
 
@@ -150,16 +152,16 @@ type genericScheduler struct {
 }
 
 // allocate onto device - rerun scheduling to set allocatefrom
-func (g *genericScheduler) allocateDevices(pod *v1.Pod, node *schedulercache.NodeInfo) error {
-	glog.V(4).Infof("Allocating devices for pod %s", pod.ObjectMeta.Name)
-	podInfo, nodeInfo, err := schedulercache.GetPodAndNode(pod, node, true)
+func (g *genericScheduler) allocateDevices(pod *v1.Pod, node *schedulernodeinfo.NodeInfo) error {
+	klog.V(4).Infof("Allocating devices for pod %s", pod.ObjectMeta.Name)
+	podInfo, nodeInfo, err := schedulernodeinfo.GetPodAndNode(pod, node, true)
 	if err != nil {
-		glog.Errorf("GetPodAndNode encouters error %v", err)
+		klog.Errorf("GetPodAndNode encouters error %v", err)
 		return err
 	}
 	err = device.DeviceScheduler.PodAllocate(podInfo, nodeInfo) // fill allocatefrom field
 	if err != nil {
-		glog.Errorf("PodAllocation encounters error %v", err)
+		klog.Errorf("PodAllocation encounters error %v", err)
 		return err
 	}
 	// convert to pod annotations
@@ -222,14 +224,14 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 	startPriorityEvalTime := time.Now()
 	// When only one node after predicate, just use it.
 	if len(filteredNodes) == 1 {
-		err := g.allocateDevices(pod, g.cachedNodeInfoMap[filteredNodes[0].Name])
+		err := g.allocateDevices(pod, g.nodeInfoSnapshot.NodeInfoMap[filteredNodes[0].Name])
 		metrics.SchedulingAlgorithmPriorityEvaluationDuration.Observe(metrics.SinceInSeconds(startPriorityEvalTime))
 		metrics.DeprecatedSchedulingAlgorithmPriorityEvaluationDuration.Observe(metrics.SinceInMicroseconds(startPriorityEvalTime))
 		return ScheduleResult{
 			SuggestedHost:  filteredNodes[0].Name,
 			EvaluatedNodes: 1 + len(failedPredicateMap),
 			FeasibleNodes:  1,
-		}, nil
+		}, err
 	}
 
 	metaPrioritiesInterface := g.priorityMetaProducer(pod, g.nodeInfoSnapshot.NodeInfoMap)
@@ -246,9 +248,9 @@ func (g *genericScheduler) Schedule(pod *v1.Pod, nodeLister algorithm.NodeLister
 
 	host, err := g.selectHost(priorityList)
 	if err != nil {
-		return host, err
+		return result, err
 	}
-	err = g.allocateDevices(pod, g.cachedNodeInfoMap[host])
+	err = g.allocateDevices(pod, g.nodeInfoSnapshot.NodeInfoMap[host])
 	return ScheduleResult{
 		SuggestedHost:  host,
 		EvaluatedNodes: len(filteredNodes) + len(failedPredicateMap),

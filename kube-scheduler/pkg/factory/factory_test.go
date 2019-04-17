@@ -26,7 +26,7 @@ import (
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

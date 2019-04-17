@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 )
 
 // ValidatePolicy checks for errors in the Config

@@ -27,7 +27,10 @@ import (
 
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	schedutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/volumebinder"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,12 +46,6 @@ import (
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/features"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	schedutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/volumebinder"
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 

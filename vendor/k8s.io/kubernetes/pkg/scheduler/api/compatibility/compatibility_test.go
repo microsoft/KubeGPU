@@ -31,10 +31,10 @@ import (
 	restclient "k8s.io/client-go/rest"
 	utiltesting "k8s.io/client-go/util/testing"
 	_ "k8s.io/kubernetes/pkg/apis/core/install"
-	_ "k8s.io/kubernetes/pkg/scheduler/algorithmprovider/defaults"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	latestschedulerapi "k8s.io/kubernetes/pkg/scheduler/api/latest"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	_ "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithmprovider/defaults"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 func TestCompatibility_v1_Scheduler(t *testing.T) {

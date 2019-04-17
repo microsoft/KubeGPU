@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["fake_cache.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/internal/cache/fake",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache/fake",
     visibility = ["//pkg/scheduler:__subpackages__"],
     deps = [
         "//pkg/scheduler/algorithm:go_default_library",

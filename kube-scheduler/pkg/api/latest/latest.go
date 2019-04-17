@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+
 	// Init the api v1 package
 	_ "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/v1"
 )

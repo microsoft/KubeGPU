@@ -37,7 +37,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/controller"
 	nodeutil "k8s.io/kubernetes/pkg/controller/util/node"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 )
 
 const (

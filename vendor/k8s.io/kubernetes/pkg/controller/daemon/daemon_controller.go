@@ -53,8 +53,8 @@ import (
 	"k8s.io/kubernetes/pkg/controller/daemon/util"
 	"k8s.io/kubernetes/pkg/features"
 	kubelettypes "k8s.io/kubernetes/pkg/kubelet/types"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/kubernetes/pkg/util/metrics"
 	"k8s.io/utils/integer"
 )

@@ -23,7 +23,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 var (

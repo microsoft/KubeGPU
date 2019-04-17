@@ -6,7 +6,7 @@ go_library(
         "extender.go",
         "generic_scheduler.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/core",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/scheduler/algorithm:go_default_library",

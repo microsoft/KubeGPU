@@ -9,7 +9,7 @@ go_library(
         "signal.go",
         "signal_windows.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/internal/cache/debugger",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache/debugger",
     visibility = ["//pkg/scheduler:__subpackages__"],
     deps = [
         "//pkg/scheduler/internal/cache:go_default_library",

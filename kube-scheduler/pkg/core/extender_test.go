@@ -23,12 +23,6 @@ import (
 	"time"
 
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
@@ -37,6 +31,9 @@ import (
 	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type fitPredicate func(pod *v1.Pod, node *v1.Node) (bool, error)

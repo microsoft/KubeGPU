@@ -1,4 +1,4 @@
-package schedulercache
+package nodeinfo
 
 import (
 	"fmt"

@@ -3,14 +3,14 @@ package priorities
 import (
 	"github.com/Microsoft/KubeGPU/device-scheduler/device"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 )
 
 // prioritizer
-func PodDevicePriority(pod *v1.Pod, meta interface{}, node *schedulercache.NodeInfo) (schedulerapi.HostPriority, error) {
-	podInfo, nodeInfo, err := schedulercache.GetPodAndNode(pod, node, true)
+func PodDevicePriority(pod *v1.Pod, meta interface{}, node *nodeinfo.NodeInfo) (schedulerapi.HostPriority, error) {
+	podInfo, nodeInfo, err := nodeinfo.GetPodAndNode(pod, node, true)
 	if err != nil {
 		glog.Errorf("GetPodAndNode encounters error %v", err)
 		return schedulerapi.HostPriority{}, err

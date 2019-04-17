@@ -8,7 +8,7 @@ load(
 go_library(
     name = "go_default_library",
     srcs = ["latest.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/api/latest",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest",
     deps = [
         "//pkg/scheduler/api:go_default_library",
         "//pkg/scheduler/api/v1:go_default_library",

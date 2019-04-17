@@ -19,8 +19,8 @@ package cache
 import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 // Cache collects pods' information and provides node-level aggregated information.

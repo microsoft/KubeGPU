@@ -34,7 +34,7 @@ import (
 	"k8s.io/kubernetes/pkg/controller"
 	"k8s.io/kubernetes/pkg/controller/testutil"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/klog"

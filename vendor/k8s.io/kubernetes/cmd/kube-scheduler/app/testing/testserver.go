@@ -33,7 +33,7 @@ import (
 	"k8s.io/kubernetes/cmd/kube-scheduler/app/options"
 
 	// import DefaultProvider
-	_ "k8s.io/kubernetes/pkg/scheduler/algorithmprovider/defaults"
+	_ "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithmprovider/defaults"
 )
 
 // TearDownFunc is to be called to tear down a test server.

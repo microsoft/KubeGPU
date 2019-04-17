@@ -7,7 +7,7 @@ go_library(
         "prebind.go",
         "stateful.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/plugins/examples",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/examples",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/scheduler/plugins/v1alpha1:go_default_library",

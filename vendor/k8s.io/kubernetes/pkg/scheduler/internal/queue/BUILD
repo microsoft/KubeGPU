@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["scheduling_queue.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/internal/queue",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue",
     visibility = ["//pkg/scheduler:__subpackages__"],
     deps = [
         "//pkg/api/v1/pod:go_default_library",

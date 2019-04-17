@@ -23,9 +23,9 @@ import (
 	"k8s.io/klog"
 
 	"k8s.io/api/core/v1"
-	internalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
-	"k8s.io/kubernetes/pkg/scheduler/internal/queue"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	internalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 // CacheDumper writes some information from the scheduler cache and the scheduling queue to the

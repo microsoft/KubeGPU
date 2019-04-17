@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["registrar.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/plugins",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/scheduler/internal/cache:go_default_library",

@@ -26,13 +26,11 @@ import (
 
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	"k8s.io/apimachinery/pkg/util/sets"
 	restclient "k8s.io/client-go/rest"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 const (

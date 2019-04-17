@@ -34,8 +34,8 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/kubernetes/pkg/controller/nodelifecycle"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/pkg/scheduler/algorithmprovider"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithmprovider"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	"k8s.io/kubernetes/plugin/pkg/admission/podtolerationrestriction"
 	pluginapi "k8s.io/kubernetes/plugin/pkg/admission/podtolerationrestriction/apis/podtolerationrestriction"
 )

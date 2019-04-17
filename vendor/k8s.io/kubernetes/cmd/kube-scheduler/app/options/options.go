@@ -45,10 +45,10 @@ import (
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/kubernetes/pkg/client/leaderelectionconfig"
 	"k8s.io/kubernetes/pkg/master/ports"
-	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
-	kubeschedulerscheme "k8s.io/kubernetes/pkg/scheduler/apis/config/scheme"
-	"k8s.io/kubernetes/pkg/scheduler/apis/config/validation"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	kubeschedulerscheme "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config/scheme"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config/validation"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 // Options has all the params needed to run a Scheduler

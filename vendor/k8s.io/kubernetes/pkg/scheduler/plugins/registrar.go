@@ -17,8 +17,8 @@ limitations under the License.
 package plugins
 
 import (
-	"k8s.io/kubernetes/pkg/scheduler/internal/cache"
-	plugins "k8s.io/kubernetes/pkg/scheduler/plugins/v1alpha1"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	plugins "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1"
 )
 
 // DefaultPluginSet is the default plugin registrar used by the default scheduler.

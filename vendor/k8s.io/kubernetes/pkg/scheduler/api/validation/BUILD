@@ -9,7 +9,7 @@ load(
 go_library(
     name = "go_default_library",
     srcs = ["validation.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/api/validation",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/validation",
     deps = [
         "//pkg/apis/core/v1/helper:go_default_library",
         "//pkg/scheduler/api:go_default_library",

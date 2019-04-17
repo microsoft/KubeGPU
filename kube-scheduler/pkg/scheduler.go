@@ -25,6 +25,14 @@ import (
 
 	"k8s.io/klog"
 
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
+	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/metrics"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -35,14 +43,6 @@ import (
 	storageinformers "k8s.io/client-go/informers/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
-	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
-	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/metrics"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 )
 
 const (
@@ -277,7 +277,7 @@ func (sched *Scheduler) recordSchedulingFailure(pod *v1.Pod, err error, reason s
 func (sched *Scheduler) schedule(pod *v1.Pod) (core.ScheduleResult, error) {
 	result, err := sched.config.Algorithm.Schedule(pod, sched.config.NodeLister)
 	if err != nil {
-		glog.V(1).Infof("Failed to schedule pod: %v/%v, error: %v", pod.Namespace, pod.Name, err)
+		klog.V(1).Infof("Failed to schedule pod: %v/%v, error: %v", pod.Namespace, pod.Name, err)
 		pod = pod.DeepCopy()
 		sched.recordSchedulingFailure(pod, err, v1.PodReasonUnschedulable, err.Error())
 		return core.ScheduleResult{}, err
@@ -409,11 +409,12 @@ func (sched *Scheduler) assume(assumed *v1.Pod, host string) error {
 func (sched *Scheduler) bind(assumed *v1.Pod, b *v1.Binding) error {
 	bindingStart := time.Now()
 	// prior to binding update the pod annotations with information on device requests being used and allocation information
-	_, err := kubeinterface.UpdatePodMetadata(sched.config.Client.CoreV1(), assumed)
+	//_, err := kubeinterface.UpdatePodMetadata(sched.config.Client.Core().V1(), assumed)
+	var err error
 	if err == nil {
 		// If binding succeeded then PodScheduled condition will be updated in apiserver so that
 		// it's atomic with setting host.
-		err := sched.config.GetBinder(assumed).Bind(b)
+		err = sched.config.GetBinder(assumed).Bind(b)
 		if finErr := sched.config.SchedulerCache.FinishBinding(assumed); finErr != nil {
 			klog.Errorf("scheduler cache FinishBinding failed: %v", finErr)
 		}

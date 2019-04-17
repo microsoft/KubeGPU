@@ -16,7 +16,7 @@ go_library(
         "testing_helper.go",
         "utils.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/algorithm/predicates",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates",
     deps = [
         "//pkg/apis/core/v1/helper:go_default_library",
         "//pkg/apis/core/v1/helper/qos:go_default_library",

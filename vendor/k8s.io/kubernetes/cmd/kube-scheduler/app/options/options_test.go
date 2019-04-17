@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 	apiserveroptions "k8s.io/apiserver/pkg/server/options"
 	componentbaseconfig "k8s.io/component-base/config"
-	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
 )
 
 func TestSchedulerOptions(t *testing.T) {

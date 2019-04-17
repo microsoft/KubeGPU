@@ -26,9 +26,6 @@ import (
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 	"k8s.io/kubernetes/pkg/features"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 const (
@@ -56,7 +53,7 @@ func defaultPredicates() sets.String {
 		predicates.CheckNodeConditionPred,
 		predicates.PodToleratesNodeTaintsPred,
 		predicates.CheckVolumeBindingPred,
-		predicates.PodFitsDevices,
+		"PodFitsDevices",
 	)
 }
 
@@ -120,7 +117,7 @@ func defaultPriorities() sets.String {
 		priorities.NodeAffinityPriority,
 		priorities.TaintTolerationPriority,
 		priorities.ImageLocalityPriority,
-		priorities.PodDevicePriority,
+		"PodDevicePriority",
 	)
 }
 

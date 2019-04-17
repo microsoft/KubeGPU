@@ -20,10 +20,9 @@ import (
 	"fmt"
 
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
 // NodeLabelPrioritizer contains information to calculate node label priority.

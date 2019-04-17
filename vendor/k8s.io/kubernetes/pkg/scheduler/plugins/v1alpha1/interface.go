@@ -20,7 +20,7 @@ package v1alpha1
 
 import (
 	"k8s.io/api/core/v1"
-	"k8s.io/kubernetes/pkg/scheduler/internal/cache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
 )
 
 // PluginData carries information that plugins may need.

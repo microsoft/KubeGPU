@@ -14,7 +14,7 @@ go_library(
         "well_known_labels.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/api",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api",
     deps = [
         "//pkg/apis/core:go_default_library",
         "//staging/src/k8s.io/api/core/v1:go_default_library",

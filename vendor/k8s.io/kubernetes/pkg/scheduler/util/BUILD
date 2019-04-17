@@ -30,7 +30,7 @@ go_library(
         "heap.go",
         "utils.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/util",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util",
     deps = [
         "//pkg/apis/scheduling:go_default_library",
         "//pkg/features:go_default_library",

@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1079,7 +1079,7 @@ func TestInterPodAffinityAnnotationsPriority(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		nodeNameToInfo := schedulercache.CreateNodeNameToInfoMap(test.pods, test.nodes)
+		nodeNameToInfo := nodeinfo.CreateNodeNameToInfoMap(test.pods, test.nodes)
 		interPodAffinity := InterPodAffinity{
 			info:                  FakeNodeListInfo(test.nodes),
 			nodeLister:            schedulertesting.FakeNodeLister(test.nodes),
@@ -1169,7 +1169,7 @@ func TestHardPodAffinityAnnotationsSymmetricWeight(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		nodeNameToInfo := schedulercache.CreateNodeNameToInfoMap(test.pods, test.nodes)
+		nodeNameToInfo := nodeinfo.CreateNodeNameToInfoMap(test.pods, test.nodes)
 		ipa := InterPodAffinity{
 			info:                  FakeNodeListInfo(test.nodes),
 			nodeLister:            schedulertesting.FakeNodeLister(test.nodes),

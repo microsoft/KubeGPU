@@ -17,7 +17,7 @@ limitations under the License.
 package testing
 
 import (
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -41,7 +41,7 @@ func (p PodsToCache) UpdateNode(oldNode, newNode *v1.Node) error { return nil }
 
 func (p PodsToCache) RemoveNode(node *v1.Node) error { return nil }
 
-func (p PodsToCache) UpdateNodeNameToInfoMap(infoMap map[string]*schedulercache.NodeInfo) error {
+func (p PodsToCache) UpdateNodeNameToInfoMap(infoMap map[string]*nodeinfo.NodeInfo) error {
 	return nil
 }
 

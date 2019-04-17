@@ -27,9 +27,9 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
-	"k8s.io/kubernetes/pkg/scheduler"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 	"k8s.io/kubernetes/test/integration/framework"
 )
 

@@ -23,9 +23,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
-	kubeschedulerscheme "k8s.io/kubernetes/pkg/scheduler/apis/config/scheme"
-	kubeschedulerconfigv1alpha1 "k8s.io/kubernetes/pkg/scheduler/apis/config/v1alpha1"
+	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	kubeschedulerscheme "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config/scheme"
+	kubeschedulerconfigv1alpha1 "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config/v1alpha1"
 )
 
 func loadConfigFromFile(file string) (*kubeschedulerconfig.KubeSchedulerConfiguration, error) {

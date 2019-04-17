@@ -24,12 +24,13 @@ import (
 
 	"k8s.io/klog"
 
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
+	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
+	"github.com/Microsoft/KubeGPU/kubeinterface"
+	extypes "github.com/Microsoft/KubeGPU/types"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
-	"github.com/Microsoft/KubeGPU/device-scheduler/device"
-	extypes "github.com/Microsoft/KubeGPU/types"
 )
 
 var (
@@ -48,7 +49,7 @@ type ImageStateSummary struct {
 // NodeInfo is node level aggregated information.
 type NodeInfo struct {
 	// Overall node information.
-	node *v1.Node
+	node   *v1.Node
 	nodeEx *extypes.NodeInfo
 
 	pods             []*v1.Pod
@@ -526,7 +527,7 @@ func (n *NodeInfo) AddPod(pod *v1.Pod) {
 	if err != nil {
 		panic(fmt.Sprintf("Pod Info annotations are not correct and cannot be parsed %+v", pod))
 	}
-	glog.V(5).Infof("NodeInfo Exteded status = %v", n.nodeEx)
+	klog.V(5).Infof("NodeInfo Exteded status = %v", n.nodeEx)
 
 	n.generation = nextGeneration()
 }

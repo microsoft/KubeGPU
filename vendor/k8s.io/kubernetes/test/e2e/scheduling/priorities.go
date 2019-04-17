@@ -31,7 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	clientset "k8s.io/client-go/kubernetes"
-	priorityutil "k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util"
+	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
 	"k8s.io/kubernetes/test/e2e/common"
 	"k8s.io/kubernetes/test/e2e/framework"
 	testutils "k8s.io/kubernetes/test/utils"

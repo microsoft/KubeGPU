@@ -17,9 +17,9 @@ limitations under the License.
 package priorities
 
 import (
-	"k8s.io/api/core/v1"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
+	"k8s.io/api/core/v1"
 )
 
 // PriorityMapFunction is a function that computes per-node results for a given node.

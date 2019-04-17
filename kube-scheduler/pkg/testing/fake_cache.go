@@ -17,7 +17,7 @@ limitations under the License.
 package testing
 
 import (
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -63,7 +63,7 @@ func (f *FakeCache) UpdateNode(oldNode, newNode *v1.Node) error { return nil }
 
 func (f *FakeCache) RemoveNode(node *v1.Node) error { return nil }
 
-func (f *FakeCache) UpdateNodeNameToInfoMap(infoMap map[string]*schedulercache.NodeInfo) error {
+func (f *FakeCache) UpdateNodeNameToInfoMap(infoMap map[string]*nodeinfo.NodeInfo) error {
 	return nil
 }
 
@@ -79,6 +79,6 @@ func (f *FakeCache) ListPDBs(selector labels.Selector) ([]*policy.PodDisruptionB
 
 func (f *FakeCache) List(s labels.Selector) ([]*v1.Pod, error) { return nil, nil }
 
-func (f *FakeCache) FilteredList(filter schedulercache.PodFilter, selector labels.Selector) ([]*v1.Pod, error) {
+func (f *FakeCache) FilteredList(filter nodeinfo.PodFilter, selector labels.Selector) ([]*v1.Pod, error) {
 	return nil, nil
 }

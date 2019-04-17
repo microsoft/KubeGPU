@@ -6,7 +6,7 @@ go_library(
         "context.go",
         "interface.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/plugins/v1alpha1",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/scheduler/internal/cache:go_default_library",

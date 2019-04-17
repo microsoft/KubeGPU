@@ -49,7 +49,7 @@ import (
 	"k8s.io/kubernetes/pkg/controller"
 	"k8s.io/kubernetes/pkg/features"
 	kubelettypes "k8s.io/kubernetes/pkg/kubelet/types"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	"k8s.io/kubernetes/pkg/securitycontext"
 	labelsutil "k8s.io/kubernetes/pkg/util/labels"
 )

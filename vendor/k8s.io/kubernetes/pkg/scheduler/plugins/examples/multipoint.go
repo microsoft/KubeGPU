@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"k8s.io/api/core/v1"
-	plugins "k8s.io/kubernetes/pkg/scheduler/plugins/v1alpha1"
+	plugins "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1"
 )
 
 // MultipointCommunicatingPlugin is an example of a plugin that implements two

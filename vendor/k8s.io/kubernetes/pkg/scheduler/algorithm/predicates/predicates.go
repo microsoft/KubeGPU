@@ -40,12 +40,12 @@ import (
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/features"
-	"k8s.io/kubernetes/pkg/scheduler/algorithm"
-	priorityutil "k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
-	schedutil "k8s.io/kubernetes/pkg/scheduler/util"
-	"k8s.io/kubernetes/pkg/scheduler/volumebinder"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
+	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
+	schedutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/volumebinder"
 	volumeutil "k8s.io/kubernetes/pkg/volume/util"
 )
 

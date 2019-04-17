@@ -21,8 +21,8 @@ import (
 	"os/signal"
 
 	corelisters "k8s.io/client-go/listers/core/v1"
-	internalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
-	internalqueue "k8s.io/kubernetes/pkg/scheduler/internal/queue"
+	internalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	internalqueue "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
 )
 
 // CacheDebugger provides ways to check and write cache information for debugging.

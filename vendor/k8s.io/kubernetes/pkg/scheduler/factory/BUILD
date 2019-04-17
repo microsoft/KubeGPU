@@ -6,7 +6,7 @@ go_library(
         "factory.go",
         "plugins.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/factory",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1/pod:go_default_library",

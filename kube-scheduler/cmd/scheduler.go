@@ -20,13 +20,18 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"time"
 
 	"github.com/spf13/pflag"
 
+	"io/ioutil"
+
+	"github.com/Microsoft/KubeGPU/device-scheduler/device"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
 	cliflag "k8s.io/component-base/cli/flag"
 	"k8s.io/component-base/logs"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/cmd/app"
+	"k8s.io/klog"
 	_ "k8s.io/kubernetes/pkg/util/prometheusclientgo" // load all the prometheus client-go plugins
 	_ "k8s.io/kubernetes/pkg/version/prometheus"      // for version metric registration
 )
@@ -49,7 +54,7 @@ func main() {
 	pluginPath := "/schedulerplugins"
 	devPlugins, err := ioutil.ReadDir(pluginPath)
 	if err != nil {
-		glog.Errorf("Cannot read plugins - skipping")
+		klog.Errorf("Cannot read plugins - skipping")
 	}
 	for _, pluginFile := range devPlugins {
 		deviceSchedulerPlugins = append(deviceSchedulerPlugins, path.Join(pluginPath, pluginFile.Name()))

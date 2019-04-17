@@ -7,7 +7,7 @@ go_library(
         "node_info.go",
         "util.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/nodeinfo",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/apis/core/v1/helper:go_default_library",

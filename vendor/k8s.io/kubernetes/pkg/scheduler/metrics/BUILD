@@ -8,7 +8,7 @@ load(
 go_library(
     name = "go_default_library",
     srcs = ["metrics.go"],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/metrics",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/metrics",
     deps = [
         "//pkg/controller/volume/persistentvolume:go_default_library",
         "//vendor/github.com/prometheus/client_golang/prometheus:go_default_library",

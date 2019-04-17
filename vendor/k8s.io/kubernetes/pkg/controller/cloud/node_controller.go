@@ -37,7 +37,7 @@ import (
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog"
 	kubeletapis "k8s.io/kubernetes/pkg/kubelet/apis"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 

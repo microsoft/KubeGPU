@@ -17,8 +17,8 @@ limitations under the License.
 package defaults
 
 import (
-	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
-	"k8s.io/kubernetes/pkg/scheduler/factory"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
 )
 
 func init() {

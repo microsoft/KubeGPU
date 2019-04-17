@@ -21,12 +21,9 @@ import (
 
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	utilnode "k8s.io/kubernetes/pkg/util/node"
 
 	"k8s.io/klog"

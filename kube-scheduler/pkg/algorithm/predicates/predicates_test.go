@@ -25,7 +25,7 @@ import (
 	"testing"
 
 	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
 	schedutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -5195,9 +5195,9 @@ func TestGetMaxVols(t *testing.T) {
 				info:      nodeListInfo,
 				podLister: schedulertesting.FakePodLister(test.pods),
 			}
-			nodeInfo := schedulercache.NewNodeInfo(podsOnNode...)
+			nodeInfo := nodeinfo.NewNodeInfo(podsOnNode...)
 			nodeInfo.SetNode(&node)
-			nodeInfoMap := map[string]*schedulercache.NodeInfo{node.Name: nodeInfo}
+			nodeInfoMap := map[string]*nodeinfo.NodeInfo{node.Name: nodeInfo}
 			fits, reasons, err := testFit.InterPodAffinityMatches(test.pod, PredicateMetadata(test.pod, nodeInfoMap), nodeInfo)
 			if err != nil {
 				t.Errorf("%s: unexpected error %v", test.test, err)
@@ -5210,9 +5210,9 @@ func TestGetMaxVols(t *testing.T) {
 				t.Errorf("%s: unexpected error: %v", test.test, err)
 			}
 			if affinity != nil && affinity.NodeAffinity != nil {
-				nodeInfo := schedulercache.NewNodeInfo()
+				nodeInfo := nodeinfo.NewNodeInfo()
 				nodeInfo.SetNode(&node)
-				nodeInfoMap := map[string]*schedulercache.NodeInfo{node.Name: nodeInfo}
+				nodeInfoMap := map[string]*nodeinfo.NodeInfo{node.Name: nodeInfo}
 				fits2, reasons, err := PodMatchNodeSelector(test.pod, PredicateMetadata(test.pod, nodeInfoMap), nodeInfo)
 				if err != nil {
 					t.Errorf("%s: unexpected error: %v", test.test, err)

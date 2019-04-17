@@ -30,7 +30,7 @@ go_library(
         "non_zero.go",
         "topologies.go",
     ],
-    importpath = "k8s.io/kubernetes/pkg/scheduler/algorithm/priorities/util",
+    importpath = "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util",
     deps = [
         "//staging/src/k8s.io/api/core/v1:go_default_library",
         "//staging/src/k8s.io/apimachinery/pkg/labels:go_default_library",
