@@ -20,12 +20,11 @@ import (
 	"reflect"
 	"testing"
 
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 )
 
 func TestMostRequested(t *testing.T) {
@@ -46,16 +45,16 @@ func TestMostRequested(t *testing.T) {
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("1000m"),
-						"memory": resource.MustParse("0"),
+						v1.ResourceCPU:    resource.MustParse("1000m"),
+						v1.ResourceMemory: resource.MustParse("0"),
 					},
 				},
 			},
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("2000m"),
-						"memory": resource.MustParse("0"),
+						v1.ResourceCPU:    resource.MustParse("2000m"),
+						v1.ResourceMemory: resource.MustParse("0"),
 					},
 				},
 			},
@@ -69,16 +68,16 @@ func TestMostRequested(t *testing.T) {
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("1000m"),
-						"memory": resource.MustParse("2000"),
+						v1.ResourceCPU:    resource.MustParse("1000m"),
+						v1.ResourceMemory: resource.MustParse("2000"),
 					},
 				},
 			},
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("2000m"),
-						"memory": resource.MustParse("3000"),
+						v1.ResourceCPU:    resource.MustParse("2000m"),
+						v1.ResourceMemory: resource.MustParse("3000"),
 					},
 				},
 			},
@@ -90,16 +89,16 @@ func TestMostRequested(t *testing.T) {
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("2000m"),
-						"memory": resource.MustParse("4000"),
+						v1.ResourceCPU:    resource.MustParse("2000m"),
+						v1.ResourceMemory: resource.MustParse("4000"),
 					},
 				},
 			},
 			{
 				Resources: v1.ResourceRequirements{
 					Requests: v1.ResourceList{
-						"cpu":    resource.MustParse("3000m"),
-						"memory": resource.MustParse("5000"),
+						v1.ResourceCPU:    resource.MustParse("3000m"),
+						v1.ResourceMemory: resource.MustParse("5000"),
 					},
 				},
 			},

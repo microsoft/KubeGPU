@@ -19,8 +19,13 @@ package util
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/api/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func fakePod() *v1.Pod {

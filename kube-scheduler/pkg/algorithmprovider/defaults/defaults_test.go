@@ -17,39 +17,40 @@ limitations under the License.
 package defaults
 
 import (
-	"os"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/util/sets"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/priorities"
 )
 
-func TestGetMaxVols(t *testing.T) {
-	previousValue := os.Getenv(KubeMaxPDVols)
-	defaultValue := 39
-
-	tests := []struct {
-		rawMaxVols string
-		expected   int
-		test       string
+func TestCopyAndReplace(t *testing.T) {
+	testCases := []struct {
+		set         sets.String
+		replaceWhat string
+		replaceWith string
+		expected    sets.String
 	}{
 		{
-			rawMaxVols: "invalid",
-			expected:   defaultValue,
-			test:       "Unable to parse maximum PD volumes value, using default value",
+			set:         sets.String{"A": sets.Empty{}, "B": sets.Empty{}},
+			replaceWhat: "A",
+			replaceWith: "C",
+			expected:    sets.String{"B": sets.Empty{}, "C": sets.Empty{}},
 		},
 		{
-			rawMaxVols: "-2",
-			expected:   defaultValue,
-			test:       "Maximum PD volumes must be a positive value, using default value",
-		},
-		{
-			rawMaxVols: "40",
-			expected:   40,
-			test:       "Parse maximum PD volumes value from env",
+			set:         sets.String{"A": sets.Empty{}, "B": sets.Empty{}},
+			replaceWhat: "D",
+			replaceWith: "C",
+			expected:    sets.String{"A": sets.Empty{}, "B": sets.Empty{}},
 		},
 	}
+	for _, testCase := range testCases {
+		result := copyAndReplace(testCase.set, testCase.replaceWhat, testCase.replaceWith)
+		if !result.Equal(testCase.expected) {
+			t.Errorf("expected %v got %v", testCase.expected, result)
+		}
+	}
+}
 
 func TestDefaultPriorities(t *testing.T) {
 	result := sets.NewString(
@@ -85,8 +86,7 @@ func TestDefaultPredicates(t *testing.T) {
 		predicates.CheckVolumeBindingPred,
 	)
 
-	os.Unsetenv(KubeMaxPDVols)
-	if previousValue != "" {
-		os.Setenv(KubeMaxPDVols, previousValue)
+	if expected := defaultPredicates(); !result.Equal(expected) {
+		t.Errorf("expected %v got %v", expected, result)
 	}
 }

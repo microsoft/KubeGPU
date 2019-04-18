@@ -23,11 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -43,18 +39,18 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/api/legacyscheme"
 	"k8s.io/kubernetes/pkg/controller/volume/persistentvolume"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/core"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
-	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
-	fakecache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache/fake"
-	internalqueue "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/volumebinder"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/priorities"
+	"k8s.io/kubernetes/pkg/scheduler/api"
+	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
+	"k8s.io/kubernetes/pkg/scheduler/core"
+	"k8s.io/kubernetes/pkg/scheduler/factory"
+	schedulerinternalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
+	fakecache "k8s.io/kubernetes/pkg/scheduler/internal/cache/fake"
+	internalqueue "k8s.io/kubernetes/pkg/scheduler/internal/queue"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"k8s.io/kubernetes/pkg/scheduler/volumebinder"
 )
 
 type fakeBinder struct {
@@ -369,7 +365,7 @@ func TestSchedulerNoPhantomPodAfterExpire(t *testing.T) {
 	case <-waitPodExpireChan:
 	case <-time.After(wait.ForeverTestTimeout):
 		close(timeout)
-		t.Fatalf("timeout after %v", wait.ForeverTestTimeout)
+		t.Fatalf("timeout timeout in waiting pod expire after %v", wait.ForeverTestTimeout)
 	}
 
 	// We use conflicted pod ports to incur fit predicate failure if first pod not removed.
@@ -386,7 +382,7 @@ func TestSchedulerNoPhantomPodAfterExpire(t *testing.T) {
 			t.Errorf("binding want=%v, get=%v", expectBinding, b)
 		}
 	case <-time.After(wait.ForeverTestTimeout):
-		t.Fatalf("timeout after %v", wait.ForeverTestTimeout)
+		t.Fatalf("timeout in binding after %v", wait.ForeverTestTimeout)
 	}
 }
 
@@ -421,7 +417,7 @@ func TestSchedulerNoPhantomPodAfterDelete(t *testing.T) {
 			t.Errorf("err want=%v, get=%v", expectErr, err)
 		}
 	case <-time.After(wait.ForeverTestTimeout):
-		t.Fatalf("timeout after %v", wait.ForeverTestTimeout)
+		t.Fatalf("timeout in fitting after %v", wait.ForeverTestTimeout)
 	}
 
 	// We mimic the workflow of cache behavior when a pod is removed by user.
@@ -448,7 +444,7 @@ func TestSchedulerNoPhantomPodAfterDelete(t *testing.T) {
 			t.Errorf("binding want=%v, get=%v", expectBinding, b)
 		}
 	case <-time.After(wait.ForeverTestTimeout):
-		t.Fatalf("timeout after %v", wait.ForeverTestTimeout)
+		t.Fatalf("timeout in binding after %v", wait.ForeverTestTimeout)
 	}
 }
 
@@ -619,6 +615,7 @@ func TestSchedulerFailedSchedulingReasons(t *testing.T) {
 	case err := <-errChan:
 		expectErr := &core.FitError{
 			Pod:              podWithTooBigResourceRequests,
+			NumAllNodes:      len(nodes),
 			FailedPredicates: failedPredicatesMap,
 		}
 		if len(fmt.Sprint(expectErr)) > 150 {

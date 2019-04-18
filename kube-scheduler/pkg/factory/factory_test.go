@@ -23,11 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -38,14 +34,14 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 	apitesting "k8s.io/kubernetes/pkg/api/testing"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	latestschedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api/latest"
-	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
-	internalqueue "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	latestschedulerapi "k8s.io/kubernetes/pkg/scheduler/api/latest"
+	schedulerinternalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
+	internalqueue "k8s.io/kubernetes/pkg/scheduler/internal/queue"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	"k8s.io/kubernetes/pkg/scheduler/util"
 )
 
 const (
@@ -381,93 +377,6 @@ func testBind(binding *v1.Binding, t *testing.T) {
 	}
 }
 
-// TestResponsibleForPod tests if a pod with an annotation that should cause it to
-// be picked up by the default scheduler, is in fact picked by the default scheduler
-// Two schedulers are made in the test: one is default scheduler and other scheduler
-// is of name "foo-scheduler". A pod must be picked up by at most one of the two
-// schedulers.
-func TestResponsibleForPod(t *testing.T) {
-	handler := utiltesting.FakeHandler{
-		StatusCode:   500,
-		ResponseBody: "",
-		T:            t,
-	}
-	server := httptest.NewServer(&handler)
-	defer server.Close()
-	client := clientset.NewForConfigOrDie(&restclient.Config{Host: server.URL, ContentConfig: restclient.ContentConfig{GroupVersion: &api.Registry.GroupOrDie(v1.GroupName).GroupVersion}})
-	// factory of "default-scheduler"
-	informerFactory := informers.NewSharedInformerFactory(client, 0)
-	factoryDefaultScheduler := NewConfigFactory(
-		v1.DefaultSchedulerName,
-		client,
-		informerFactory.Core().V1().Nodes(),
-		informerFactory.Core().V1().Pods(),
-		informerFactory.Core().V1().PersistentVolumes(),
-		informerFactory.Core().V1().PersistentVolumeClaims(),
-		informerFactory.Core().V1().ReplicationControllers(),
-		informerFactory.Extensions().V1beta1().ReplicaSets(),
-		informerFactory.Apps().V1beta1().StatefulSets(),
-		informerFactory.Core().V1().Services(),
-		v1.DefaultHardPodAffinitySymmetricWeight,
-	)
-	// factory of "foo-scheduler"
-	factoryFooScheduler := NewConfigFactory(
-		"foo-scheduler",
-		client,
-		informerFactory.Core().V1().Nodes(),
-		informerFactory.Core().V1().Pods(),
-		informerFactory.Core().V1().PersistentVolumes(),
-		informerFactory.Core().V1().PersistentVolumeClaims(),
-		informerFactory.Core().V1().ReplicationControllers(),
-		informerFactory.Extensions().V1beta1().ReplicaSets(),
-		informerFactory.Apps().V1beta1().StatefulSets(),
-		informerFactory.Core().V1().Services(),
-		v1.DefaultHardPodAffinitySymmetricWeight,
-	)
-	// scheduler annotations to be tested
-	schedulerFitsDefault := "default-scheduler"
-	schedulerFitsFoo := "foo-scheduler"
-	schedulerFitsNone := "bar-scheduler"
-
-	tests := []struct {
-		pod             *v1.Pod
-		pickedByDefault bool
-		pickedByFoo     bool
-	}{
-		{
-			// pod with "spec.Schedulername=default-scheduler" should be picked
-			// by the scheduler of name "default-scheduler", NOT by the one of name "foo-scheduler"
-			pod:             &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}, Spec: v1.PodSpec{SchedulerName: schedulerFitsDefault}},
-			pickedByDefault: true,
-			pickedByFoo:     false,
-		},
-		{
-			// pod with "spec.SchedulerName=foo-scheduler" should be NOT
-			// be picked by the scheduler of name "default-scheduler", but by the one of name "foo-scheduler"
-			pod:             &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}, Spec: v1.PodSpec{SchedulerName: schedulerFitsFoo}},
-			pickedByDefault: false,
-			pickedByFoo:     true,
-		},
-		{
-			// pod with "spec.SchedulerName=foo-scheduler" should be NOT
-			// be picked by niether the scheduler of name "default-scheduler" nor the one of name "foo-scheduler"
-			pod:             &v1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}, Spec: v1.PodSpec{SchedulerName: schedulerFitsNone}},
-			pickedByDefault: false,
-			pickedByFoo:     false,
-		},
-	}
-
-	for _, test := range tests {
-		podOfDefault := factoryDefaultScheduler.ResponsibleForPod(test.pod)
-		podOfFoo := factoryFooScheduler.ResponsibleForPod(test.pod)
-		results := []bool{podOfDefault, podOfFoo}
-		expected := []bool{test.pickedByDefault, test.pickedByFoo}
-		if !reflect.DeepEqual(results, expected) {
-			t.Errorf("expected: {%v, %v}, got {%v, %v}", test.pickedByDefault, test.pickedByFoo, podOfDefault, podOfFoo)
-		}
-	}
-}
-
 func TestInvalidHardPodAffinitySymmetricWeight(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	// factory of "default-scheduler"
@@ -649,9 +558,5 @@ func testGetBinderFunc(expectedBinderType, podName string, extenders []algorithm
 	binderType := fmt.Sprintf("%s", reflect.TypeOf(binder))
 	if binderType != expectedBinderType {
 		t.Errorf("Expected binder %q but got %q", expectedBinderType, binderType)
-	}
-	expectedNodes := []string{"node1", "node4", "node6", "node10", "node11"}
-	if !reflect.DeepEqual(expectedNodes, nodeNames) {
-		t.Errorf("expected: %v, got %v", expectedNodes, nodeNames)
 	}
 }

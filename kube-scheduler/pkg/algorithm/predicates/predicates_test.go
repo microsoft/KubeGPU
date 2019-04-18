@@ -24,58 +24,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
-	schedutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
-	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	schedulertesting "k8s.io/kubernetes/pkg/scheduler/testing"
 )
-
-type FakeNodeInfo v1.Node
-
-func (n FakeNodeInfo) GetNodeInfo(nodeName string) (*v1.Node, error) {
-	node := v1.Node(n)
-	return &node, nil
-}
-
-type FakeNodeListInfo []v1.Node
-
-func (nodes FakeNodeListInfo) GetNodeInfo(nodeName string) (*v1.Node, error) {
-	for _, node := range nodes {
-		if node.Name == nodeName {
-			return &node, nil
-		}
-	}
-	return nil, fmt.Errorf("Unable to find node: %s", nodeName)
-}
-
-type FakePersistentVolumeClaimInfo []v1.PersistentVolumeClaim
-
-func (pvcs FakePersistentVolumeClaimInfo) GetPersistentVolumeClaimInfo(namespace string, pvcID string) (*v1.PersistentVolumeClaim, error) {
-	for _, pvc := range pvcs {
-		if pvc.Name == pvcID && pvc.Namespace == namespace {
-			return &pvc, nil
-		}
-	}
-	return nil, fmt.Errorf("Unable to find persistent volume claim: %s/%s", namespace, pvcID)
-}
-
-type FakePersistentVolumeInfo []v1.PersistentVolume
-
-func (pvs FakePersistentVolumeInfo) GetPersistentVolumeInfo(pvID string) (*v1.PersistentVolume, error) {
-	for _, pv := range pvs {
-		if pv.Name == pvID {
-			return &pv, nil
-		}
-	}
-	return nil, fmt.Errorf("Unable to find persistent volume: %s", pvID)
-}
 
 var (
 	extendedResourceA     = v1.ResourceName("example.com/aaa")
@@ -486,7 +444,6 @@ func TestPodFitsResources(t *testing.T) {
 			name: "due to container scratch disk",
 			reasons: []PredicateFailureReason{
 				NewInsufficientResourceError(v1.ResourceCPU, 1, 10, 10),
-				NewInsufficientResourceError(v1.ResourceStorageScratch, 1, 20, 20),
 			},
 		},
 		{
@@ -596,7 +553,7 @@ func TestPodFitsHost(t *testing.T) {
 	}
 }
 
-func newPod(host string, hostPorts ...int) *v1.Pod {
+func newPod(host string, hostPortInfos ...string) *v1.Pod {
 	networkPorts := []v1.ContainerPort{}
 	for _, portInfo := range hostPortInfos {
 		splited := strings.Split(portInfo, "/")
@@ -736,7 +693,7 @@ func TestPodFitsHostPorts(t *testing.T) {
 	}
 }
 
-func TestDiskConflicts(t *testing.T) {
+func TestGCEDiskConflicts(t *testing.T) {
 	volState := v1.PodSpec{
 		Volumes: []v1.Volume{
 			{
@@ -968,6 +925,7 @@ func TestISCSIDiskConflicts(t *testing.T) {
 	}
 }
 
+// TODO: Add test case for RequiredDuringSchedulingRequiredDuringExecution after it's implemented.
 func TestPodFitsSelector(t *testing.T) {
 	tests := []struct {
 		pod      *v1.Pod
@@ -1357,42 +1315,6 @@ func TestPodFitsSelector(t *testing.T) {
 			fits: true,
 			name: "Pod with multiple NodeSelectorTerms ORed in affinity, matches the node's labels and will schedule onto the node",
 		},
-		// TODO: Uncomment this test when implement RequiredDuringSchedulingRequiredDuringExecution
-		//		{
-		//			pod: &v1.Pod{
-		//				ObjectMeta: metav1.ObjectMeta{
-		//					Annotations: map[string]string{
-		//						v1.AffinityAnnotationKey: `
-		//						{"nodeAffinity": {
-		//							"requiredDuringSchedulingRequiredDuringExecution": {
-		//								"nodeSelectorTerms": [{
-		//									"matchExpressions": [{
-		//										"key": "foo",
-		//										"operator": "In",
-		//										"values": ["bar", "value2"]
-		//									}]
-		//								}]
-		//							},
-		//							"requiredDuringSchedulingIgnoredDuringExecution": {
-		//								"nodeSelectorTerms": [{
-		//									"matchExpressions": [{
-		//										"key": "foo",
-		//										"operator": "NotIn",
-		//										"values": ["bar", "value2"]
-		//									}]
-		//								}]
-		//							}
-		//						}}`,
-		//					},
-		//				},
-		//			},
-		//			labels: map[string]string{
-		//				"foo": "bar",
-		//			},
-		//			fits: false,
-		//			test: "Pod with an Affinity both requiredDuringSchedulingRequiredDuringExecution and " +
-		//				"requiredDuringSchedulingIgnoredDuringExecution indicated that don't match node's labels and won't schedule onto the node",
-		//		},
 		{
 			pod: &v1.Pod{
 				Spec: v1.PodSpec{
@@ -2034,6 +1956,7 @@ func TestRunGeneralPredicates(t *testing.T) {
 	}
 }
 
+// TODO: Add test case for RequiredDuringSchedulingRequiredDuringExecution after it's implemented.
 func TestInterPodAffinity(t *testing.T) {
 	podLabel := map[string]string{"service": "securityscan"}
 	labels1 := map[string]string{
@@ -2325,50 +2248,6 @@ func TestInterPodAffinity(t *testing.T) {
 			fits: true,
 			name: "satisfies the PodAffinity and PodAntiAffinity with the existing pod",
 		},
-		// TODO: Uncomment this block when implement RequiredDuringSchedulingRequiredDuringExecution.
-		//{
-		//	 pod: &v1.Pod{
-		//		ObjectMeta: metav1.ObjectMeta{
-		//			Labels: podLabel2,
-		//			Annotations: map[string]string{
-		//				v1.AffinityAnnotationKey: `
-		//				{"podAffinity": {
-		//					"requiredDuringSchedulingRequiredDuringExecution": [
-		//						{
-		//							"labelSelector": {
-		//								"matchExpressions": [{
-		//									"key": "service",
-		//									"operator": "Exists"
-		//								}, {
-		//									"key": "wrongkey",
-		//									"operator": "DoesNotExist"
-		//								}]
-		//							},
-		//							"topologyKey": "region"
-		//						}, {
-		//							"labelSelector": {
-		//								"matchExpressions": [{
-		//									"key": "service",
-		//									"operator": "In",
-		//									"values": ["securityscan"]
-		//								}, {
-		//									"key": "service",
-		//									"operator": "NotIn",
-		//									"values": ["WrongValue"]
-		//								}]
-		//							},
-		//							"topologyKey": "region"
-		//						}
-		//					]
-		//				}}`,
-		//			},
-		//		},
-		//	},
-		//	pods: []*v1.Pod{{Spec: v1.PodSpec{NodeName: "machine1"}, ObjectMeta: metav1.ObjectMeta{Labels: podlabel}}},
-		//	node: &node1,
-		//	fits: true,
-		//	test: "satisfies the PodAffinity with different Label Operators in multiple RequiredDuringSchedulingRequiredDuringExecution ",
-		//},
 		{
 			pod: &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
@@ -4854,25 +4733,10 @@ func TestVolumeZonePredicateMultiZone(t *testing.T) {
 			Pod:  createPodWithVolume("pod_1", "Vol_3", "PVC_3"),
 			Node: &v1.Node{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": [{
-								"matchExpressions": [{
-									"key": "foo",
-									"operator": "In",
-									"values": ["bar", "value2"]
-								}]
-							}]
-						}}}`,
-					},
+					Name: "host1",
 				},
 			},
-			labels: map[string]string{
-				"foo": "bar",
-			},
-			fits: true,
-			test: "Pod with matchExpressions using In operator that matches the existing node",
+			Fits: true,
 		},
 		{
 			name: "label zone failure domain matched",
@@ -4883,12 +4747,7 @@ func TestVolumeZonePredicateMultiZone(t *testing.T) {
 					Labels: map[string]string{v1.LabelZoneFailureDomain: "us-west1-a", "uselessLabel": "none"},
 				},
 			},
-			labels: map[string]string{
-				// We use two digit to denote major version and two digit for minor version.
-				"kernel-version": "0206",
-			},
-			fits: true,
-			test: "Pod with matchExpressions using Gt operator that matches the existing node",
+			Fits: true,
 		},
 		{
 			name: "label zone failure domain failed match",
@@ -4939,97 +4798,32 @@ func TestVolumeZonePredicateWithVolumeBinding(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: classImmediate},
 		},
 		{
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": [{
-								"matchExpressions": [{
-									"key": "GPU",
-									"operator": "Exists"
-								}]
-							}]
-						}}}`,
-					},
-				},
-			},
-			labels: map[string]string{
-				"GPU": "NVIDIA-GRID-K1",
-			},
-			fits: true,
-			test: "Pod with matchExpressions using Exists operator that matches the existing node",
+			ObjectMeta:        metav1.ObjectMeta{Name: classWait},
+			VolumeBindingMode: &modeWait,
 		},
+	}
+
+	pvInfo := FakePersistentVolumeInfo{
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "Vol_1", Labels: map[string]string{v1.LabelZoneFailureDomain: "us-west1-a"}},
 		},
+	}
+
+	pvcInfo := FakePersistentVolumeClaimInfo{
 		{
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": null
-						}}}`,
-					},
-				},
-			},
-			labels: map[string]string{
-				"foo": "bar",
-			},
-			fits: false,
-			test: "Pod with a nil []NodeSelectorTerm in affinity, can't match the node's labels and won't schedule onto the node",
+			ObjectMeta: metav1.ObjectMeta{Name: "PVC_1", Namespace: "default"},
+			Spec:       v1.PersistentVolumeClaimSpec{VolumeName: "Vol_1"},
 		},
 		{
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": []
-						}}}`,
-					},
-				},
-			},
-			labels: map[string]string{
-				"foo": "bar",
-			},
-			fits: false,
-			test: "Pod with an empty []NodeSelectorTerm in affinity, can't match the node's labels and won't schedule onto the node",
+			ObjectMeta: metav1.ObjectMeta{Name: "PVC_NoSC", Namespace: "default"},
+			Spec:       v1.PersistentVolumeClaimSpec{StorageClassName: &class0},
 		},
 		{
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": [{}, {}]
-						}}}`,
-					},
-				},
-			},
-			labels: map[string]string{
-				"foo": "bar",
-			},
-			fits: false,
-			test: "Pod with invalid NodeSelectTerms in affinity will match no objects and won't schedule onto the node",
+			ObjectMeta: metav1.ObjectMeta{Name: "PVC_EmptySC", Namespace: "default"},
 		},
 		{
-			pod: &v1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						v1.AffinityAnnotationKey: `
-						{"nodeAffinity": { "requiredDuringSchedulingIgnoredDuringExecution": {
-							"nodeSelectorTerms": [{"matchExpressions": [{}]}]
-						}}}`,
-					},
-				},
-			},
-			labels: map[string]string{
-				"foo": "bar",
-			},
-			fits: false,
-			test: "Pod with empty MatchExpressions is not a valid value will match no objects and won't schedule onto the node",
+			ObjectMeta: metav1.ObjectMeta{Name: "PVC_WaitSC", Namespace: "default"},
+			Spec:       v1.PersistentVolumeClaimSpec{StorageClassName: &classWait},
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{Name: "PVC_ImmediateSC", Namespace: "default"},
@@ -5078,42 +4872,6 @@ func TestVolumeZonePredicateWithVolumeBinding(t *testing.T) {
 			Fits:          false,
 			ExpectFailure: true,
 		},
-		// TODO: Uncomment this test when implement RequiredDuringSchedulingRequiredDuringExecution
-		//		{
-		//			pod: &v1.Pod{
-		//				ObjectMeta: metav1.ObjectMeta{
-		//					Annotations: map[string]string{
-		//						v1.AffinityAnnotationKey: `
-		//						{"nodeAffinity": {
-		//							"requiredDuringSchedulingRequiredDuringExecution": {
-		//								"nodeSelectorTerms": [{
-		//									"matchExpressions": [{
-		//										"key": "foo",
-		//										"operator": "In",
-		//										"values": ["bar", "value2"]
-		//									}]
-		//								}]
-		//							},
-		//							"requiredDuringSchedulingIgnoredDuringExecution": {
-		//								"nodeSelectorTerms": [{
-		//									"matchExpressions": [{
-		//										"key": "foo",
-		//										"operator": "NotIn",
-		//										"values": ["bar", "value2"]
-		//									}]
-		//								}]
-		//							}
-		//						}}`,
-		//					},
-		//				},
-		//			},
-		//			labels: map[string]string{
-		//				"foo": "bar",
-		//			},
-		//			fits: false,
-		//			test: "Pod with an Affinity both requiredDuringSchedulingRequiredDuringExecution and " +
-		//				"requiredDuringSchedulingIgnoredDuringExecution indicated that don't match node's labels and won't schedule onto the node",
-		//		},
 		{
 			name: "unbound volume wait binding mode",
 			Pod:  createPodWithVolume("pod_1", "vol_1", "PVC_WaitSC"),
@@ -5167,7 +4925,6 @@ func TestGetMaxVols(t *testing.T) {
 			name:       "Parse maximum PD volumes value from env",
 		},
 	}
-	expectedFailureReasons := []algorithm.PredicateFailureReason{ErrPodAffinityNotMatch}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -5178,55 +4935,10 @@ func TestGetMaxVols(t *testing.T) {
 			}
 		})
 	}
-	affinityExpectedFailureReasons := []algorithm.PredicateFailureReason{ErrPodAffinityNotMatch}
-	selectorExpectedFailureReasons := []algorithm.PredicateFailureReason{ErrNodeSelectorNotMatch}
 
-	for _, test := range tests {
-		nodeListInfo := FakeNodeListInfo(test.nodes)
-		for _, node := range test.nodes {
-			var podsOnNode []*v1.Pod
-			for _, pod := range test.pods {
-				if pod.Spec.NodeName == node.Name {
-					podsOnNode = append(podsOnNode, pod)
-				}
-			}
-
-			testFit := PodAffinityChecker{
-				info:      nodeListInfo,
-				podLister: schedulertesting.FakePodLister(test.pods),
-			}
-			nodeInfo := nodeinfo.NewNodeInfo(podsOnNode...)
-			nodeInfo.SetNode(&node)
-			nodeInfoMap := map[string]*nodeinfo.NodeInfo{node.Name: nodeInfo}
-			fits, reasons, err := testFit.InterPodAffinityMatches(test.pod, PredicateMetadata(test.pod, nodeInfoMap), nodeInfo)
-			if err != nil {
-				t.Errorf("%s: unexpected error %v", test.test, err)
-			}
-			if !fits && !reflect.DeepEqual(reasons, affinityExpectedFailureReasons) {
-				t.Errorf("%s: unexpected failure reasons: %v", test.test, reasons)
-			}
-			affinity, err := v1helper.GetAffinityFromPodAnnotations(test.pod.ObjectMeta.Annotations)
-			if err != nil {
-				t.Errorf("%s: unexpected error: %v", test.test, err)
-			}
-			if affinity != nil && affinity.NodeAffinity != nil {
-				nodeInfo := nodeinfo.NewNodeInfo()
-				nodeInfo.SetNode(&node)
-				nodeInfoMap := map[string]*nodeinfo.NodeInfo{node.Name: nodeInfo}
-				fits2, reasons, err := PodMatchNodeSelector(test.pod, PredicateMetadata(test.pod, nodeInfoMap), nodeInfo)
-				if err != nil {
-					t.Errorf("%s: unexpected error: %v", test.test, err)
-				}
-				if !fits2 && !reflect.DeepEqual(reasons, selectorExpectedFailureReasons) {
-					t.Errorf("%s: unexpected failure reasons: %v, want: %v", test.test, reasons, selectorExpectedFailureReasons)
-				}
-				fits = fits && fits2
-			}
-
-			if fits != test.fits[node.Name] {
-				t.Errorf("%s: expected %v for %s got %v", test.test, test.fits[node.Name], node.Name, fits)
-			}
-		}
+	os.Unsetenv(KubeMaxPDVols)
+	if previousValue != "" {
+		os.Setenv(KubeMaxPDVols, previousValue)
 	}
 }
 
