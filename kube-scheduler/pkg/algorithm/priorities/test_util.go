@@ -17,9 +17,8 @@ limitations under the License.
 package priorities
 
 import (
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,18 +40,18 @@ func makeNode(node string, milliCPU, memory int64) *v1.Node {
 	}
 }
 
-func priorityFunction(mapFn algorithm.PriorityMapFunction, reduceFn algorithm.PriorityReduceFunction, mataData interface{}) algorithm.PriorityFunction {
-	return func(pod *v1.Pod, nodeNameToInfo map[string]*schedulercache.NodeInfo, nodes []*v1.Node) (schedulerapi.HostPriorityList, error) {
+func priorityFunction(mapFn PriorityMapFunction, reduceFn PriorityReduceFunction, metaData interface{}) PriorityFunction {
+	return func(pod *v1.Pod, nodeNameToInfo map[string]*schedulernodeinfo.NodeInfo, nodes []*v1.Node) (schedulerapi.HostPriorityList, error) {
 		result := make(schedulerapi.HostPriorityList, 0, len(nodes))
 		for i := range nodes {
-			hostResult, err := mapFn(pod, mataData, nodeNameToInfo[nodes[i].Name])
+			hostResult, err := mapFn(pod, metaData, nodeNameToInfo[nodes[i].Name])
 			if err != nil {
 				return nil, err
 			}
 			result = append(result, hostResult)
 		}
 		if reduceFn != nil {
-			if err := reduceFn(pod, mataData, nodeNameToInfo, result); err != nil {
+			if err := reduceFn(pod, metaData, nodeNameToInfo, result); err != nil {
 				return nil, err
 			}
 		}

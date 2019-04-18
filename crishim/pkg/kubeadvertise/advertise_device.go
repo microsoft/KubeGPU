@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilnet "k8s.io/apimachinery/pkg/util/net"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/cmd/kubelet/app"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
@@ -24,7 +24,11 @@ type DeviceAdvertiser struct {
 }
 
 func NewDeviceAdvertiser(s *options.KubeletServer, dm *device.DevicesManager, thisNodeName string) (*DeviceAdvertiser, error) {
-	clientConfig, err := app.CreateAPIServerClientConfig(s)
+	clientConfig, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: s.KubeConfig},
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
+
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +43,7 @@ func NewDeviceAdvertiser(s *options.KubeletServer, dm *device.DevicesManager, th
 func (da *DeviceAdvertiser) patchResources() error {
 	// Get current node status
 	opts := metav1.GetOptions{}
-	node, err := da.KubeClient.Core().Nodes().Get(da.nodeName, opts)
+	node, err := da.KubeClient.CoreV1().Nodes().Get(da.nodeName, opts)
 	if err != nil {
 		return fmt.Errorf("error getting current node %q: %v", da.nodeName, err)
 	}
@@ -100,7 +104,10 @@ func GetHostName(f *options.KubeletFlags) (string, string, error) {
 	// 3) Lookup the IP from node name by DNS and use the first non-loopback ipv4 address
 	// 4) Try to get the IP from the network interface used as default gateway
 	ipName := ""
-	nodeName := nodeutil.GetHostname(f.HostnameOverride)
+	nodeName, err := nodeutil.GetHostname(f.HostnameOverride)
+	if err != nil {
+		return "", nodeName, err
+	}
 	if f.NodeIP != "" {
 		ipName = f.NodeIP
 	} else {

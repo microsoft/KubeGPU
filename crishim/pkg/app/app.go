@@ -11,9 +11,8 @@ import (
 	"github.com/spf13/pflag"
 
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/apiserver/pkg/util/flag"
-	"k8s.io/apiserver/pkg/util/logs"
-	kubeletapp "k8s.io/kubernetes/cmd/kubelet/app"
+	"k8s.io/component-base/cli/flag"
+	"k8s.io/component-base/logs"
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/version/verflag"
 
@@ -43,11 +42,11 @@ func RunApp() {
 	kubeletFlags.AddFlags(pflag.CommandLine)
 
 	// construct KubeletConfiguration object and register command line flags mapping
-	defaultConfig, err := options.NewKubeletConfiguration()
+	kubeletConfig, err := options.NewKubeletConfiguration()
 	if err != nil {
 		Die(err)
 	}
-	options.AddKubeletConfigFlags(pflag.CommandLine, defaultConfig)
+	options.AddKubeletConfigFlags(pflag.CommandLine, kubeletConfig)
 
 	criShimCfg := CriShimConfig{}
 	criShimCfg.New()
@@ -65,19 +64,15 @@ func RunApp() {
 
 	// TODO(mtaufen): won't need this this once dynamic config is GA
 	// set feature gates so we can check if dynamic config is enabled
-	if err := utilfeature.DefaultFeatureGate.SetFromMap(defaultConfig.FeatureGates); err != nil {
+	if err := utilfeature.DefaultMutableFeatureGate.SetFromMap(kubeletConfig.FeatureGates); err != nil {
 		Die(err)
 	}
 	// validate the initial KubeletFlags, to make sure the dynamic-config-related flags aren't used unless the feature gate is on
 	if err := options.ValidateKubeletFlags(kubeletFlags); err != nil {
 		Die(err)
 	}
-	// bootstrap the kubelet config controller, app.BootstrapKubeletConfigController will check
-	// feature gates and only turn on relevant parts of the controller
-	kubeletConfig, _, err := kubeletapp.BootstrapKubeletConfigController(
-		defaultConfig, kubeletFlags.InitConfigDir, kubeletFlags.DynamicConfigDir)
-	if err != nil {
-		Die(err)
+	if len(kubeletFlags.KubeletConfigFile) > 0 {
+		Die(fmt.Errorf("Not supported - configuration file"))
 	}
 
 	// construct a KubeletServer from kubeletFlags and kubeletConfig

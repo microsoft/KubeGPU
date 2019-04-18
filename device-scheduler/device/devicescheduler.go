@@ -15,6 +15,8 @@ import (
 type DevicesScheduler struct {
 	Devices           []sctypes.DeviceScheduler
 	RunGroupScheduler []bool
+	score             map[string]map[string]float64
+	maxScore          map[string]float64
 }
 
 // essentially a static variable
@@ -95,8 +97,24 @@ func (ds *DevicesScheduler) PodFitsResources(podInfo *types.PodInfo, nodeInfo *t
 		totalScore += score
 		totalFit = totalFit && fit
 		totalReasons = append(totalReasons, reasons...)
+		if totalFit {
+			ds.score[podInfo.Name][nodeInfo.Name] = totalScore
+			if totalScore > ds.maxScore[podInfo.Name] {
+				ds.maxScore[podInfo.Name] = totalScore
+			}
+		} else {
+			ds.score[podInfo.Name][nodeInfo.Name] = 0.0
+		}
 	}
 	return totalFit, totalReasons, totalScore
+}
+
+// priority - returns number between 0 and 1 (1 for node with maximum score)
+func (ds *DevicesScheduler) PodPriority(podInfo *types.PodInfo, nodeInfo *types.NodeInfo) float64 {
+	if ds.maxScore[podInfo.Name] != 0.0 {
+		return ds.score[podInfo.Name][nodeInfo.Name] / ds.maxScore[podInfo.Name]
+	}
+	return 0.0
 }
 
 // allocate devices & write into annotations

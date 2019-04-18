@@ -20,19 +20,21 @@ import (
 	"reflect"
 	"testing"
 
-	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
+	apps "k8s.io/api/apps/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/api/v1"
+	priorityutil "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/priorities/util"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
+	schedulertesting "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/testing"
 )
 
 func TestPriorityMetadata(t *testing.T) {
-	nonZeroReqs := &schedulercache.Resource{}
-	nonZeroReqs.MilliCPU = priorityutil.DefaultMilliCpuRequest
+	nonZeroReqs := &schedulernodeinfo.Resource{}
+	nonZeroReqs.MilliCPU = priorityutil.DefaultMilliCPURequest
 	nonZeroReqs.Memory = priorityutil.DefaultMemoryRequest
 
-	specifiedReqs := &schedulercache.Resource{}
+	specifiedReqs := &schedulernodeinfo.Resource{}
 	specifiedReqs.MilliCPU = 200
 	specifiedReqs.Memory = 2000
 
@@ -85,8 +87,8 @@ func TestPriorityMetadata(t *testing.T) {
 					ImagePullPolicy: "Always",
 					Resources: v1.ResourceRequirements{
 						Requests: v1.ResourceList{
-							"cpu":    resource.MustParse("200m"),
-							"memory": resource.MustParse("2000"),
+							v1.ResourceCPU:    resource.MustParse("200m"),
+							v1.ResourceMemory: resource.MustParse("2000"),
 						},
 					},
 				},
@@ -94,15 +96,33 @@ func TestPriorityMetadata(t *testing.T) {
 			Tolerations: tolerations,
 		},
 	}
+	podWithAffinityAndRequests := &v1.Pod{
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Name:            "container",
+					Image:           "image",
+					ImagePullPolicy: "Always",
+					Resources: v1.ResourceRequirements{
+						Requests: v1.ResourceList{
+							v1.ResourceCPU:    resource.MustParse("200m"),
+							v1.ResourceMemory: resource.MustParse("2000"),
+						},
+					},
+				},
+			},
+			Affinity: podAffinity,
+		},
+	}
 	tests := []struct {
 		pod      *v1.Pod
-		test     string
+		name     string
 		expected interface{}
 	}{
 		{
 			pod:      nil,
 			expected: nil,
-			test:     "pod is nil , priorityMetadata is nil",
+			name:     "pod is nil , priorityMetadata is nil",
 		},
 		{
 			pod: podWithTolerationsAndAffinity,
@@ -111,7 +131,7 @@ func TestPriorityMetadata(t *testing.T) {
 				podTolerations: tolerations,
 				affinity:       podAffinity,
 			},
-			test: "Produce a priorityMetadata with default requests",
+			name: "Produce a priorityMetadata with default requests",
 		},
 		{
 			pod: podWithTolerationsAndRequests,
@@ -120,13 +140,29 @@ func TestPriorityMetadata(t *testing.T) {
 				podTolerations: tolerations,
 				affinity:       nil,
 			},
-			test: "Produce a priorityMetadata with specified requests",
+			name: "Produce a priorityMetadata with specified requests",
+		},
+		{
+			pod: podWithAffinityAndRequests,
+			expected: &priorityMetadata{
+				nonZeroRequest: specifiedReqs,
+				podTolerations: nil,
+				affinity:       podAffinity,
+			},
+			name: "Produce a priorityMetadata with specified requests",
 		},
 	}
+	metaDataProducer := NewPriorityMetadataFactory(
+		schedulertesting.FakeServiceLister([]*v1.Service{}),
+		schedulertesting.FakeControllerLister([]*v1.ReplicationController{}),
+		schedulertesting.FakeReplicaSetLister([]*apps.ReplicaSet{}),
+		schedulertesting.FakeStatefulSetLister([]*apps.StatefulSet{}))
 	for _, test := range tests {
-		ptData := PriorityMetadata(test.pod, nil)
-		if !reflect.DeepEqual(test.expected, ptData) {
-			t.Errorf("%s: expected %#v, got %#v", test.test, test.expected, ptData)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			ptData := metaDataProducer(test.pod, nil)
+			if !reflect.DeepEqual(test.expected, ptData) {
+				t.Errorf("expected %#v, got %#v", test.expected, ptData)
+			}
+		})
 	}
 }
