@@ -109,8 +109,8 @@ def copySchedToMain():
         oscmd('python {0} -e "{1}" -s {2} -d {3}'.format(extScript, ".go", d, dirsSchedToMain[d]))
     # search and replace import paths in kube-scheduler directory
     tryChDir(os.path.join(thisBase, 'kube-scheduler'))
-    oscmd("find . -name '*.go' -exec sed -i 's?k8s.io/kubernetes/pkg/scheduler?github.com/KubeGPU/kube-scheduler/pkg?g' {} +")
-    oscmd("find . -name '*.go' -exec sed -i 's?k8s.io/kubernetes/cmd/kube-scheduler?github.com/KubeGPU/kube-scheduler/cmd?g' {} +")
+    oscmd("find . -name '*.go' -exec sed -i 's?k8s.io/kubernetes/pkg/scheduler?github.com/Microsoft/KubeGPU/kube-scheduler/pkg?g' {} +")
+    oscmd("find . -name '*.go' -exec sed -i 's?k8s.io/kubernetes/cmd/kube-scheduler?github.com/Microsoft/KubeGPU/kube-scheduler/cmd?g' {} +")
 
 def copyMainToSched():
     checkoutSched("master")
