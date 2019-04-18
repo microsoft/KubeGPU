@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	componentbasevalidation "k8s.io/component-base/config/validation"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	"k8s.io/kubernetes/pkg/scheduler/apis/config"
 )
 
 // ValidateKubeSchedulerConfiguration ensures validation of the KubeSchedulerConfiguration struct

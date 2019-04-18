@@ -23,13 +23,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
-	internalqueue "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/queue"
-	plugins "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/plugins/v1alpha1"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/util"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	"k8s.io/kubernetes/pkg/scheduler/factory"
+	internalqueue "k8s.io/kubernetes/pkg/scheduler/internal/queue"
+	plugins "k8s.io/kubernetes/pkg/scheduler/plugins/v1alpha1"
+	"k8s.io/kubernetes/pkg/scheduler/util"
 )
 
 // FakeConfigurator is an implementation for test.

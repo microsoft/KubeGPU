@@ -18,7 +18,7 @@ package lifecycle
 
 import (
 	"k8s.io/api/core/v1"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 )
 
 // AdmissionFailureHandlerStub is an AdmissionFailureHandler that does not perform any handling of admission failure.

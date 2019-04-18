@@ -19,8 +19,8 @@ package fake
 import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm"
-	schedulerinternalcache "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/internal/cache"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm"
+	schedulerinternalcache "k8s.io/kubernetes/pkg/scheduler/internal/cache"
 )
 
 // Cache is used for testing

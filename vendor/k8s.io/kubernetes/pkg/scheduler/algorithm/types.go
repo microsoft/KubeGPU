@@ -21,7 +21,7 @@ import (
 	"k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
 )
 
 // NodeFieldSelectorKeys is a map that: the key are node field selector keys; the values are

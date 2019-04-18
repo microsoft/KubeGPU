@@ -7,8 +7,28 @@ import shutil
 import sys
 import os
 thisPath = os.path.dirname(os.path.realpath(__file__))
-k8s = os.path.join(thisPath, '../../../..', 'k8s.io/kubernetes')
-ksched = os.path.join(thisPath, '../..', 'KubeGPU-scheduler')
+k8s = os.path.join(thisPath, '..', '..', '..', '..', 'k8s.io', 'kubernetes')
+ksched = os.path.join(thisPath, '..', '..', 'KubeGPU-scheduler')
+extScript = os.path.join(thisPath, 'extcopy.py')
+
+def tryMove(src, dst):
+    done = False
+    try:
+        if not os.path.exists(dst):
+            shutil.move(src, dst)
+            done = True
+    except Exception:
+        pass
+
+    if not done and os.path.isdir(src):
+        for (path, dirs, files) in os.walk(src):
+            pathExt = path[len(src)+1:]
+            for p in dirs+files:
+                tryMove(os.path.join(path, p), os.path.join(dst, pathExt, p))
+
+def oscmd(cmd):
+    print(cmd)
+    os.system(cmd)
 
 if __name__ == "__main__":
     newV = sys.argv[1]
@@ -16,20 +36,18 @@ if __name__ == "__main__":
     try:
         os.chdir(k8s)
         os.system('git pull')
-        os.system('git fetch all')
         os.system('git checkout {0}'.format(newV))
     except Exception:
         print("Not found dir")
         exit()
     # blast the existing vendor tree and copy new stuff
     vendor = os.path.join(thisPath, '..', 'vendor')
-    shutil.rmtree(vendor)
-    vendork8s = os.path.join(vendor, 'k8s.io/kubernetes')
-    os.system('python {0}/extcopy.py -e "*.go" -s {1} -d {2}'.format(thisPath, k8s, vendork8s))
+    shutil.rmtree(vendor, ignore_errors=True)
+    vendork8s = os.path.join(vendor, 'k8s.io', 'kubernetes')
+    for extCopy in ['.go', '.h', '.c', '.cgo', '.cpp', '.s']:
+        oscmd('python {0} -e "{1}" -s {2} -d {3}'.format(extScript, extCopy, k8s, vendork8s))
     vendork8svendor = os.path.join(vendork8s, 'vendor')
-    for s in os.listdir(vendork8svendor):
-        shutil.move(os.path.join(vendork8svendor, s), vendor)
-    # move staging stuff
-    stagingd = os.path.join(vendork8s, '/staging/src/k8s.io')
-    for s in os.listdir(stagingd):
-        shutil.move(os.path.join(stagingd, s), os.path.join(vendor, 'k8s.io'))
+    tryMove(vendork8svendor, vendor) # move vendor
+    stagingd = os.path.join(vendork8s, 'staging', 'src', 'k8s.io')
+    print("StagingDir: {0}".format(stagingd))
+    tryMove(stagingd, os.path.join(vendor, 'k8s.io')) # move staging

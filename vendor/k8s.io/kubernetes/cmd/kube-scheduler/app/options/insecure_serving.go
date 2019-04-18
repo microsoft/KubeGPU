@@ -25,7 +25,7 @@ import (
 
 	apiserveroptions "k8s.io/apiserver/pkg/server/options"
 	schedulerappconfig "k8s.io/kubernetes/cmd/kube-scheduler/app/config"
-	kubeschedulerconfig "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	kubeschedulerconfig "k8s.io/kubernetes/pkg/scheduler/apis/config"
 )
 
 // CombinedInsecureServingOptions sets up to two insecure listeners for healthz and metrics. The flags

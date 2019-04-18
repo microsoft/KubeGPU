@@ -22,7 +22,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	"k8s.io/kubernetes/pkg/scheduler/apis/config"
 )
 
 func TestValidateKubeSchedulerConfiguration(t *testing.T) {

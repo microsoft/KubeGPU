@@ -27,7 +27,7 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	configv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	v1alpha1 "k8s.io/kube-scheduler/config/v1alpha1"
-	config "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/apis/config"
+	config "k8s.io/kubernetes/pkg/scheduler/apis/config"
 )
 
 func init() {

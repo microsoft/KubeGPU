@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/factory"
+	"k8s.io/kubernetes/pkg/scheduler/factory"
 	testutils "k8s.io/kubernetes/test/utils"
 	"math"
 	"strconv"

@@ -42,7 +42,7 @@ import (
 	"k8s.io/kubernetes/pkg/controller/volume/persistentvolume"
 	persistentvolumeoptions "k8s.io/kubernetes/pkg/controller/volume/persistentvolume/options"
 	"k8s.io/kubernetes/pkg/features"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/algorithm/predicates"
+	"k8s.io/kubernetes/pkg/scheduler/algorithm/predicates"
 	"k8s.io/kubernetes/pkg/volume"
 	volumetest "k8s.io/kubernetes/pkg/volume/testing"
 	imageutils "k8s.io/kubernetes/test/utils/image"

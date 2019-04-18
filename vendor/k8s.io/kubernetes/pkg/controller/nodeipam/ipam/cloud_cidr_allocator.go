@@ -42,7 +42,7 @@ import (
 	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce"
 	"k8s.io/kubernetes/pkg/controller"
 	nodeutil "k8s.io/kubernetes/pkg/controller/util/node"
-	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
+	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
 	utilnode "k8s.io/kubernetes/pkg/util/node"
 	utiltaints "k8s.io/kubernetes/pkg/util/taints"
 )
