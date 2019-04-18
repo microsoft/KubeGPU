@@ -17,78 +17,39 @@ limitations under the License.
 package priorities
 
 import (
-	"fmt"
-
 	schedulerapi "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/api"
-	"github.com/Microsoft/KubeGPU/kube-scheduler/pkg/schedulercache"
-	"k8s.io/api/core/v1"
-
-	"github.com/golang/glog"
+	schedulernodeinfo "github.com/Microsoft/KubeGPU/kube-scheduler/pkg/nodeinfo"
 )
 
-// MostRequestedPriority is a priority function that favors nodes with most requested resources.
-// It calculates the percentage of memory and CPU requested by pods scheduled on the node, and prioritizes
-// based on the maximum of the average of the fraction of requested to capacity.
-// Details: (cpu(10 * sum(requested) / capacity) + memory(10 * sum(requested) / capacity)) / 2
-func MostRequestedPriorityMap(pod *v1.Pod, meta interface{}, nodeInfo *schedulercache.NodeInfo) (schedulerapi.HostPriority, error) {
-	var nonZeroRequest *schedulercache.Resource
-	if priorityMeta, ok := meta.(*priorityMetadata); ok {
-		nonZeroRequest = priorityMeta.nonZeroRequest
-	} else {
-		// We couldn't parse metadatat - fallback to computing it.
-		nonZeroRequest = getNonZeroRequests(pod)
-	}
-	return calculateUsedPriority(pod, nonZeroRequest, nodeInfo)
+var (
+	mostResourcePriority = &ResourceAllocationPriority{"MostResourceAllocation", mostResourceScorer}
+
+	// MostRequestedPriorityMap is a priority function that favors nodes with most requested resources.
+	// It calculates the percentage of memory and CPU requested by pods scheduled on the node, and prioritizes
+	// based on the maximum of the average of the fraction of requested to capacity.
+	// Details: (cpu(10 * sum(requested) / capacity) + memory(10 * sum(requested) / capacity)) / 2
+	MostRequestedPriorityMap = mostResourcePriority.PriorityMap
+)
+
+func mostResourceScorer(requested, allocable *schedulernodeinfo.Resource, includeVolumes bool, requestedVolumes int, allocatableVolumes int) int64 {
+	return (mostRequestedScore(requested.MilliCPU, allocable.MilliCPU) +
+		mostRequestedScore(requested.Memory, allocable.Memory)) / 2
 }
 
 // The used capacity is calculated on a scale of 0-10
 // 0 being the lowest priority and 10 being the highest.
 // The more resources are used the higher the score is. This function
-// is almost a reversed version of least_requested_priority.calculatUnusedScore
+// is almost a reversed version of least_requested_priority.calculateUnusedScore
 // (10 - calculateUnusedScore). The main difference is in rounding. It was added to
 // keep the final formula clean and not to modify the widely used (by users
-// in their default scheduling policies) calculateUSedScore.
-func calculateUsedScore(requested int64, capacity int64, node string) int64 {
+// in their default scheduling policies) calculateUsedScore.
+func mostRequestedScore(requested, capacity int64) int64 {
 	if capacity == 0 {
 		return 0
 	}
 	if requested > capacity {
-		glog.V(10).Infof("Combined requested resources %d from existing pods exceeds capacity %d on node %s",
-			requested, capacity, node)
 		return 0
 	}
+
 	return (requested * schedulerapi.MaxPriority) / capacity
-}
-
-// Calculate the resource used on a node.  'node' has information about the resources on the node.
-// 'pods' is a list of pods currently scheduled on the node.
-func calculateUsedPriority(pod *v1.Pod, podRequests *schedulercache.Resource, nodeInfo *schedulercache.NodeInfo) (schedulerapi.HostPriority, error) {
-	node := nodeInfo.Node()
-	if node == nil {
-		return schedulerapi.HostPriority{}, fmt.Errorf("node not found")
-	}
-
-	allocatableResources := nodeInfo.AllocatableResource()
-	totalResources := *podRequests
-	totalResources.MilliCPU += nodeInfo.NonZeroRequest().MilliCPU
-	totalResources.Memory += nodeInfo.NonZeroRequest().Memory
-
-	cpuScore := calculateUsedScore(totalResources.MilliCPU, allocatableResources.MilliCPU, node.Name)
-	memoryScore := calculateUsedScore(totalResources.Memory, allocatableResources.Memory, node.Name)
-	if glog.V(10) {
-		// We explicitly don't do glog.V(10).Infof() to avoid computing all the parameters if this is
-		// not logged. There is visible performance gain from it.
-		glog.V(10).Infof(
-			"%v -> %v: Most Requested Priority, capacity %d millicores %d memory bytes, total request %d millicores %d memory bytes, score %d CPU %d memory",
-			pod.Name, node.Name,
-			allocatableResources.MilliCPU, allocatableResources.Memory,
-			totalResources.MilliCPU, totalResources.Memory,
-			cpuScore, memoryScore,
-		)
-	}
-
-	return schedulerapi.HostPriority{
-		Host:  node.Name,
-		Score: int((cpuScore + memoryScore) / 2),
-	}, nil
 }
