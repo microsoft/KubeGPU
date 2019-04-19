@@ -14,7 +14,7 @@ import (
 
 type DevicesScheduler struct {
 	Devices           []sctypes.DeviceScheduler
-	RunGroupScheduler []bool
+	hasGroupScheduler bool
 	score             map[string]map[string]float64
 	maxScore          map[string]float64
 }
@@ -23,18 +23,18 @@ type DevicesScheduler struct {
 var DeviceScheduler = &DevicesScheduler{}
 
 func (ds *DevicesScheduler) AddDevice(device sctypes.DeviceScheduler) {
-	ds.Devices = append(ds.Devices, device)
 	usingGroupScheduler := device.UsingGroupScheduler()
-	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
-	if usingGroupScheduler {
-		// last device using group scheduler runs the group scheduler
-		for i := range ds.RunGroupScheduler {
-			ds.RunGroupScheduler[i] = false
-		}
-		ds.RunGroupScheduler = append(ds.RunGroupScheduler, true)
+	if !ds.hasGroupScheduler {
+		ds.Devices = append(ds.Devices, device)
 	} else {
-		ds.RunGroupScheduler = append(ds.RunGroupScheduler, false)
+		ds.Devices = append(ds.Devices[:len(ds.Devices)-1], device, ds.Devices[len(ds.Devices)-1])
 	}
+	if usingGroupScheduler && !ds.hasGroupScheduler {
+		glog.V(3).Infof("Adding group device for group scheduler")
+		ds.Devices = append(ds.Devices, &GrpDevice{})
+		ds.hasGroupScheduler = true
+	}
+	glog.V(3).Infof("Registering device scheduler %s, using group scheduler %v", device, usingGroupScheduler)
 }
 
 func (ds *DevicesScheduler) AddDevicesSchedulerFromPlugins(pluginNames []string) {

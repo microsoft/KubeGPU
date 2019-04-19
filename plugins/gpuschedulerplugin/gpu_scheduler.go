@@ -51,7 +51,7 @@ func (ns *NvidiaGPUScheduler) RemoveNode(nodeName string) {
 	RemoveNodeFromNodeTreeCache(nodeName)
 }
 
-func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool, runGrpScheduler bool) (bool, []sctypes.PredicateFailureReason, float64) {
+func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, fillAllocateFrom bool) (bool, []sctypes.PredicateFailureReason, float64) {
 	err, found := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
 		//panic("Unexpected error")
@@ -60,14 +60,10 @@ func (ns *NvidiaGPUScheduler) PodFitsDevice(nodeInfo *types.NodeInfo, podInfo *t
 	if !found {
 		return false, nil, 0.0
 	}
-	if runGrpScheduler {
-		glog.V(5).Infof("Running group scheduler on device requests %+v", podInfo)
-		return grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, fillAllocateFrom)
-	}
 	return true, nil, 0.0
 }
 
-func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
+func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
 	err, found := TranslateGPUResorces(nodeInfo, podInfo)
 	if err != nil {
 		return err
@@ -75,26 +71,14 @@ func (ns *NvidiaGPUScheduler) PodAllocate(nodeInfo *types.NodeInfo, podInfo *typ
 	if !found {
 		return fmt.Errorf("TranslateGPUResorces fails as no translation is found")
 	}
-	if runGrpScheduler {
-		fits, reasons, _ := grpalloc.PodFitsGroupConstraints(nodeInfo, podInfo, true)
-		if !fits {
-			return fmt.Errorf("Scheduler unable to allocate pod %s as pod no longer fits: %v", podInfo.Name, reasons)
-		}
-	}
 	return nil
 }
 
-func (ns *NvidiaGPUScheduler) TakePodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
-	if runGrpScheduler {
-		grpalloc.TakePodGroupResource(nodeInfo, podInfo)
-	}
+func (ns *NvidiaGPUScheduler) TakePodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
 	return nil
 }
 
-func (ns *NvidiaGPUScheduler) ReturnPodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo, runGrpScheduler bool) error {
-	if runGrpScheduler {
-		grpalloc.ReturnPodGroupResource(nodeInfo, podInfo)
-	}
+func (ns *NvidiaGPUScheduler) ReturnPodResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) error {
 	return nil
 }
 
