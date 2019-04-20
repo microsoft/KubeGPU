@@ -283,3 +283,29 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 
 	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil
 }
+
+
+// numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
+// nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
+// var newDevices []*runtimeapi.Device
+// // first remove any existing nvidia devices
+// numRequestedGPU := 0
+// for _, oldDevice := range config.Devices {
+// 	isNvidiaDevice := false
+// 	if oldDevice.HostPath == "/dev/nvidiactl" ||
+// 		oldDevice.HostPath == "/dev/nvidia-uvm" ||
+// 		oldDevice.HostPath == "/dev/nvidia-uvm-tools" {
+// 		isNvidiaDevice = true
+// 	}
+// 	if nvidiaFullpathRE.MatchString(oldDevice.HostPath) {
+// 		isNvidiaDevice = true
+// 		numRequestedGPU++
+// 	}
+// 	if !isNvidiaDevice || 0 == numAllocateFrom {
+// 		newDevices = append(newDevices, oldDevice)
+// 	}
+// }
+// if (numAllocateFrom > 0) && (numRequestedGPU > 0) && (numAllocateFrom != numRequestedGPU) {
+// 	return fmt.Errorf("Number of AllocateFrom is different than number of requested GPUs")
+// }
+// glog.V(3).Infof("Modified devices: %v", newDevices)
