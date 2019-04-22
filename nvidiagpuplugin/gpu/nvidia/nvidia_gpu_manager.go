@@ -223,7 +223,7 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 }
 
 // AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Volume, []string, error) {
+func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Volume, []string, map[string]string, error) {
 	gpuList := []string{}
 	volumeDriver := ""
 	volumeName := ""
@@ -281,7 +281,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 		}
 	}
 
-	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil
+	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil, nil
 }
 
 
