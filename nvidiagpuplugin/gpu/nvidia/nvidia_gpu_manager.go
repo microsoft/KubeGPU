@@ -14,43 +14,6 @@ import (
 	"strconv"
 )
 
-type memoryInfo struct {
-	Global int64 `json:"Global"`
-}
-
-type pciInfo struct {
-	BusID     string `json:"BusID"`
-	Bandwidth int64  `json:"Bandwidth"`
-}
-
-type topologyInfo struct {
-	BusID string `json:"BusID"`
-	Link  int32  `json:"Link"`
-}
-
-type gpuInfo struct {
-	ID       string         `json:"UUID"`
-	Model    string         `json:"Model"`
-	Path     string         `json:"Path"`
-	Memory   memoryInfo     `json:"Memory"`
-	PCI      pciInfo        `json:"PCI"`
-	Topology []topologyInfo `json:"Topology"`
-	Found    bool           `json:"-"`
-	Index    int            `json:"-"`
-	InUse    bool           `json:"-"`
-	TopoDone bool           `json:"-"`
-	Name     string         `json:"-"`
-}
-
-type versionInfo struct {
-	Driver string `json:"Driver"`
-	CUDA   string `json:"CUDA"`
-}
-type gpusInfo struct {
-	Version versionInfo `json:"Version"`
-	Gpus    []gpuInfo   `json:"Devices"`
-}
-
 // NvidiaGPUManager manages nvidia gpu devices.
 type NvidiaGPUManager struct {
 	sync.Mutex
@@ -231,7 +194,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 	defer ngm.Unlock()
 
 	if container.AllocateFrom == nil || 0 == len(container.AllocateFrom) {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	//re := regexp.MustCompile(types.DeviceGroupPrefix + "/gpu/" + `(.*?)/cards`)
@@ -255,7 +218,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 	body, err := np.GetGPUCommandLine(devices)
 	glog.V(3).Infof("PodName: %v Command line from plugin: %v", pod.Name, string(body))
 	if err != nil {
-		return []devtypes.Volume{}, nil, err
+		return nil, []devtypes.Volume{}, nil, err
 	}
 
 	re = regexp.MustCompile(`(.*?)=(.*)`)
@@ -283,7 +246,6 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 
 	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil, nil
 }
-
 
 // numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler
 // nvidiaFullpathRE := regexp.MustCompile(`^/dev/nvidia[0-9]*$`)
