@@ -23,12 +23,13 @@ type NvidiaGPUManager struct {
 	busIDToID map[string]string
 	indexToID []string
 	numGpus   int
+	useNVML   bool
 }
 
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
 // TODO: Migrate to use pod level cgroups and make it generic to all runtimes.
 func NewNvidiaGPUManager() (devtypes.Device, error) {
-	ngm := &NvidiaGPUManager{}
+	ngm := &NvidiaGPUManager{useNVML: true}
 	return ngm, ngm.New()
 }
 
@@ -88,15 +89,23 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 	ngm.Lock()
 	defer ngm.Unlock()
 
-	np := ngm.np
-	body, err := np.GetGPUInfo()
-	if err != nil {
-		return err
-	}
-	glog.V(5).Infof("GetGPUInfo returns %s", string(body))
 	var gpus gpusInfo
-	if err := json.Unmarshal(body, &gpus); err != nil {
-		return err
+	if !ngm.useNVML {
+		np := ngm.np
+		body, err := np.GetGPUInfo()
+		if err != nil {
+			return err
+		}
+		glog.V(5).Infof("GetGPUInfo returns %s", string(body))
+		if err := json.Unmarshal(body, &gpus); err != nil {
+			return err
+		}
+	} else {
+		gpuPtr, err := getDevices()
+		if err != nil {
+			return err
+		}
+		gpus = *gpuPtr
 	}
 	glog.V(5).Infof("GPUInfo: %+v", gpus)
 	// convert certain resources to correct units, such as memory and Bandwidth
@@ -185,11 +194,39 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	return nil
 }
 
-// AllocateGPU returns VolumeName, VolumeDriver, and list of Devices to use
-func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Volume, []string, map[string]string, error) {
+// For use with nvidia runtime (nvidia docker2)
+func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Mount, []string, map[string]string, error) {
 	gpuList := []string{}
-	volumeDriver := ""
-	volumeName := ""
+	ngm.Lock()
+	defer ngm.Unlock()
+
+	if container.AllocateFrom == nil || 0 == len(container.AllocateFrom) {
+		return nil, nil, nil, nil
+	}
+
+	re := regexp.MustCompile(types.DeviceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
+
+	for _, res := range container.AllocateFrom {
+		glog.V(4).Infof("PodName: %v -- searching for device UID: %v", pod.Name, res)
+		matches := re.FindStringSubmatch(string(res))
+		if len(matches) >= 2 {
+			id := matches[1]
+			gpuList = append(gpuList, id)
+		}
+	}
+
+	env := map[string]string{
+		"NVIDIA_VISIBLE_DEVICES": strings.Join(gpuList, ","),
+	}
+
+	return nil, nil, env, nil
+}
+
+// AllocateGPU returns MountName, MountDriver, and list of Devices to use
+func (ngm *NvidiaGPUManager) AllocateOld(pod *types.PodInfo, container *types.ContainerInfo) ([]devtypes.Mount, []string, map[string]string, error) {
+	gpuList := []string{}
+	// volumeDriver := ""
+	// volumeName := ""
 	ngm.Lock()
 	defer ngm.Unlock()
 
@@ -218,7 +255,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 	body, err := np.GetGPUCommandLine(devices)
 	glog.V(3).Infof("PodName: %v Command line from plugin: %v", pod.Name, string(body))
 	if err != nil {
-		return nil, []devtypes.Volume{}, nil, err
+		return nil, nil, nil, err
 	}
 
 	re = regexp.MustCompile(`(.*?)=(.*)`)
@@ -236,15 +273,16 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 				if !available {
 					gpuList = append(gpuList, val) // for other devices, e.g. /dev/nvidiactl, /dev/nvidia-uvm, /dev/nvidia-uvm-tools
 				}
-			} else if key == `--volume-driver` {
-				volumeDriver = val
-			} else if key == `--volume` {
-				volumeName = val
 			}
+			// } else if key == `--volume-driver` {
+			// 	volumeDriver = val
+			// } else if key == `--volume` {
+			// 	volumeName = val
+			// }
 		}
 	}
 
-	return []devtypes.Volume{{Name: volumeName, Driver: volumeDriver}}, gpuList, nil, nil
+	return nil, gpuList, nil, nil
 }
 
 // numAllocateFrom := len(cont.AllocateFrom) // may be zero from old scheduler

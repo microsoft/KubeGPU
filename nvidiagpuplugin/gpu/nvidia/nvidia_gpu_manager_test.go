@@ -79,16 +79,16 @@ func testAlloc(t *testing.T, ngm devtypes.Device, info *gpusInfo, alloc map[int]
 	}
 	pod := types.PodInfo{}
 	pod.Name = "TestPod"
-	volumesGet, devicesGet, err := ngm.Allocate(&pod, &container)
+	_, devicesGet, _, err := ngm.(*NvidiaGPUManager).AllocateOld(&pod, &container)
 	if err != nil {
 		t.Errorf("Got error %v", err)
 	}
-	if volumesGet[0].Name != volumeName {
-		t.Errorf("Volume name incorrect - expected %v - got %v", volumeName, volumesGet[0].Name)
-	}
-	if volumesGet[0].Driver != volumeDriver {
-		t.Errorf("Volume driver incorrect - expected %v - got %v", volumeDriver, volumesGet[0].Driver)
-	}
+	// if volumesGet[0].Name != volumeName {
+	// 	t.Errorf("Volume name incorrect - expected %v - got %v", volumeName, volumesGet[0].Name)
+	// }
+	// if volumesGet[0].Driver != volumeDriver {
+	// 	t.Errorf("Volume driver incorrect - expected %v - got %v", volumeDriver, volumesGet[0].Driver)
+	// }
 	devices := []string{"/dev/nvidiactl", "/dev/nvidia-uvm", "/dev/nvidia-uvm-tools"}
 	for _, to := range alloc {
 		devices = append(devices, info.Gpus[to].Path)
