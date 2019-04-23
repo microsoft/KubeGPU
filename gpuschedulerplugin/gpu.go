@@ -71,7 +71,11 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 }
 
 func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
-	if podInfo.Requests[GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
+	req, ok := podInfo.Requests[GPUTopologyGeneration]
+	if !ok {
+		req = int64(1)
+	}
+	if req == int64(0) { // zero implies no topology, or topology explictly given
 		for contName, contCopy := range podInfo.InitContainers {
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.InitContainers[contName] = contCopy
@@ -81,7 +85,7 @@ func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) 
 			podInfo.RunningContainers[contName] = contCopy
 		}
 		return nil, true
-	} else if podInfo.Requests[GPUTopologyGeneration] == int64(1) {
+	} else if req == int64(1) {
 		found := ConvertToBestGPURequests(podInfo) // found a tree
 		return nil, found
 	} else {

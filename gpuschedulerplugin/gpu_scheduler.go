@@ -5,17 +5,23 @@ import (
 
 	"github.com/Microsoft/KubeDevice-API/pkg/devicescheduler"
 	types "github.com/Microsoft/KubeDevice-API/pkg/types"
+	gtype "github.com/Microsoft/KubeGPU/gpuplugintypes"
 )
 
 const (
 	// auto topology generation "0" means default (everything in its own group)
-	GPUTopologyGeneration types.ResourceName = "alpha.gpu/gpu-generate-topology"
+	GPUTopologyGeneration types.ResourceName = "gpu/gpu-generate-topology"
 )
 
 type NvidiaGPUScheduler struct {
 }
 
+// force translation to two levels
 func (ns *NvidiaGPUScheduler) AddNode(nodeName string, nodeInfo *types.NodeInfo) {
+	modReq := TranslateGPUResources(nodeInfo.KubeAlloc[gtype.ResourceGPU], types.ResourceList{
+		types.DeviceGroupPrefix + "/gpugrp1/A/gpugrp0/B/gpu/GPU0/cards": int64(1),
+	}, nodeInfo.Allocatable)
+	nodeInfo.Allocatable = modReq
 	AddResourcesToNodeTreeCache(nodeName, nodeInfo.Allocatable)
 }
 
