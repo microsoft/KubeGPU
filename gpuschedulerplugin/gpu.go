@@ -10,7 +10,6 @@ import (
 	"github.com/Microsoft/KubeDevice-API/pkg/utils"
 	gputypes "github.com/Microsoft/KubeGPU/gpuplugintypes"
 	sctypes "github.com/Microsoft/KubeGPU/gpuplugintypes"
-	"github.com/golang/glog"
 )
 
 // TranslateGPUResources translates GPU resources to max level advertised by the node
@@ -60,7 +59,7 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 	resourceModified = resourceModified || resourceModified1
 
 	if resourceModified {
-		glog.V(3).Infoln("New Resources", containerRequests)
+		utils.Logf(3, "New Resources: %v", containerRequests)
 	}
 
 	return containerRequests
@@ -86,7 +85,7 @@ func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) 
 		found := ConvertToBestGPURequests(podInfo) // found a tree
 		return nil, found
 	} else {
-		glog.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
+		utils.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
 		return fmt.Errorf("Invalid topology generation request"), false
 	}
 }

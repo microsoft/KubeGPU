@@ -8,8 +8,8 @@ import (
 
 	devtypes "github.com/Microsoft/KubeDevice-API/pkg/device"
 	"github.com/Microsoft/KubeDevice-API/pkg/types"
+	"github.com/Microsoft/KubeDevice-API/pkg/utils"
 	gputypes "github.com/Microsoft/KubeGPU/gpuplugintypes"
-	"github.com/golang/glog"
 
 	"strconv"
 )
@@ -96,7 +96,7 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 		if err != nil {
 			return err
 		}
-		glog.V(5).Infof("GetGPUInfo returns %s", string(body))
+		utils.Logf(5, "GetGPUInfo returns %s", string(body))
 		if err := json.Unmarshal(body, &gpus); err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 		}
 		gpus = *gpuPtr
 	}
-	glog.V(5).Infof("GPUInfo: %+v", gpus)
+	utils.Logf(5, "GPUInfo: %+v", gpus)
 	// convert certain resources to correct units, such as memory and Bandwidth
 	for i := range gpus.Gpus {
 		gpus.Gpus[i].Memory.Global *= int64(1024) * int64(1024) // in units of MiB
@@ -176,11 +176,11 @@ func (ngm *NvidiaGPUManager) Start() error {
 func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 	err := ngm.UpdateGPUInfo() // don't care about error, ignore it
 	if err != nil {
-		glog.Infof("UpdateGPUInfo encounters error %+v, setting GPUs to zero", err)
+		utils.Logf(0, "UpdateGPUInfo encounters error %+v, setting GPUs to zero", err)
 		ngm.numGpus = 0
 		return err
 	}
-	glog.V(4).Infof("NumGPUs found = %d", ngm.numGpus)
+	utils.Logf(4, "NumGPUs found = %d", ngm.numGpus)
 	nodeInfo.Capacity[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	nodeInfo.Allocatable[gputypes.ResourceGPU] = int64(len(ngm.gpus))
 	for _, val := range ngm.gpus {
@@ -207,7 +207,7 @@ func (ngm *NvidiaGPUManager) Allocate(pod *types.PodInfo, container *types.Conta
 	re := regexp.MustCompile(types.DeviceGroupPrefix + "/gpugrp1/.*/gpugrp0/.*/gpu/" + `(.*?)/cards`)
 
 	for _, res := range container.AllocateFrom {
-		glog.V(4).Infof("PodName: %v -- searching for device UID: %v", pod.Name, res)
+		utils.Logf(4, "PodName: %v -- searching for device UID: %v", pod.Name, res)
 		matches := re.FindStringSubmatch(string(res))
 		if len(matches) >= 2 {
 			id := matches[1]
@@ -239,21 +239,21 @@ func (ngm *NvidiaGPUManager) AllocateOld(pod *types.PodInfo, container *types.Co
 
 	devices := []int{}
 	for _, res := range container.AllocateFrom {
-		glog.V(4).Infof("PodName: %v -- searching for device UID: %v", pod.Name, res)
+		utils.Logf(4, "PodName: %v -- searching for device UID: %v", pod.Name, res)
 		matches := re.FindStringSubmatch(string(res))
 		if len(matches) >= 2 {
 			id := matches[1]
 			devices = append(devices, ngm.gpus[id].Index)
-			glog.V(4).Infof("PodName: %v -- device index: %v", pod.Name, ngm.gpus[id].Index)
+			utils.Logf(4, "PodName: %v -- device index: %v", pod.Name, ngm.gpus[id].Index)
 			if ngm.gpus[id].Found {
 				gpuList = append(gpuList, ngm.gpus[id].Path)
-				glog.V(3).Infof("PodName: %v -- UID: %v device path: %v", pod.Name, res, ngm.gpus[id].Path)
+				utils.Logf(4, "PodName: %v -- UID: %v device path: %v", pod.Name, res, ngm.gpus[id].Path)
 			}
 		}
 	}
 	np := ngm.np
 	body, err := np.GetGPUCommandLine(devices)
-	glog.V(3).Infof("PodName: %v Command line from plugin: %v", pod.Name, string(body))
+	utils.Logf(4, "PodName: %v Command line from plugin: %v", pod.Name, string(body))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -308,4 +308,4 @@ func (ngm *NvidiaGPUManager) AllocateOld(pod *types.PodInfo, container *types.Co
 // if (numAllocateFrom > 0) && (numRequestedGPU > 0) && (numAllocateFrom != numRequestedGPU) {
 // 	return fmt.Errorf("Number of AllocateFrom is different than number of requested GPUs")
 // }
-// glog.V(3).Infof("Modified devices: %v", newDevices)
+// utils.Logf(3, "Modified devices: %v", newDevices)
