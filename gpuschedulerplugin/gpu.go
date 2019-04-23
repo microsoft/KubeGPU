@@ -1,6 +1,7 @@
 package gpuschedulerplugin
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 
@@ -63,6 +64,31 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 	}
 
 	return containerRequests
+}
+
+func TranslateGPUContainerResources(alloc types.ResourceList, cont types.ContainerInfo) types.ResourceList {
+	numGPUs := cont.Requests[gputypes.ResourceGPU] // get from annotation, don't use default KubeRequests as this must be set to zero
+	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
+}
+
+func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
+	if podInfo.Requests[GPUTopologyGeneration] == int64(0) { // zero implies no topology, or topology explictly given
+		for contName, contCopy := range podInfo.InitContainers {
+			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+			podInfo.InitContainers[contName] = contCopy
+		}
+		for contName, contCopy := range podInfo.RunningContainers {
+			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
+			podInfo.RunningContainers[contName] = contCopy
+		}
+		return nil, true
+	} else if podInfo.Requests[GPUTopologyGeneration] == int64(1) {
+		found := ConvertToBestGPURequests(podInfo) // found a tree
+		return nil, found
+	} else {
+		glog.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
+		return fmt.Errorf("Invalid topology generation request"), false
+	}
 }
 
 func addToNode(node *sctypes.SortedTreeNode, nodeResources types.ResourceList, partitionPrefix string, suffix string, partitionLevel int) *sctypes.SortedTreeNode {
