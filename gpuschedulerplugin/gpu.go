@@ -73,7 +73,7 @@ func TranslateGPUContainerResources(alloc types.ResourceList, cont types.Contain
 func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
 	req, ok := podInfo.Requests[GPUTopologyGeneration]
 	if !ok {
-		req = int64(1)
+		req = int64(0)
 	}
 	if req == int64(0) { // zero implies no topology, or topology explictly given
 		for contName, contCopy := range podInfo.InitContainers {
