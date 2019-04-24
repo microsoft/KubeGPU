@@ -65,8 +65,25 @@ func TranslateGPUResources(neededGPUs int64, nodeResources types.ResourceList, c
 	return containerRequests
 }
 
+func max(x, y int64) int64 {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 func TranslateGPUContainerResources(alloc types.ResourceList, cont types.ContainerInfo) types.ResourceList {
-	numGPUs := cont.Requests[gputypes.ResourceGPU] // get from annotation, don't use default KubeRequests as this must be set to zero
+	numGPUs, ok := cont.Requests[gputypes.ResourceGPU]
+	numKGPUs, okK := cont.KubeRequests[gputypes.ResourceGPU]
+	if ok && okK {
+		numGPUs = max(numGPUs, numKGPUs)
+	} else if ok {
+		// numGPUs = numGPUs
+	} else if okK {
+		numGPUs = numKGPUs
+	} else {
+		numGPUs = 0
+	}
 	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 

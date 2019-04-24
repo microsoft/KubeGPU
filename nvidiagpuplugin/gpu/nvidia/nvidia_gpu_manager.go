@@ -181,8 +181,11 @@ func (ngm *NvidiaGPUManager) UpdateNodeInfo(nodeInfo *types.NodeInfo) error {
 		return err
 	}
 	utils.Logf(4, "NumGPUs found = %d", ngm.numGpus)
-	nodeInfo.Capacity[gputypes.ResourceGPU] = int64(len(ngm.gpus))
-	nodeInfo.Allocatable[gputypes.ResourceGPU] = int64(len(ngm.gpus))
+	numGpus := int64(len(ngm.gpus))
+	nodeInfo.Capacity[gputypes.ResourceGPU] = numGpus
+	nodeInfo.Allocatable[gputypes.ResourceGPU] = numGpus
+	nodeInfo.KubeCap[gputypes.ResourceGPU] = numGpus
+	nodeInfo.KubeAlloc[gputypes.ResourceGPU] = numGpus
 	for _, val := range ngm.gpus {
 		if val.Found { // if currently discovered
 			types.AddGroupResource(nodeInfo.Capacity, val.Name+"/memory", val.Memory.Global)

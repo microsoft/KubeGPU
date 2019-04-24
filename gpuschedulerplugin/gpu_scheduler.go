@@ -5,6 +5,7 @@ import (
 
 	"github.com/Microsoft/KubeDevice-API/pkg/devicescheduler"
 	types "github.com/Microsoft/KubeDevice-API/pkg/types"
+	"github.com/Microsoft/KubeDevice-API/pkg/utils"
 	gtype "github.com/Microsoft/KubeGPU/gpuplugintypes"
 )
 
@@ -22,6 +23,7 @@ func (ns *NvidiaGPUScheduler) AddNode(nodeName string, nodeInfo *types.NodeInfo)
 		types.DeviceGroupPrefix + "/gpugrp1/A/gpugrp0/B/gpu/GPU0/cards": int64(1),
 	}, nodeInfo.Allocatable)
 	nodeInfo.Allocatable = modReq
+	utils.Logf(4, "AllocAddNode: %v", nodeInfo.Allocatable)
 	AddResourcesToNodeTreeCache(nodeName, nodeInfo.Allocatable)
 }
 
