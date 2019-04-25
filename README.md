@@ -10,7 +10,7 @@ The project has been started and being worked on by the Cloud Computing and Stor
 
     a. *Custom CRI shim and device advertiser*: This binary serves two purposes. The first purpose is to advertise devices and other information to be used by the scheduler. The advertisement is done by patching the node annotation on the API server. The second purpose is to serve as a CRI shim for container creation. The shim modifies the container configuration by using pod annotations. As an example, these annotations could be provided by the scheduler which specify which devices are being used.  However, the actual modifications made to the container configuration are done inside the `plugins`.
 
-    Code for the crishim is inside the `crishim` directory.
+    Code for the kubecri is inside the `kubecri` directory.
 
     b. *Custom scheduler*: The purpose of the custom scheduler is to schedule a pod on a node using arbitrary constraints that are specified by the pod using the device scheduler plugins. The scheduler allows for finding the node for the pod to run on as well as *schedule devices to use on the node*. The second part is why a custom scheduler is needed. Arbitrary constraints can already be specified to a certain extent in default Kubernetes by using scheduler extender or additional remote predicates. However, the devices to use are not scheduled in a default Kubernetes scheduler. In our custom scheduler, nodes are first evaluated for fit by using an additional device predicate. Then, the devices needed to meet the pod constraints are allocated on the chosen node. Finally, the chosen devices are written as pod annotations to be consumed by the custom CRI shim.
 
@@ -24,7 +24,7 @@ A plugin for NVidia GPU scheduling is provided here and can be used as an exampl
 
 You can add other devices by forking and adding code directly into the plugins directory.
 
-To add other devices is fairly easy. For the CRI shim and device advertiser, you simply need to create a structure type which supports the `Device` interface in `crishim/pkg/types/types.go`.  You can use the `NvidiaGPUManager` class in `plugins/nvidiagpuplugin/gpu/nvidia/nvidia_gpu_manager.go` as an example. Then, you need to create the plugin by creating a constructor function, `CreateDevicePlugin()`, which the extension code will search for to create the `Device`, as done in `plugins/nvidiagpuplugin/plugin/nvidiagpu.go`. The `Device` interface is given by the following.
+To add other devices is fairly easy. For the CRI shim and device advertiser, you simply need to create a structure type which supports the `Device` interface in `kubecri/pkg/types/types.go`.  You can use the `NvidiaGPUManager` class in `plugins/nvidiagpuplugin/gpu/nvidia/nvidia_gpu_manager.go` as an example. Then, you need to create the plugin by creating a constructor function, `CreateDevicePlugin()`, which the extension code will search for to create the `Device`, as done in `plugins/nvidiagpuplugin/plugin/nvidiagpu.go`. The `Device` interface is given by the following.
 
     type Device interface {
         // New creates the device and initializes it
