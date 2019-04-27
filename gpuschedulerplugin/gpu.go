@@ -304,9 +304,7 @@ func ConvertToBestGPURequests(podInfo *types.PodInfo) bool {
 	bestTree := findBestTreeInCache(int(numGPUs))
 	if bestTree != nil {
 		utils.Logf(5, "Best tree\n")
-		if utils.Logb(5) {
-			gputypes.LogTreeNode(5, bestTree)
-		}
+		gputypes.LogTreeNode(5, bestTree)
 		// now translate requests to best tree
 		contKeys := utils.SortedStringKeys(podInfo.RunningContainers)
 		for _, contKey := range contKeys {

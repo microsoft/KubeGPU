@@ -1,6 +1,7 @@
 package gpuplugintypes
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/Microsoft/KubeDevice-API/pkg/utils"
@@ -52,18 +53,22 @@ func PrintTreeNode(node *SortedTreeNode) {
 	printTreeNode(node, 0)
 }
 
-func logTreeNode(loglevel int, node *SortedTreeNode, level int) {
+func logTreeNode(buffer *bytes.Buffer, node *SortedTreeNode, level int) {
 	for i := 0; i < 3*level; i++ {
-		utils.Logf(loglevel, " ")
+		buffer.WriteString(" ")
 	}
-	utils.Logf(loglevel, "%d\n", node.Val)
+	buffer.WriteString(fmt.Sprintf("%d\n", node.Val))
 	for _, child := range node.Child {
-		logTreeNode(loglevel, child, level+1)
+		logTreeNode(buffer, child, level+1)
 	}
 }
 
 func LogTreeNode(loglevel int, node *SortedTreeNode) {
-	logTreeNode(loglevel, node, 0)
+	if utils.Logb(loglevel) {
+		var buffer bytes.Buffer
+		logTreeNode(&buffer, node, 0)
+		utils.Logf(loglevel, buffer.String())
+	}
 }
 
 // returns true if same
