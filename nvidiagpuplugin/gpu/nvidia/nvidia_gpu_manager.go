@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	devtypes "github.com/Microsoft/KubeDevice-API/pkg/device"
 	"github.com/Microsoft/KubeDevice-API/pkg/types"
@@ -17,13 +18,15 @@ import (
 // NvidiaGPUManager manages nvidia gpu devices.
 type NvidiaGPUManager struct {
 	sync.Mutex
-	np        NvidiaPlugin
-	gpus      map[string]gpuInfo
-	pathToID  map[string]string
-	busIDToID map[string]string
-	indexToID []string
-	numGpus   int
-	useNVML   bool
+	np              NvidiaPlugin
+	gpus            map[string]GpuInfo
+	pathToID        map[string]string
+	busIDToID       map[string]string
+	indexToID       []string
+	numGpus         int
+	useNVML         bool
+	gpusInfo        *GpusInfo
+	nvmlLastGetTime time.Time
 }
 
 // NewNvidiaGPUManager returns a GPUManager that manages local Nvidia GPUs.
@@ -35,7 +38,7 @@ func NewNvidiaGPUManager() (devtypes.Device, error) {
 
 func (ngm *NvidiaGPUManager) New() error {
 	plugin := &NvidiaDockerPlugin{}
-	ngm.gpus = make(map[string]gpuInfo)
+	ngm.gpus = make(map[string]GpuInfo)
 	ngm.np = plugin
 	return nil
 }
@@ -89,7 +92,7 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 	ngm.Lock()
 	defer ngm.Unlock()
 
-	var gpus gpusInfo
+	var gpus GpusInfo
 	if !ngm.useNVML {
 		np := ngm.np
 		body, err := np.GetGPUInfo()
@@ -101,11 +104,18 @@ func (ngm *NvidiaGPUManager) UpdateGPUInfo() error {
 			return err
 		}
 	} else {
-		gpuPtr, err := getDevices()
-		if err != nil {
-			return err
+		timeElapsed := time.Now().Sub(ngm.nvmlLastGetTime)
+		if ngm.gpusInfo == nil || timeElapsed.Seconds() > 5*60.0 {
+			gpuPtr, err := GetDevices()
+			if err != nil {
+				return err
+			}
+			gpus = *gpuPtr
+			ngm.nvmlLastGetTime = time.Now()
+			ngm.gpusInfo = gpuPtr
+		} else {
+			gpus = *ngm.gpusInfo
 		}
-		gpus = *gpuPtr
 	}
 	utils.Logf(5, "GPUInfo: %+v", gpus)
 	// convert certain resources to correct units, such as memory and Bandwidth

@@ -9,7 +9,7 @@ import (
 type NvidiaFakePlugin struct {
 	volumeDriver string
 	volume       string
-	gInfo        gpusInfo
+	gInfo        GpusInfo
 }
 
 func (np *NvidiaFakePlugin) GetGPUInfo() ([]byte, error) {
@@ -26,14 +26,14 @@ func (np *NvidiaFakePlugin) GetGPUCommandLine(devices []int) ([]byte, error) {
 	return []byte(cliString), nil
 }
 
-func NewFakeNvidiaGPUManager(info *gpusInfo, volume string, volumeDriver string) (devtypes.Device, error) {
+func NewFakeNvidiaGPUManager(info *GpusInfo, volume string, volumeDriver string) (devtypes.Device, error) {
 	plugin := &NvidiaFakePlugin{
 		gInfo:        *info,
 		volume:       volume,
 		volumeDriver: volumeDriver,
 	}
 	return &NvidiaGPUManager{
-		gpus:    make(map[string]gpuInfo),
+		gpus:    make(map[string]GpuInfo),
 		np:      plugin,
 		useNVML: false,
 	}, nil

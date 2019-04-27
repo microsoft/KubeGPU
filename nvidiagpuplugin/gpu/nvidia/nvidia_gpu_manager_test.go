@@ -34,7 +34,7 @@ func assertMapEqual(t *testing.T, cap types.ResourceList, capExpected map[string
 	}
 }
 
-func setAllocFrom(info *gpusInfo, allocFrom types.ResourceLocation, from int, to int) {
+func setAllocFrom(info *GpusInfo, allocFrom types.ResourceLocation, from int, to int) {
 	fromS := strconv.Itoa(from)
 	toS := info.Gpus[to].ID
 	fromLoc := types.ResourceName(string(types.DeviceGroupPrefix) + "/gpu/" + fromS + "/cards")
@@ -71,7 +71,7 @@ func checkElemEqual(t *testing.T, a1 []string, a2 []string) {
 	}
 }
 
-func testAlloc(t *testing.T, ngm devtypes.Device, info *gpusInfo, alloc map[int]int) {
+func testAlloc(t *testing.T, ngm devtypes.Device, info *GpusInfo, alloc map[int]int) {
 	container := types.ContainerInfo{}
 	container.AllocateFrom = make(types.ResourceLocation)
 	for from, to := range alloc {
@@ -97,7 +97,7 @@ func testAlloc(t *testing.T, ngm devtypes.Device, info *gpusInfo, alloc map[int]
 }
 
 func TestAlloc(t *testing.T) {
-	var info gpusInfo
+	var info GpusInfo
 	err := json.Unmarshal([]byte(jsonString), &info)
 	if err != nil {
 		t.Errorf("Got error %v", err)
@@ -128,7 +128,7 @@ func TestAlloc(t *testing.T) {
 	//fmt.Println(ngm.Capacity())
 	assertMapEqual(t, cap, capExpected)
 
-	info = gpusInfo{}
+	info = GpusInfo{}
 	err = json.Unmarshal([]byte(jsonString2), &info)
 	nodeInfo = types.NewNodeInfo()
 	ngm, err = NewFakeNvidiaGPUManager(&info, volumeName, volumeDriver)

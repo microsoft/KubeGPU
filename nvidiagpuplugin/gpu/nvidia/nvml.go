@@ -1,10 +1,19 @@
 package nvidia
 
 import (
+	"fmt"
+
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 )
 
-func getDevices() (*gpusInfo, error) {
+// GetDevices returns the device information
+func GetDevices() (*GpusInfo, error) {
+	err := nvml.Init()
+	defer nvml.Shutdown()
+	fmt.Printf("Initialized NVML\n")
+	if err != nil {
+		return nil, err
+	}
 	numGpus, err := nvml.GetDeviceCount()
 	if err != nil {
 		return nil, err
@@ -31,23 +40,23 @@ func getDevices() (*gpusInfo, error) {
 		}
 	}
 
-	gpus := &gpusInfo{}
+	gpus := &GpusInfo{}
 	gpus.Version.Driver, err = nvml.GetDriverVersion()
 	if err != nil {
 		return nil, err
 	}
 	gpus.Version.CUDA = "" // unsupported for now
 	for i := uint(0); i < numGpus; i++ {
-		gpu := gpuInfo{}
+		gpu := GpuInfo{}
 		gpu.ID = devices[i].UUID
 		gpu.Model = *devices[i].Model
 		gpu.Path = devices[i].Path
-		gpu.Memory = memoryInfo{Global: int64(*devices[i].Memory)}
-		gpu.PCI = pciInfo{BusID: devices[i].PCI.BusID, Bandwidth: int64(*devices[i].PCI.Bandwidth)}
-		var topos []topologyInfo
+		gpu.Memory = MemoryInfo{Global: int64(*devices[i].Memory)}
+		gpu.PCI = PciInfo{BusID: devices[i].PCI.BusID, Bandwidth: int64(*devices[i].PCI.Bandwidth)}
+		var topos []TopologyInfo
 		for j := uint(0); j < numGpus; j++ {
 			if i != j {
-				topos = append(topos, topologyInfo{BusID: devices[i].Topology[j].BusID, Link: int32(devices[i].Topology[j].Link)})
+				topos = append(topos, TopologyInfo{BusID: devices[i].Topology[j].BusID, Link: int32(devices[i].Topology[j].Link)})
 			}
 		}
 		gpu.Topology = topos
