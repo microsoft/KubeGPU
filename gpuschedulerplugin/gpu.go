@@ -73,26 +73,43 @@ func max(x, y int64) int64 {
 }
 
 func TranslateGPUContainerResources(alloc types.ResourceList, cont types.ContainerInfo) types.ResourceList {
-	numGPUs, ok := cont.Requests[gputypes.ResourceGPU]
-	numKGPUs, okK := cont.KubeRequests[gputypes.ResourceGPU]
-	if ok && okK {
-		numGPUs = max(numGPUs, numKGPUs)
-	} else if ok {
-		// numGPUs = numGPUs
-	} else if okK {
-		numGPUs = numKGPUs
-	} else {
-		numGPUs = 0
-	}
+	numGPUs, _ := cont.Requests[gputypes.ResourceGPU]
 	return TranslateGPUResources(numGPUs, alloc, cont.DevRequests)
 }
 
-func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
-	req, ok := podInfo.Requests[GPUTopologyGeneration]
-	if !ok {
-		req = int64(0)
+func SetGPUReqs(cont *types.ContainerInfo) {
+	numGPUs, ok := cont.Requests[gputypes.ResourceGPU]
+	numKGPUs, okK := cont.KubeRequests[gputypes.ResourceGPU]
+	if ok && okK {
+		cont.Requests[gputypes.ResourceGPU] = max(numGPUs, numKGPUs)
+	} else if ok {
+		// numGPUs = numGPUs
+	} else if okK {
+		cont.Requests[gputypes.ResourceGPU] = numKGPUs
+	} else {
+		cont.Requests[gputypes.ResourceGPU] = 0
 	}
-	if req == int64(0) { // zero implies no topology, or topology explictly given
+}
+
+func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) (error, bool) {
+	for _, contCopy := range podInfo.InitContainers {
+		SetGPUReqs(&contCopy)
+	}
+	for _, contCopy := range podInfo.RunningContainers {
+		SetGPUReqs(&contCopy)
+	}
+
+	req, ok := podInfo.Requests[GPUTopologyGeneration]
+	found := true
+	if !ok || req == int64(1) { // auto generate best topology if no explicit request given
+		found = ConvertToBestGPURequests(podInfo) // found a tree
+		if found {
+			utils.Logf(4, "Auto-generated topology using best tree: %+v", podInfo)
+			return nil, found
+		}
+	}
+
+	if !found || req == int64(0) { // zero implies no topology
 		for contName, contCopy := range podInfo.InitContainers {
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.InitContainers[contName] = contCopy
@@ -101,14 +118,12 @@ func TranslatePodGPUResources(nodeInfo *types.NodeInfo, podInfo *types.PodInfo) 
 			contCopy.DevRequests = TranslateGPUContainerResources(nodeInfo.Allocatable, contCopy)
 			podInfo.RunningContainers[contName] = contCopy
 		}
+		utils.Logf(4, "Auto-generated topology using no topology: %+v", podInfo)
 		return nil, true
-	} else if req == int64(1) {
-		found := ConvertToBestGPURequests(podInfo) // found a tree
-		return nil, found
-	} else {
-		utils.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
-		return fmt.Errorf("Invalid topology generation request"), false
 	}
+
+	utils.Errorf("Invalid topology generation request %v", podInfo.Requests[GPUTopologyGeneration])
+	return fmt.Errorf("Invalid topology generation request"), false
 }
 
 func addToNode(node *sctypes.SortedTreeNode, nodeResources types.ResourceList, partitionPrefix string, suffix string, partitionLevel int) *sctypes.SortedTreeNode {
@@ -204,6 +219,7 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 		nodeLocation = node
 		nodeCacheMap[node] = treeInfo
 	}
+	//fmt.Printf("NodeName: %v nodeLocation: %v", nodeName, nodeLocation)
 	nodeLocationMap[nodeName] = nodeLocation
 }
 
@@ -268,6 +284,7 @@ func translateToTree(node *sctypes.SortedTreeNode, cont *types.ContainerInfo) {
 	// append requests
 	numGPUs := int(cont.Requests[gputypes.ResourceGPU])
 	resList := assignGPUs(node, types.DeviceGroupPrefix+"/gpugrp", "gpugrp", "gpu", "cards", 2, &numGPUs)
+	//fmt.Printf("ResList: %+v", resList)
 	for resKey, resVal := range resList {
 		cont.DevRequests[resKey] = resVal
 	}
@@ -286,8 +303,10 @@ func ConvertToBestGPURequests(podInfo *types.PodInfo) bool {
 	}
 	bestTree := findBestTreeInCache(int(numGPUs))
 	if bestTree != nil {
-		//fmt.Printf("Best tree\n")
-		//types.PrintTreeNode(bestTree)
+		utils.Logf(5, "Best tree\n")
+		if utils.Logb(5) {
+			gputypes.LogTreeNode(5, bestTree)
+		}
 		// now translate requests to best tree
 		contKeys := utils.SortedStringKeys(podInfo.RunningContainers)
 		for _, contKey := range contKeys {

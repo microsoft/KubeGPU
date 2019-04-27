@@ -1,6 +1,10 @@
 package gpuplugintypes
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/Microsoft/KubeDevice-API/pkg/utils"
+)
 
 func findNodeInsertionPoint(node *SortedTreeNode, valToAdd int, score float64) int {
 	insertionPoint := len(node.Child) // if nothing found, insert at end
@@ -46,6 +50,20 @@ func printTreeNode(node *SortedTreeNode, level int) {
 
 func PrintTreeNode(node *SortedTreeNode) {
 	printTreeNode(node, 0)
+}
+
+func logTreeNode(loglevel int, node *SortedTreeNode, level int) {
+	for i := 0; i < 3*level; i++ {
+		utils.Logf(loglevel, " ")
+	}
+	utils.Logf(loglevel, "%d\n", node.Val)
+	for _, child := range node.Child {
+		logTreeNode(loglevel, child, level+1)
+	}
+}
+
+func LogTreeNode(loglevel int, node *SortedTreeNode) {
+	logTreeNode(loglevel, node, 0)
 }
 
 // returns true if same
