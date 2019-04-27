@@ -1,8 +1,6 @@
 package nvidia
 
 import (
-	"fmt"
-
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 )
 
@@ -10,7 +8,7 @@ import (
 func GetDevices() (*GpusInfo, error) {
 	err := nvml.Init()
 	defer nvml.Shutdown()
-	fmt.Printf("Initialized NVML\n")
+	//fmt.Printf("Initialized NVML\n")
 	if err != nil {
 		return nil, err
 	}
