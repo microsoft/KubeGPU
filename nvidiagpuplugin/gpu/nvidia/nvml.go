@@ -7,11 +7,18 @@ import (
 // GetDevices returns the device information
 func GetDevices() (*GpusInfo, error) {
 	err := nvml.Init()
-	defer nvml.Shutdown()
+	nvmlFound := false
+	shutDown := func() {
+		if nvmlFound {
+			nvml.Shutdown()
+		}
+	}
+	defer shutDown()
 	//fmt.Printf("Initialized NVML\n")
 	if err != nil {
 		return nil, err
 	}
+	nvmlFound = true
 	numGpus, err := nvml.GetDeviceCount()
 	if err != nil {
 		return nil, err
