@@ -1,8 +1,12 @@
 package main
 
-import "github.com/Microsoft/KubeGPU/nvidiagpuplugin/gpu/nvidia"
+import (
+	"fmt"
+
+	"github.com/Microsoft/KubeGPU/nvidiagpuplugin/gpu/nvidia"
+)
 
 func main() {
 	devices, err := nvidia.GetDevices()
-	print("Err: %v Devices: %+v", err, devices)
+	fmt.Printf("Err: %v Devices: %+v\n", err, devices)
 }
