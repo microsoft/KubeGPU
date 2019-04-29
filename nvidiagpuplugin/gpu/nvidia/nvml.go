@@ -56,8 +56,13 @@ func GetDevices() (*GpusInfo, error) {
 		gpu.ID = devices[i].UUID
 		gpu.Model = *devices[i].Model
 		gpu.Path = devices[i].Path
-		gpu.Memory = MemoryInfo{Global: int64(*devices[i].Memory)}
-		gpu.PCI = PciInfo{BusID: devices[i].PCI.BusID, Bandwidth: int64(*devices[i].PCI.Bandwidth)}
+		gpu.Memory = MemoryInfo{
+			Global: int64(*devices[i].Memory)*int64(1024)*int64(1024), //MiB
+		}
+		gpu.PCI = PciInfo{
+			BusID: devices[i].PCI.BusID,
+			Bandwidth: int64(*devices[i].PCI.Bandwidth)*int64(1000)*int64(1000), // MB
+		}
 		var topos []TopologyInfo
 		for j := uint(0); j < numGpus; j++ {
 			if i != j {
