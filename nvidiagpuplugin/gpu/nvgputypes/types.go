@@ -1,4 +1,9 @@
-package nvidia
+package nvgputypes
+
+import (
+	"encoding/json"
+	"os/exec"
+)
 
 type MemoryInfo struct {
 	Global int64 `json:"Global"`
@@ -35,4 +40,17 @@ type VersionInfo struct {
 type GpusInfo struct {
 	Version VersionInfo `json:"Version"`
 	Gpus    []GpuInfo   `json:"Devices"`
+}
+
+func GetDevices() (*GpusInfo, error) {
+	output, err := exec.Command("/usr/local/bin/nvmlinfo", "json").Output()
+	if err != nil {
+		return nil, err
+	}
+	gpus := &GpusInfo{}
+	err = json.Unmarshal(output, &gpus)
+	if err != nil {
+		return nil, err
+	}
+	return gpus, nil
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/Microsoft/KubeGPU/nvidiagpuplugin/gpu/nvidia"
 )
 
-func CreateDevicePlugin() (error, device.Device) {
+func CreateDevicePlugin() (device.Device, error) {
 	gpuManager := &nvidia.NvidiaGPUManager{}
-	return nil, gpuManager
+	return gpuManager, nil
 }

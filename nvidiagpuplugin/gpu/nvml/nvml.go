@@ -1,11 +1,14 @@
-package nvidia
+package nvml
 
 import (
+	"encoding/json"
+
+	"github.com/Microsoft/KubeGPU/nvidiagpuplugin/gpu/nvgputypes"
 	"github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml"
 )
 
 // GetDevices returns the device information
-func GetDevices() (*GpusInfo, error) {
+func GetDevices() (*nvgputypes.GpusInfo, error) {
 	err := nvml.Init()
 	nvmlFound := false
 	shutDown := func() {
@@ -45,28 +48,31 @@ func GetDevices() (*GpusInfo, error) {
 		}
 	}
 
-	gpus := &GpusInfo{}
+	gpus := &nvgputypes.GpusInfo{}
 	gpus.Version.Driver, err = nvml.GetDriverVersion()
 	if err != nil {
 		return nil, err
 	}
 	gpus.Version.CUDA = "" // unsupported for now
 	for i := uint(0); i < numGpus; i++ {
-		gpu := GpuInfo{}
+		gpu := nvgputypes.GpuInfo{}
 		gpu.ID = devices[i].UUID
 		gpu.Model = *devices[i].Model
 		gpu.Path = devices[i].Path
-		gpu.Memory = MemoryInfo{
-			Global: int64(*devices[i].Memory)*int64(1024)*int64(1024), //MiB
+		gpu.Memory = nvgputypes.MemoryInfo{
+			Global: int64(*devices[i].Memory) * int64(1024) * int64(1024), //MiB
 		}
-		gpu.PCI = PciInfo{
-			BusID: devices[i].PCI.BusID,
-			Bandwidth: int64(*devices[i].PCI.Bandwidth)*int64(1000)*int64(1000), // MB
+		gpu.PCI = nvgputypes.PciInfo{
+			BusID:     devices[i].PCI.BusID,
+			Bandwidth: int64(*devices[i].PCI.Bandwidth) * int64(1000) * int64(1000), // MB
 		}
-		var topos []TopologyInfo
+		var topos []nvgputypes.TopologyInfo
 		for j := uint(0); j < numGpus; j++ {
 			if i != j {
-				topos = append(topos, TopologyInfo{BusID: devices[i].Topology[j].BusID, Link: int32(devices[i].Topology[j].Link)})
+				topos = append(topos, nvgputypes.TopologyInfo{
+					BusID: devices[i].Topology[j].BusID,
+					Link:  int32(devices[i].Topology[j].Link),
+				})
 			}
 		}
 		gpu.Topology = topos
@@ -74,4 +80,18 @@ func GetDevices() (*GpusInfo, error) {
 	}
 
 	return gpus, nil
+}
+
+// GetDevicesJSON returns the device information as a JSON string
+func GetDevicesJSON() []byte {
+	gpus, err := GetDevices()
+	if err != nil {
+		return nil
+	} else {
+		str, err := json.Marshal(gpus)
+		if err != nil {
+			return nil
+		}
+		return str
+	}
 }

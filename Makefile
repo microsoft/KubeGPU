@@ -1,7 +1,7 @@
 BUILD_DIR ?= _output
 
 .PHONY: all
-all: clean nvidiagpuplugin gpuschedulerplugin nvidiadevs
+all: clean nvidiagpuplugin gpuschedulerplugin nvidiadevs nvmlinfo
 
 .PHONY: nvidiagpuplugin
 nvidiagpuplugin:
@@ -14,6 +14,10 @@ gpuschedulerplugin:
 .PHONY: nvidiadevs
 nvidiadevs:
 	go build -o ${BUILD_DIR}/nvidiadevs ./nvidiagpuplugin/cmd/main.go
+
+.PHONE: nvmlinfo
+nvmlinfo:
+	go build -o ${BUILD_DIR}/nvmlinfo ./nvidiagpuplugin/nvmlinfo/main.go
 
 .PHONY: clean
 clean:
