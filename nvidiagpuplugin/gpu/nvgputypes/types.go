@@ -47,10 +47,12 @@ func GetDevices() (*GpusInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Printf("Get Output: %v\n", output)
 	gpus := &GpusInfo{}
 	err = json.Unmarshal(output, &gpus)
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Printf("Get devs: %+v\n", gpus)
 	return gpus, nil
 }

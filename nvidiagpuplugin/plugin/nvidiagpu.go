@@ -6,6 +6,5 @@ import (
 )
 
 func CreateDevicePlugin() (device.Device, error) {
-	gpuManager := &nvidia.NvidiaGPUManager{}
-	return gpuManager, nil
+	return nvidia.NewNvidiaGPUManager()
 }
