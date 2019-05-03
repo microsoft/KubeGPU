@@ -165,14 +165,14 @@ type treeInfo struct {
 	TreeScore   float64
 }
 
-var nodeCacheMap = make(map[*sctypes.SortedTreeNode]treeInfo)
-var nodeLocationMap = make(map[string]*sctypes.SortedTreeNode)
+var NodeCacheMap = make(map[*sctypes.SortedTreeNode]treeInfo)
+var NodeLocationMap = make(map[string]*sctypes.SortedTreeNode)
 
 func removeNodeFromCache(nodeName string, nodeLocation *sctypes.SortedTreeNode) {
 	if nodeLocation != nil {
-		delete(nodeCacheMap[nodeLocation].ListOfNodes, nodeName)
-		if len(nodeCacheMap[nodeLocation].ListOfNodes) == 0 {
-			delete(nodeCacheMap, nodeLocation)
+		delete(NodeCacheMap[nodeLocation].ListOfNodes, nodeName)
+		if len(NodeCacheMap[nodeLocation].ListOfNodes) == 0 {
+			delete(NodeCacheMap, nodeLocation)
 		}
 	}
 }
@@ -196,7 +196,7 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 	// get tree representation of node gpu resources
 	node := addToNode(nil, nodeResources, "gpugrp", "cards", 1) // gpugrp1 and gpugrp0
 	// see if resource has changed
-	nodeLocation := nodeLocationMap[nodeName]
+	nodeLocation := NodeLocationMap[nodeName]
 	if sctypes.CompareTreeNode(node, nodeLocation) {
 		return
 	}
@@ -204,9 +204,9 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 	removeNodeFromCache(nodeName, nodeLocation)
 	// check if matches to some other node in cache
 	found := false
-	for cacheKey := range nodeCacheMap {
+	for cacheKey := range NodeCacheMap {
 		if sctypes.CompareTreeNode(node, cacheKey) {
-			nodeCacheMap[cacheKey].ListOfNodes[nodeName] = true
+			NodeCacheMap[cacheKey].ListOfNodes[nodeName] = true
 			nodeLocation = cacheKey
 			found = true
 			break
@@ -217,22 +217,22 @@ func AddResourcesToNodeTreeCache(nodeName string, nodeResources types.ResourceLi
 		treeScore := computeTreeScore(node)
 		treeInfo := treeInfo{ListOfNodes: map[string]bool{nodeName: true}, TreeScore: treeScore}
 		nodeLocation = node
-		nodeCacheMap[node] = treeInfo
+		NodeCacheMap[node] = treeInfo
 	}
 	//fmt.Printf("NodeName: %v nodeLocation: %v", nodeName, nodeLocation)
-	nodeLocationMap[nodeName] = nodeLocation
+	NodeLocationMap[nodeName] = nodeLocation
 }
 
 func RemoveNodeFromNodeTreeCache(nodeName string) {
-	nodeLocation := nodeLocationMap[nodeName]
+	nodeLocation := NodeLocationMap[nodeName]
 	removeNodeFromCache(nodeName, nodeLocation)
-	delete(nodeLocationMap, nodeName)
+	delete(NodeLocationMap, nodeName)
 }
 
 func findBestTreeInCache(num int) *sctypes.SortedTreeNode {
 	var bestTree *sctypes.SortedTreeNode
 	bestScore := 0.0
-	for tree, treeInfo := range nodeCacheMap {
+	for tree, treeInfo := range NodeCacheMap {
 		if tree.Val >= num {
 			if treeInfo.TreeScore > bestScore {
 				bestTree = tree
