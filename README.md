@@ -9,6 +9,17 @@ The main project has now been split into the core and the plugins.  For the core
 [https://github.com/Microsoft/KubeDevice].
 The NVIDIA GPU plugins (which can be used in place of the standard NVIDIA device plugin) is located here.
 
+# Building the plugin
+
+To build the plugin, make sure you have a Go installation. Then, run
+```
+go get github.com/NVIDIA/gpu-monitoring-tools/bindings/go/nvml
+go get github.com/Microsoft/KubeDevice-API
+go get github.com/Microsoft/KubeGPU
+cd $GOPATH/src/github.com/Microsoft/KubeGPU
+make
+```
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
