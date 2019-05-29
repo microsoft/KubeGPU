@@ -44,14 +44,14 @@ func TestTree(t *testing.T) {
 	AddResourcesToNodeTreeCache("B", nodeRes2)
 	AddResourcesToNodeTreeCache("C", nodeRes3)
 	AddResourcesToNodeTreeCache("D", types.ResourceList{"ABCD": 4})
-	for key, val := range nodeCacheMap {
+	for key, val := range NodeCacheMap {
 		fmt.Printf("Key\n")
 		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
 	}
 	RemoveNodeFromNodeTreeCache("A")
 	fmt.Printf("After removal\n")
-	for key, val := range nodeCacheMap {
+	for key, val := range NodeCacheMap {
 		fmt.Printf("Key\n")
 		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
@@ -88,12 +88,12 @@ func TestTree(t *testing.T) {
 	}
 	RemoveNodeFromNodeTreeCache("B")
 	fmt.Printf("Now should have only one\n")
-	for key, val := range nodeCacheMap {
+	for key, val := range NodeCacheMap {
 		fmt.Printf("Key\n")
 		sctypes.PrintTreeNode(key)
 		fmt.Printf("Val: %v\n", val)
 	}
-	fmt.Printf("LocationMap :%v\n", nodeLocationMap)
+	fmt.Printf("LocationMap :%v\n", NodeLocationMap)
 	ConvertToBestGPURequests(podInfo)
 	expectedPodInfo = &types.PodInfo{
 		RunningContainers: map[string]types.ContainerInfo{
